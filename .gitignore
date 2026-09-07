@@ -28,3 +28,6 @@ prisma/generated/
 
 ### Claude Code session state ###
 .claude/scheduled_tasks.lock
+
+.vercel
+.env*
