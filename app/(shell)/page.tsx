@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { EventPreviewCard } from "@/components/event/EventPreviewCard";
+import { SeeAllLink } from "@/components/event/SeeAllLink";
 
 export default async function DiscoverPage() {
   const actor = await getActor();
@@ -78,9 +79,7 @@ export default async function DiscoverPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Upcoming</h2>
-          <Link href="/events" className="text-xs text-mute">
-            See all
-          </Link>
+          <SeeAllLink href="/events" />
         </div>
         {upcoming.length === 0 ? (
           <p className="text-sm text-mute">No events nearby yet.</p>
@@ -96,9 +95,7 @@ export default async function DiscoverPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Popular clubs</h2>
-          <Link href="/clubs" className="text-xs text-mute">
-            See all
-          </Link>
+          <SeeAllLink href="/clubs" />
         </div>
         {clubs.length === 0 ? (
           <p className="text-sm text-mute">No clubs yet.</p>
