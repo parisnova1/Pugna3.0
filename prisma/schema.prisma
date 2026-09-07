@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums (blueprint §4 / §5)
+// ---------------------------------------------------------------------------
+
+enum Hat {
+  FIGHTER
+  CLUB
+  ORGANIZER
+}
+
+enum EventStatus {
+  DRAFT
+  READY
+  PUBLISHED
+  LIVE
+  INTERMISSION
+  FINISHED
+  CANCELLED
+  ARCHIVED
+}
+
+enum BoutStatus {
+  DRAFT
+  TBD
+  CONFIRMED
+  READY
+  DELAYED
+  IN_PROGRESS
+  FINAL
+  SCRATCHED
+  NO_SHOW
+}
+
+enum RequestStatus {
+  PENDING
+  PARTIAL
+  COMPLETE
+  DECLINED
+  EXPIRED
+}
+
+enum NominationStatus {
+  CREATED
+  PENDING
+  ACCEPTED
+  CONFIRMED
+  DECLINED
+  WITHDRAWN
+  REPLACEMENT
+}
+
+enum ScratchReason {
+  INJURY
+  WITHDRAWAL
+  NO_OPPONENT
+  ORGANIZER_DECISION
+  OTHER
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  name           String?
+  hats           Hat[]    @default([])
+  activeHat      Hat?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  fighterProfile   FighterProfile?
+
+  // Club admin memberships (many-to-many via join table)
+  clubAdminships   ClubAdmin[]
+
+  // Events this user may host-manage (creator + club admins at event creation)
+  hostEvents       EventHostMember[]
+
+  createdEvents    Event[]        @relation("EventCreatedBy")
+  follows          Follow[]
+}
+
+model Club {
+  id        String   @id @default(cuid())
+  name      String
+  city      String?
+  venue     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  admins       ClubAdmin[]
+  roster       FighterProfile[]
+  requests     EventRequest[]
+  nominations  Nomination[]
+  organizedEvents Event[] @relation("EventOrganizingClub")
+}
+
+model ClubAdmin {
+  id       String @id @default(cuid())
+  clubId   String
+  userId   String
+  club     Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId])
+}
+
+model FighterProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName  String
+  clubId       String?
+  club         Club?    @relation(fields: [clubId], references: [id])
+  weightClass  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  nominations     Nomination[]
+  boutsAsFighterA Bout[] @relation("BoutFighterA")
+  boutsAsFighterB Bout[] @relation("BoutFighterB")
+}
+
+model Event {
+  id                 String      @id @default(cuid())
+  slug               String?     @unique
+  code               String?     @unique
+  name               String
+  venue              String?
+  city               String?
+  date               DateTime
+  startTime          DateTime?
+  sport              String      @default("Boxing")
+  description        String?
+  streamUrl          String?
+  status             EventStatus @default(DRAFT)
+  organizingClubId   String?
+  organizingClub     Club?       @relation("EventOrganizingClub", fields: [organizingClubId], references: [id])
+  createdByUserId    String
+  createdBy          User        @relation("EventCreatedBy", fields: [createdByUserId], references: [id])
+  dayCount           Int         @default(1)
+  ringCount          Int         @default(1)
+  cancelReason       String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  hostMembers  EventHostMember[]
+  requests     EventRequest[]
+  nominations  Nomination[]
+  bouts        Bout[]
+  follows      Follow[]
+}
+
+// hostMemberUserIds[] modeled as a join table
+model EventHostMember {
+  id      String @id @default(cuid())
+  eventId String
+  userId  String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model EventRequest {
+  id           String        @id @default(cuid())
+  eventId      String
+  clubId       String
+  event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  club         Club          @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  requirements Json          // [{ weightClass, need }]
+  deadline     DateTime?
+  status       RequestStatus @default(PENDING)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([eventId, clubId])
+}
+
+model Nomination {
+  id           String           @id @default(cuid())
+  eventId      String
+  clubId       String
+  fighterId    String
+  weightClass  String
+  status       NominationStatus @default(CREATED)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  event   Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  club    Club           @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  fighter FighterProfile @relation(fields: [fighterId], references: [id], onDelete: Cascade)
+}
+
+model Bout {
+  id             String        @id @default(cuid())
+  eventId        String
+  number         Int
+  weightClass    String
+  ring           Int           @default(1)
+  day            Int           @default(1)
+  fighterAId     String?
+  fighterBId     String?
+  status         BoutStatus    @default(DRAFT)
+  scheduledTime  DateTime?
+  delayMinutes   Int?
+  scratchReason  ScratchReason?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  event     Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fighterA  FighterProfile? @relation("BoutFighterA", fields: [fighterAId], references: [id])
+  fighterB  FighterProfile? @relation("BoutFighterB", fields: [fighterBId], references: [id])
+  result    Result?
+
+  @@unique([eventId, number])
+}
+
+model Result {
+  id       String  @id @default(cuid())
+  boutId   String  @unique
+  bout     Bout    @relation(fields: [boutId], references: [id], onDelete: Cascade)
+  winnerId String?
+  loserId  String?
+  method   String
+  round    Int?
+
+  createdAt DateTime @default(now())
+}
+
+model Follow {
+  id      String @id @default(cuid())
+  userId  String
+  eventId String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+}

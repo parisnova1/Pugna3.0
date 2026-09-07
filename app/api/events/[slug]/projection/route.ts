@@ -1,0 +1,28 @@
+import { NextResponse } from "next/server";
+import { getEventCardData } from "@/lib/event-query";
+import { getActor } from "@/lib/actor";
+import { can } from "@/lib/rbac";
+
+export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const data = await getEventCardData(slug);
+  if (!data) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+
+  const actor = await getActor();
+  const published = data.event.status !== "DRAFT" && data.event.status !== "READY";
+  const view = can(actor, "event.view", { eventId: data.event.id, eventPublished: published });
+  if (!view.allowed) return NextResponse.json({ error: view.code }, { status: 403 });
+
+  return NextResponse.json({
+    status: data.event.status,
+    nowLabel: data.projection.nowLabel,
+    now: data.projection.now
+      ? { id: data.projection.now.id, number: data.projection.now.number, status: data.projection.now.status, delayMinutes: data.projection.now.delayMinutes }
+      : null,
+    next: data.projection.next
+      ? { id: data.projection.next.id, number: data.projection.next.number, status: data.projection.next.status }
+      : null,
+    bouts: data.event.bouts.map((b) => ({ id: b.id, number: b.number, status: b.status })),
+    updatedAt: new Date().toISOString(),
+  });
+}

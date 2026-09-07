@@ -1,0 +1,244 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { getActor } from "@/lib/actor";
+import { can } from "@/lib/rbac";
+import { transitionEvent, IllegalTransitionError } from "@/lib/state/event";
+import { slugify, generateEventCode } from "@/lib/slug";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import type { ActionResult } from "@/lib/actions/hat";
+
+export async function createEvent(): Promise<{ ok: true; eventId: string } | { ok: false; code: string; reason: string }> {
+  const actor = await getActor();
+  const result = can(actor, "event.create");
+  if (!result.allowed) return { ok: false, code: result.code, reason: result.reason };
+
+  const event = await prisma.event.create({
+    data: {
+      name: "Untitled event",
+      date: new Date(),
+      createdByUserId: actor!.userId,
+      status: "DRAFT",
+      hostMembers: { create: [{ userId: actor!.userId }] },
+    },
+  });
+
+  revalidatePath("/host");
+  return { ok: true, eventId: event.id };
+}
+
+export async function updateEventSkeleton(eventId: string, formData: FormData): Promise<ActionResult> {
+  const actor = await getActor();
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) return { ok: false, code: "NOT_FOUND", reason: "Event not found." };
+
+  const gate = can(actor, "event.edit", { eventId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const dateStr = String(formData.get("date") ?? "");
+  const city = String(formData.get("city") ?? "").trim() || null;
+  const venue = String(formData.get("venue") ?? "").trim() || null;
+  const streamUrl = String(formData.get("streamUrl") ?? "").trim() || null;
+  const description = String(formData.get("description") ?? "").trim() || null;
+
+  if (!name || !dateStr) {
+    return { ok: false, code: "VALIDATION_BLOCKED", reason: "Name and date are required." };
+  }
+
+  await prisma.event.update({
+    where: { id: eventId },
+    data: { name, date: new Date(dateStr), city, venue, streamUrl, description },
+  });
+
+  revalidatePath(`/host/events/${eventId}`);
+  return { ok: true };
+}
+
+export async function updateEventStructure(eventId: string, formData: FormData): Promise<ActionResult> {
+  const actor = await getActor();
+  const gate = can(actor, "event.edit", { eventId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const sport = String(formData.get("sport") ?? "Boxing").trim() || "Boxing";
+  const ringCount = Math.max(1, Number(formData.get("ringCount") ?? 1));
+  const dayCount = Math.max(1, Number(formData.get("dayCount") ?? 1));
+
+  await prisma.event.update({ where: { id: eventId }, data: { sport, ringCount, dayCount } });
+  revalidatePath(`/host/events/${eventId}`);
+  return { ok: true };
+}
+
+export async function addGuestFighter(formData: FormData): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor) return { ok: false, code: "AUTH_REQUIRED", reason: "Sign in required." };
+
+  const eventId = String(formData.get("eventId") ?? "");
+  const gate = can(actor, "event.edit", { eventId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const displayName = String(formData.get("name") ?? "").trim();
+  const weightClass = String(formData.get("weightClass") ?? "").trim() || null;
+  const clubName = String(formData.get("clubText") ?? "").trim();
+
+  if (!displayName) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Fighter name is required." };
+
+  // Guest fighters get a placeholder user + fighter profile ("Not in the app").
+  const placeholderEmail = `guest.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@pugna.local`;
+  const placeholderUser = await prisma.user.create({
+    data: { email: placeholderEmail, passwordHash: "GUEST_NO_LOGIN", name: displayName, hats: [] },
+  });
+
+  let club = clubName ? await prisma.club.findFirst({ where: { name: clubName } }) : null;
+  if (!club && clubName) {
+    club = await prisma.club.create({ data: { name: clubName } });
+  }
+
+  const fighter = await prisma.fighterProfile.create({
+    data: { userId: placeholderUser.id, displayName, weightClass, clubId: club?.id ?? null },
+  });
+
+  await prisma.nomination.create({
+    data: {
+      eventId,
+      clubId: club?.id ?? (await ensureGuestClub()).id,
+      fighterId: fighter.id,
+      weightClass: weightClass ?? "Unassigned",
+      status: "CONFIRMED",
+    },
+  });
+
+  revalidatePath(`/host/events/${eventId}`);
+  return { ok: true };
+}
+
+async function ensureGuestClub() {
+  const existing = await prisma.club.findFirst({ where: { name: "Independent / Guest" } });
+  if (existing) return existing;
+  return prisma.club.create({ data: { name: "Independent / Guest" } });
+}
+
+export async function createBout(formData: FormData): Promise<ActionResult> {
+  const actor = await getActor();
+  const eventId = String(formData.get("eventId") ?? "");
+  const gate = can(actor, "event.edit", { eventId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const fighterAId = String(formData.get("fighterAId") ?? "") || null;
+  const fighterBId = String(formData.get("fighterBId") ?? "") || null;
+  const weightClass = String(formData.get("weightClass") ?? "").trim();
+
+  if (!weightClass) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Weight class is required." };
+
+  const count = await prisma.bout.count({ where: { eventId } });
+  const status = fighterAId && fighterBId ? "CONFIRMED" : "TBD";
+
+  await prisma.bout.create({
+    data: { eventId, number: count + 1, weightClass, fighterAId, fighterBId, status },
+  });
+
+  revalidatePath(`/host/events/${eventId}`);
+  return { ok: true };
+}
+
+export async function setBoutSchedule(boutId: string, eventId: string, formData: FormData): Promise<ActionResult> {
+  const actor = await getActor();
+  const gate = can(actor, "event.edit", { eventId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const timeStr = String(formData.get("scheduledTime") ?? "");
+  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Bout not found." };
+
+  const nextStatus = bout.status === "TBD" ? "TBD" : bout.status === "DRAFT" ? "CONFIRMED" : bout.status;
+
+  await prisma.bout.update({
+    where: { id: boutId },
+    data: { scheduledTime: timeStr ? new Date(timeStr) : null, status: nextStatus },
+  });
+
+  revalidatePath(`/host/events/${eventId}`);
+  return { ok: true };
+}
+
+export async function markBoutReady(boutId: string, eventId: string): Promise<ActionResult> {
+  const actor = await getActor();
+  const gate = can(actor, "event.edit", { eventId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Bout not found." };
+  if (bout.status !== "CONFIRMED") return { ok: false, code: "CONFLICT", reason: "Bout must be confirmed first." };
+
+  await prisma.bout.update({ where: { id: boutId }, data: { status: "READY" } });
+  revalidatePath(`/host/events/${eventId}`);
+  return { ok: true };
+}
+
+export async function publishEvent(eventId: string): Promise<ActionResult> {
+  const actor = await getActor();
+  const gate = can(actor, "event.publish", { eventId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const event = await prisma.event.findUnique({ where: { id: eventId }, include: { bouts: true } });
+  if (!event) return { ok: false, code: "NOT_FOUND", reason: "Event not found." };
+
+  if (!event.venue && !event.city) {
+    return { ok: false, code: "VALIDATION_BLOCKED", reason: "Add a venue or city before publishing." };
+  }
+  if (event.bouts.length === 0) {
+    return { ok: false, code: "VALIDATION_BLOCKED", reason: "Add at least one bout before publishing." };
+  }
+  const emptyBout = event.bouts.find((b) => !b.fighterAId && !b.fighterBId);
+  if (emptyBout) {
+    return { ok: false, code: "VALIDATION_BLOCKED", reason: `Bout ${emptyBout.number} has no fighters.` };
+  }
+
+  try {
+    if (event.status === "DRAFT") transitionEvent("DRAFT", "READY");
+    const nextStatus = transitionEvent(event.status === "DRAFT" ? "READY" : event.status, "PUBLISHED");
+
+    const slug = event.slug ?? slugify(event.name, event.date);
+    const code = event.code ?? generateEventCode();
+
+    // Bring every non-terminal bout to READY so the projection has a valid NOW candidate.
+    await prisma.$transaction([
+      ...event.bouts
+        .filter((b) => b.status === "CONFIRMED")
+        .map((b) => prisma.bout.update({ where: { id: b.id }, data: { status: "READY" } })),
+      prisma.event.update({ where: { id: eventId }, data: { status: nextStatus, slug, code } }),
+    ]);
+  } catch (error) {
+    if (error instanceof IllegalTransitionError) {
+      return { ok: false, code: "CONFLICT", reason: error.message };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/host/events/${eventId}`);
+  revalidatePath("/events");
+  redirect(`/host/events/${eventId}`);
+}
+
+export async function cancelEvent(eventId: string, formData: FormData): Promise<ActionResult> {
+  const actor = await getActor();
+  const gate = can(actor, "event.cancel", { eventId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const reason = String(formData.get("reason") ?? "").trim() || "Cancelled by organizer";
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) return { ok: false, code: "NOT_FOUND", reason: "Event not found." };
+
+  try {
+    transitionEvent(event.status, "CANCELLED");
+  } catch (error) {
+    if (error instanceof IllegalTransitionError) return { ok: false, code: "CONFLICT", reason: error.message };
+    throw error;
+  }
+
+  await prisma.event.update({ where: { id: eventId }, data: { status: "CANCELLED", cancelReason: reason } });
+  revalidatePath(`/host/events/${eventId}`);
+  revalidatePath("/events");
+  return { ok: true };
+}

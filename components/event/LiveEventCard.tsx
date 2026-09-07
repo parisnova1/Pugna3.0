@@ -1,0 +1,215 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import type { BoutStatus, EventStatus } from "@prisma/client";
+import { formatUpdatedAt } from "@/lib/format";
+
+export type BoutView = {
+  id: string;
+  number: number;
+  weightClass: string;
+  status: BoutStatus;
+  delayMinutes: number | null;
+  fighterAName: string | null;
+  fighterBName: string | null;
+};
+
+type ProjectionResponse = {
+  status: EventStatus;
+  nowLabel: "LIVE" | "DELAYED" | "UP_NEXT" | "INTERMISSION" | null;
+  now: { id: string; number: number; status: BoutStatus; delayMinutes: number | null } | null;
+  next: { id: string; number: number; status: BoutStatus } | null;
+  bouts: { id: string; number: number; status: BoutStatus }[];
+  updatedAt: string;
+};
+
+const POLL_MS = 15000;
+const LIVE_STATUSES: EventStatus[] = ["PUBLISHED", "LIVE", "INTERMISSION"];
+
+function statusLabel(bout: BoutView): string {
+  switch (bout.status) {
+    case "FINAL":
+      return "Final";
+    case "SCRATCHED":
+      return "Scratched";
+    case "NO_SHOW":
+      return "No-show";
+    case "IN_PROGRESS":
+      return "Live";
+    case "DELAYED":
+      return bout.delayMinutes ? `Delayed +${bout.delayMinutes}` : "Delayed";
+    case "READY":
+    case "CONFIRMED":
+      return "Scheduled";
+    case "TBD":
+      return "TBD opponent";
+    default:
+      return "Draft";
+  }
+}
+
+export function LiveEventCard({
+  slug,
+  initialStatus,
+  initialBouts,
+  initialNowLabel,
+  initialNowId,
+  initialNextId,
+}: {
+  slug: string;
+  initialStatus: EventStatus;
+  initialBouts: BoutView[];
+  initialNowLabel: ProjectionResponse["nowLabel"];
+  initialNowId: string | null;
+  initialNextId: string | null;
+}) {
+  const [status, setStatus] = useState(initialStatus);
+  const [bouts, setBouts] = useState(initialBouts);
+  const [nowLabel, setNowLabel] = useState(initialNowLabel);
+  const [nowId, setNowId] = useState(initialNowId);
+  const [nextId, setNextId] = useState(initialNextId);
+  const [updatedAt, setUpdatedAt] = useState<Date>(new Date());
+  const [connectionLost, setConnectionLost] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    async function poll() {
+      try {
+        const res = await fetch(`/api/events/${slug}/projection`, { cache: "no-store" });
+        if (!res.ok) throw new Error("bad status");
+        const data: ProjectionResponse = await res.json();
+        setStatus(data.status);
+        setNowLabel(data.nowLabel);
+        setNowId(data.now?.id ?? null);
+        setNextId(data.next?.id ?? null);
+        setBouts((prev) =>
+          prev.map((b) => {
+            const match = data.bouts.find((d) => d.id === b.id);
+            if (!match) return b;
+            const delay = data.now?.id === b.id ? data.now.delayMinutes : null;
+            return { ...b, status: match.status, delayMinutes: delay };
+          }),
+        );
+        setUpdatedAt(new Date(data.updatedAt));
+        setConnectionLost(false);
+      } catch {
+        setConnectionLost(true);
+      }
+    }
+
+    if (!LIVE_STATUSES.includes(status)) return;
+
+    poll();
+    timerRef.current = setInterval(poll, POLL_MS);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, status === "FINISHED" || status === "ARCHIVED" || status === "CANCELLED"]);
+
+  const now = bouts.find((b) => b.id === nowId) ?? null;
+  const next = bouts.find((b) => b.id === nextId) ?? null;
+  const isPolling = LIVE_STATUSES.includes(status);
+
+  return (
+    <div className="space-y-6">
+      {isPolling && (
+        <p className="text-[11px] text-mute tabular">
+          {connectionLost ? (
+            <>Connection lost · Showing last update {formatUpdatedAt(updatedAt)} · Retrying…</>
+          ) : (
+            <>Updated {formatUpdatedAt(updatedAt)}</>
+          )}
+        </p>
+      )}
+
+      {nowLabel === "INTERMISSION" ? (
+        <div className="rounded-card bg-panel border border-white/10 p-5">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Now</p>
+          <p className="mt-2 text-lg font-semibold">Intermission</p>
+          <p className="text-sm text-mute mt-1">Resuming shortly.</p>
+        </div>
+      ) : now ? (
+        <BoutHero bout={now} slug={slug} label={nowLabel} />
+      ) : (
+        <div className="rounded-card bg-panel border border-white/10 p-5">
+          <p className="text-sm text-mute">
+            {status === "FINISHED" ? "Event finished." : "No bout in progress."}
+          </p>
+        </div>
+      )}
+
+      {next && (
+        <div>
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Next</p>
+          <Link
+            href={`/e/${slug}/bout/${next.id}`}
+            className="block rounded-card bg-panel border border-white/10 p-4"
+          >
+            <p className="font-medium">
+              {next.fighterAName ?? "TBD"} <span className="text-mute">vs</span> {next.fighterBName ?? "TBD"}
+            </p>
+            <p className="text-xs text-mute mt-1">
+              Bout {next.number} · {statusLabel(next)}
+            </p>
+          </Link>
+        </div>
+      )}
+
+      <div>
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Full card</p>
+        <div className="space-y-2">
+          {bouts.map((bout) => (
+            <Link
+              key={bout.id}
+              href={`/e/${slug}/bout/${bout.id}`}
+              className={[
+                "flex items-center justify-between rounded-card border px-4 py-3",
+                bout.id === nowId ? "border-signal/40 bg-signal/5" : "border-white/10 bg-panel",
+              ].join(" ")}
+            >
+              <div>
+                <p className="text-sm font-medium">
+                  {bout.fighterAName ?? "TBD"} <span className="text-mute">vs</span> {bout.fighterBName ?? "TBD"}
+                </p>
+                <p className="text-xs text-mute mt-0.5">
+                  Bout {bout.number} · {bout.weightClass}
+                </p>
+              </div>
+              <span className="text-xs text-mute shrink-0 ml-2">{statusLabel(bout)}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BoutHero({
+  bout,
+  slug,
+  label,
+}: {
+  bout: BoutView;
+  slug: string;
+  label: ProjectionResponse["nowLabel"];
+}) {
+  const isLive = label === "LIVE";
+  return (
+    <Link href={`/e/${slug}/bout/${bout.id}`} className="block rounded-card bg-panel border border-white/10 p-5">
+      <div className="flex items-center gap-2">
+        {isLive && <span className="live-pulse w-2 h-2 rounded-full bg-signal" />}
+        <p className="text-xs font-semibold uppercase tracking-wide text-signal">
+          {label === "LIVE" ? "Live now" : label === "DELAYED" ? statusLabel(bout) : "Up next"}
+        </p>
+      </div>
+      <p className="mt-3 text-xl font-semibold">
+        {bout.fighterAName ?? "TBD"} <span className="text-mute font-normal">vs</span> {bout.fighterBName ?? "TBD"}
+      </p>
+      <p className="text-sm text-mute mt-1">
+        Bout {bout.number} · {bout.weightClass}
+      </p>
+    </Link>
+  );
+}
