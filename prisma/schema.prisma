@@ -66,6 +66,21 @@ enum ScratchReason {
   OTHER
 }
 
+// blueprint §9 — event-driven only, no social notifications.
+enum NotificationType {
+  NOMINATED
+  NOMINATION_ACCEPTED
+  NOMINATION_DECLINED
+  EVENT_PUBLISHED
+  EVENT_CANCELLED
+  SCHEDULE_CHANGED
+  BOUT_DELAYED
+  BOUT_SCRATCHED
+  BOUT_LIVE
+  BOUT_RESULT
+  EVENT_FINISHED
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -90,6 +105,7 @@ model User {
 
   createdEvents    Event[]        @relation("EventCreatedBy")
   follows          Follow[]
+  notifications    Notification[]
 }
 
 model Club {
@@ -248,4 +264,18 @@ model Follow {
   event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  message   String
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
 }

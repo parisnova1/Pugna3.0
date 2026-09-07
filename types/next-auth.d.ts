@@ -20,6 +20,5 @@ declare module "next-auth/jwt" {
     activeHat?: Hat | null;
     adminClubIds?: string[];
     hostEventIds?: string[];
-    refresh?: boolean;
   }
 }

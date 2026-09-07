@@ -9,6 +9,12 @@ import { assertStartAllowed, ProjectionConflictError } from "@/lib/projection";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/hat";
 import type { ScratchReason } from "@prisma/client";
+import { notifyMany } from "@/lib/actions/notify";
+import { getFollowerUserIds } from "@/lib/actions/event";
+
+function boutFighterUserIds(bout: { fighterA: { userId: string } | null; fighterB: { userId: string } | null }): string[] {
+  return [bout.fighterA?.userId, bout.fighterB?.userId].filter((id): id is string => Boolean(id));
+}
 
 async function gateLive(eventId: string): Promise<ActionResult | null> {
   const actor = await getActor();
@@ -21,7 +27,7 @@ export async function startBout(boutId: string, eventId: string): Promise<Action
   if (denied) return denied;
 
   const event = await prisma.event.findUnique({ where: { id: eventId } });
-  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true } });
   if (!event || !bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
 
   try {
@@ -41,6 +47,8 @@ export async function startBout(boutId: string, eventId: string): Promise<Action
     throw error;
   }
 
+  await notifyMany(boutFighterUserIds(bout), "BOUT_LIVE", `Your bout at ${event.name} is starting now.`, `/e/${event.slug ?? ""}`);
+
   revalidateLive(eventId);
   return { ok: true };
 }
@@ -49,7 +57,7 @@ export async function finishBout(boutId: string, eventId: string, formData: Form
   const denied = await gateLive(eventId);
   if (denied) return denied;
 
-  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true, event: true } });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
 
   const winnerId = String(formData.get("winnerId") ?? "") || null;
@@ -76,6 +84,8 @@ export async function finishBout(boutId: string, eventId: string, formData: Form
     throw error;
   }
 
+  await notifyMany(boutFighterUserIds(bout), "BOUT_RESULT", `Result posted for your bout at ${bout.event.name}: ${method}.`, `/e/${bout.event.slug ?? ""}`);
+
   revalidateLive(eventId);
   return { ok: true };
 }
@@ -84,7 +94,7 @@ export async function delayBout(boutId: string, eventId: string, formData: FormD
   const denied = await gateLive(eventId);
   if (denied) return denied;
 
-  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true, event: true } });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
 
   const minutes = Number(formData.get("minutes") ?? 5);
@@ -98,6 +108,14 @@ export async function delayBout(boutId: string, eventId: string, formData: FormD
     throw error;
   }
 
+  const followerIds = await getFollowerUserIds(eventId);
+  await notifyMany(
+    [...boutFighterUserIds(bout), ...followerIds],
+    "BOUT_DELAYED",
+    `Bout ${bout.number} at ${bout.event.name} is delayed.`,
+    `/e/${bout.event.slug ?? ""}`,
+  );
+
   revalidateLive(eventId);
   return { ok: true };
 }
@@ -106,7 +124,7 @@ export async function scratchBout(boutId: string, eventId: string, formData: For
   const denied = await gateLive(eventId);
   if (denied) return denied;
 
-  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true, event: true } });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
 
   const reason = String(formData.get("reason") ?? "OTHER") as ScratchReason;
@@ -118,6 +136,8 @@ export async function scratchBout(boutId: string, eventId: string, formData: For
     if (error instanceof IllegalTransitionError) return { ok: false, code: "CONFLICT", reason: error.message };
     throw error;
   }
+
+  await notifyMany(boutFighterUserIds(bout), "BOUT_SCRATCHED", `Your bout at ${bout.event.name} was scratched.`, `/e/${bout.event.slug ?? ""}`);
 
   revalidateLive(eventId);
   return { ok: true };
@@ -197,6 +217,9 @@ export async function finishEvent(eventId: string): Promise<ActionResult> {
     if (error instanceof IllegalTransitionError) return { ok: false, code: "CONFLICT", reason: error.message };
     throw error;
   }
+
+  const followerIds = await getFollowerUserIds(eventId);
+  await notifyMany(followerIds, "EVENT_FINISHED", `${event.name} has finished.`, event.slug ? `/e/${event.slug}` : undefined);
 
   revalidateLive(eventId);
   revalidatePath("/events");

@@ -3,15 +3,21 @@ import Link from "next/link";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { formatCountdown } from "@/lib/format";
+import { BellLink } from "@/components/nav/BellLink";
 
 export default async function YouHomePage() {
   const actor = await getActor();
   if (!actor) redirect("/account?returnTo=/you");
 
+  const unreadCount = await prisma.notification.count({ where: { userId: actor.userId, read: false } });
+
   const fighter = await prisma.fighterProfile.findUnique({ where: { userId: actor.userId } });
   if (!fighter) {
     return (
       <div className="pt-10 text-center space-y-3">
+        <div className="flex justify-end">
+          <BellLink unreadCount={unreadCount} />
+        </div>
         <p className="text-mute text-sm">No fighter profile yet.</p>
         <Link href="/account" className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
           Set up
@@ -35,7 +41,10 @@ export default async function YouHomePage() {
 
   return (
     <div className="space-y-6 pt-2">
-      <h1 className="text-2xl font-semibold">{fighter.displayName}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">{fighter.displayName}</h1>
+        <BellLink unreadCount={unreadCount} />
+      </div>
 
       <div className="rounded-card bg-panel border border-white/10 p-5">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Next bout</p>

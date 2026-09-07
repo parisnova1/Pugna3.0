@@ -4,6 +4,7 @@ import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { createClub, claimClub } from "@/lib/actions/club";
 import { ActionForm } from "@/components/host/ActionForm";
+import { BellLink } from "@/components/nav/BellLink";
 
 const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
 
@@ -27,11 +28,16 @@ export default async function ClubHomePage({
     : null;
 
   if (myClub) {
+    const unreadCount = await prisma.notification.count({ where: { userId: actor.userId, read: false } });
+
     return (
       <div className="space-y-6 pt-2">
-        <div>
-          <h1 className="text-2xl font-semibold">{myClub.name}</h1>
-          <p className="text-mute text-sm mt-1">{myClub.city ?? "—"} · {myClub._count.roster} fighters</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{myClub.name}</h1>
+            <p className="text-mute text-sm mt-1">{myClub.city ?? "—"} · {myClub._count.roster} fighters</p>
+          </div>
+          <BellLink unreadCount={unreadCount} />
         </div>
 
         {myClub.requests.length > 0 && (

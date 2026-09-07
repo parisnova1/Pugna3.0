@@ -8,6 +8,7 @@ import { slugify, generateEventCode } from "@/lib/slug";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/lib/actions/hat";
+import { notifyMany } from "@/lib/actions/notify";
 
 export async function createEvent(): Promise<{ ok: true; eventId: string } | { ok: false; code: string; reason: string }> {
   const actor = await getActor();
@@ -195,11 +196,12 @@ export async function publishEvent(eventId: string): Promise<ActionResult> {
     return { ok: false, code: "VALIDATION_BLOCKED", reason: `Bout ${emptyBout.number} has no fighters.` };
   }
 
+  const slug = event.slug ?? slugify(event.name, event.date);
+
   try {
     if (event.status === "DRAFT") transitionEvent("DRAFT", "READY");
     const nextStatus = transitionEvent(event.status === "DRAFT" ? "READY" : event.status, "PUBLISHED");
 
-    const slug = event.slug ?? slugify(event.name, event.date);
     const code = event.code ?? generateEventCode();
 
     // Bring every non-terminal bout to READY so the projection has a valid NOW candidate.
@@ -216,9 +218,26 @@ export async function publishEvent(eventId: string): Promise<ActionResult> {
     throw error;
   }
 
+  const fighterUserIds = await getBoutFighterUserIds(eventId);
+  await notifyMany(fighterUserIds, "EVENT_PUBLISHED", `${event.name} is published — check your schedule.`, `/e/${slug}`);
+
   revalidatePath(`/host/events/${eventId}`);
   revalidatePath("/events");
   redirect(`/host/events/${eventId}`);
+}
+
+export async function getBoutFighterUserIds(eventId: string): Promise<string[]> {
+  const bouts = await prisma.bout.findMany({
+    where: { eventId },
+    include: { fighterA: true, fighterB: true },
+  });
+  const ids = bouts.flatMap((b) => [b.fighterA?.userId, b.fighterB?.userId]).filter((id): id is string => Boolean(id));
+  return [...new Set(ids)];
+}
+
+export async function getFollowerUserIds(eventId: string): Promise<string[]> {
+  const follows = await prisma.follow.findMany({ where: { eventId }, select: { userId: true } });
+  return follows.map((f) => f.userId);
 }
 
 export async function cancelEvent(eventId: string, formData: FormData): Promise<ActionResult> {
@@ -238,6 +257,18 @@ export async function cancelEvent(eventId: string, formData: FormData): Promise<
   }
 
   await prisma.event.update({ where: { id: eventId }, data: { status: "CANCELLED", cancelReason: reason } });
+
+  const [fighterUserIds, followerUserIds] = await Promise.all([
+    getBoutFighterUserIds(eventId),
+    getFollowerUserIds(eventId),
+  ]);
+  await notifyMany(
+    [...fighterUserIds, ...followerUserIds],
+    "EVENT_CANCELLED",
+    `${event.name} was cancelled: ${reason}`,
+    event.slug ? `/e/${event.slug}` : undefined,
+  );
+
   revalidatePath(`/host/events/${eventId}`);
   revalidatePath("/events");
   return { ok: true };

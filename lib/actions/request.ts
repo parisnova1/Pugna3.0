@@ -6,6 +6,7 @@ import { can } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/hat";
 import type { Prisma } from "@prisma/client";
+import { notify, notifyMany } from "@/lib/actions/notify";
 
 export type Requirement = { weightClass: string; need: number };
 
@@ -51,9 +52,17 @@ export async function nominateFighter(formData: FormData): Promise<ActionResult>
     return { ok: false, code: "VALIDATION_BLOCKED", reason: "Fighter, event, and weight class are required." };
   }
 
-  await prisma.nomination.create({
-    data: { eventId, clubId, fighterId, weightClass, status: "PENDING" },
-  });
+  const [nomination, event] = await Promise.all([
+    prisma.nomination.create({ data: { eventId, clubId, fighterId, weightClass, status: "PENDING" }, include: { fighter: true } }),
+    prisma.event.findUnique({ where: { id: eventId } }),
+  ]);
+
+  await notify(
+    nomination.fighter.userId,
+    "NOMINATED",
+    `You've been nominated for ${event?.name ?? "an event"} at ${weightClass}.`,
+    "/you/noms",
+  );
 
   revalidatePath(`/host/events/${eventId}/entries`);
   revalidatePath("/club/events");
@@ -66,18 +75,34 @@ export async function respondToNomination(nominationId: string, accept: boolean)
   const gate = can(actor, "nomination.respond");
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
 
-  const nomination = await prisma.nomination.findUnique({ where: { id: nominationId }, include: { fighter: true } });
+  const nomination = await prisma.nomination.findUnique({
+    where: { id: nominationId },
+    include: { fighter: true, event: true, club: { include: { admins: true } } },
+  });
   if (!nomination) return { ok: false, code: "NOT_FOUND", reason: "Nomination not found." };
   if (nomination.fighter.userId !== actor!.userId) {
     return { ok: false, code: "FORBIDDEN", reason: "This nomination isn't yours." };
   }
 
+  const clubAdminIds = nomination.club.admins.map((a) => a.userId);
+
   if (accept) {
     await prisma.nomination.update({ where: { id: nominationId }, data: { status: "ACCEPTED" } });
+    await notifyMany(
+      clubAdminIds,
+      "NOMINATION_ACCEPTED",
+      `${nomination.fighter.displayName} accepted the nomination for ${nomination.event.name}.`,
+      "/club/events",
+    );
   } else {
-    await prisma.nomination.update({ where: { id: nominationId }, data: { status: "DECLINED" } });
     // Replacement banner: flip to REPLACEMENT so the club sees it needs a new fighter.
     await prisma.nomination.update({ where: { id: nominationId }, data: { status: "REPLACEMENT" } });
+    await notifyMany(
+      clubAdminIds,
+      "NOMINATION_DECLINED",
+      `${nomination.fighter.displayName} declined the nomination for ${nomination.event.name} — a replacement is needed.`,
+      "/club/events",
+    );
   }
 
   revalidatePath("/you/noms");

@@ -31,33 +31,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    // Runs on every server-side session read (not just sign-in), so this
+    // always re-derives hats/activeHat/adminClubIds/hostEventIds from the DB
+    // rather than freezing them at login. Without this, actions taken mid-
+    // session (switching hats, creating an event, claiming a club) would
+    // never take effect for RBAC checks until the user signed out and back in.
     async jwt({ token, user }) {
-      if (user?.id) {
-        token.userId = user.id;
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          include: { clubAdminships: true, hostEvents: true },
-        });
-        if (dbUser) {
-          token.hats = dbUser.hats;
-          token.activeHat = dbUser.activeHat;
-          token.adminClubIds = dbUser.clubAdminships.map((a) => a.clubId);
-          token.hostEventIds = dbUser.hostEvents.map((h) => h.eventId);
-        }
-      }
-      // Allow the hat-switch server action to refresh the token on demand.
-      if (token.userId && token.refresh) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.userId as string },
-          include: { clubAdminships: true, hostEvents: true },
-        });
-        if (dbUser) {
-          token.hats = dbUser.hats;
-          token.activeHat = dbUser.activeHat;
-          token.adminClubIds = dbUser.clubAdminships.map((a) => a.clubId);
-          token.hostEventIds = dbUser.hostEvents.map((h) => h.eventId);
-        }
-        token.refresh = false;
+      const userId = user?.id ?? (token.userId as string | undefined);
+      if (!userId) return token;
+
+      token.userId = userId;
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { clubAdminships: true, hostEvents: true },
+      });
+      if (dbUser) {
+        token.hats = dbUser.hats;
+        token.activeHat = dbUser.activeHat;
+        token.adminClubIds = dbUser.clubAdminships.map((a) => a.clubId);
+        token.hostEventIds = dbUser.hostEvents.map((h) => h.eventId);
       }
       return token;
     },
