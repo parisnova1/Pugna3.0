@@ -65,7 +65,7 @@ export default async function ClubEventsPage() {
                     </span>
                   ))}
                 </div>
-                {roster.length > 0 && (
+                {roster.length > 0 ? (
                   <ActionForm action={nominateFighter} submitLabel="Nominate" className="space-y-2">
                     <input type="hidden" name="eventId" value={req.eventId} />
                     <input type="hidden" name="clubId" value={clubId} />
@@ -79,6 +79,8 @@ export default async function ClubEventsPage() {
                     </select>
                     <input name="weightClass" placeholder="Weight class" required className={inputClass} />
                   </ActionForm>
+                ) : (
+                  <p className="text-xs text-mute">Add fighters to your roster first.</p>
                 )}
               </div>
             );

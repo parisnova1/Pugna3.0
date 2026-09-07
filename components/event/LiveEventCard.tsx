@@ -27,6 +27,19 @@ type ProjectionResponse = {
 const POLL_MS = 15000;
 const LIVE_STATUSES: EventStatus[] = ["PUBLISHED", "LIVE", "INTERMISSION"];
 
+function statusPillFor(
+  status: EventStatus,
+  nowLabel: ProjectionResponse["nowLabel"],
+): { text: string; live: boolean } | null {
+  if (status === "CANCELLED") return { text: "Cancelled", live: false };
+  if (status === "FINISHED" || status === "ARCHIVED") return { text: "Finished", live: false };
+  if (nowLabel === "LIVE") return { text: "Live", live: true };
+  if (nowLabel === "INTERMISSION") return { text: "Intermission", live: false };
+  if (status === "PUBLISHED") return { text: "Upcoming", live: false };
+  if (status === "LIVE") return { text: "In progress", live: false };
+  return null;
+}
+
 function statusLabel(bout: BoutView): string {
   switch (bout.status) {
     case "FINAL":
@@ -51,6 +64,11 @@ function statusLabel(bout: BoutView): string {
 
 export function LiveEventCard({
   slug,
+  name,
+  dateLabel,
+  venueLabel,
+  streamUrl,
+  cancelReason,
   initialStatus,
   initialBouts,
   initialNowLabel,
@@ -58,6 +76,11 @@ export function LiveEventCard({
   initialNextId,
 }: {
   slug: string;
+  name: string;
+  dateLabel: string;
+  venueLabel: string;
+  streamUrl: string | null;
+  cancelReason: string | null;
   initialStatus: EventStatus;
   initialBouts: BoutView[];
   initialNowLabel: ProjectionResponse["nowLabel"];
@@ -111,9 +134,41 @@ export function LiveEventCard({
   const now = bouts.find((b) => b.id === nowId) ?? null;
   const next = bouts.find((b) => b.id === nextId) ?? null;
   const isPolling = LIVE_STATUSES.includes(status);
+  const pill = statusPillFor(status, nowLabel);
 
   return (
     <div className="space-y-6">
+      <div>
+        {pill && (
+          <span
+            className={[
+              "inline-flex items-center gap-1 text-[11px] font-semibold tracking-wide rounded-pill px-2 py-0.5 mb-2",
+              pill.live ? "bg-signal text-onsignal" : "text-mute border border-white/10",
+            ].join(" ")}
+          >
+            {pill.live && <span className="live-pulse w-1.5 h-1.5 rounded-full bg-onsignal" />}
+            {pill.text}
+          </span>
+        )}
+        <h1 className="text-2xl font-semibold">{name}</h1>
+        <p className="text-mute text-sm mt-1">
+          {dateLabel} · {venueLabel}
+        </p>
+        {streamUrl && status !== "CANCELLED" && (
+          <a
+            href={streamUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-signal mt-2 font-medium"
+          >
+            Watch stream ↗
+          </a>
+        )}
+        {status === "CANCELLED" && cancelReason && (
+          <p className="text-sm text-signal mt-2">Cancelled: {cancelReason}</p>
+        )}
+      </div>
+
       {isPolling && (
         <p className="text-[11px] text-mute tabular">
           {connectionLost ? (

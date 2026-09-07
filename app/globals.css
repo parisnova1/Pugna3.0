@@ -23,6 +23,11 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+button.bg-signal,
+a.bg-signal {
+  box-shadow: 0 4px 20px -4px rgba(220, 58, 44, 0.45);
+}
+
 @keyframes live-pulse {
   0%,
   100% {

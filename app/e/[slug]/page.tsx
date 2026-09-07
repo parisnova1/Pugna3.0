@@ -49,18 +49,8 @@ export default async function EventCardPage({ params }: { params: Promise<{ slug
     fighterBName: b.fighterB?.displayName ?? null,
   }));
 
-  const statusPill =
-    event.status === "CANCELLED"
-      ? "Cancelled"
-      : event.status === "FINISHED"
-        ? "Finished"
-        : projection.nowLabel === "LIVE"
-          ? "Live"
-          : event.status === "PUBLISHED"
-            ? "Upcoming"
-            : projection.nowLabel === "INTERMISSION"
-              ? "Intermission"
-              : null;
+  const dateLabel = `${formatEventDate(event.date)}${event.startTime ? ` · ${formatTime(event.startTime)}` : ""}`;
+  const venueLabel = event.venue ?? event.city ?? "TBD";
 
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10">
@@ -78,39 +68,13 @@ export default async function EventCardPage({ params }: { params: Promise<{ slug
         </div>
       </div>
 
-      <div className="mb-6">
-        {statusPill && (
-          <span
-            className={[
-              "inline-block text-[11px] font-semibold tracking-wide rounded-pill px-2 py-0.5 mb-2",
-              statusPill === "Live" ? "bg-signal text-onsignal" : "text-mute border border-white/10",
-            ].join(" ")}
-          >
-            {statusPill}
-          </span>
-        )}
-        <h1 className="text-2xl font-semibold">{event.name}</h1>
-        <p className="text-mute text-sm mt-1">
-          {formatEventDate(event.date)}
-          {event.startTime ? ` · ${formatTime(event.startTime)}` : ""} · {event.venue ?? event.city ?? "TBD"}
-        </p>
-        {event.streamUrl && event.status !== "CANCELLED" && (
-          <a
-            href={event.streamUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-signal mt-2 font-medium"
-          >
-            Watch stream ↗
-          </a>
-        )}
-        {event.status === "CANCELLED" && event.cancelReason && (
-          <p className="text-sm text-signal mt-2">Cancelled: {event.cancelReason}</p>
-        )}
-      </div>
-
       <LiveEventCard
         slug={slug}
+        name={event.name}
+        dateLabel={dateLabel}
+        venueLabel={venueLabel}
+        streamUrl={event.streamUrl}
+        cancelReason={event.cancelReason}
         initialStatus={event.status}
         initialBouts={bouts}
         initialNowLabel={projection.nowLabel}

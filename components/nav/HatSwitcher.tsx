@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Hat } from "@prisma/client";
 import { switchHat } from "@/lib/actions/hat";
@@ -14,6 +14,7 @@ const ALL_HATS: { hat: Hat; label: string }[] = [
 
 export function HatSwitcher({ hats, activeHat }: { hats: Hat[]; activeHat: Hat | null }) {
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   return (
@@ -29,8 +30,9 @@ export function HatSwitcher({ hats, activeHat }: { hats: Hat[]; activeHat: Hat |
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  if (granted) await switchHat(hat);
-                  else await grantHat(hat);
+                  setError(null);
+                  const result = granted ? await switchHat(hat) : await grantHat(hat);
+                  if (!result.ok) setError(result.reason);
                   router.refresh();
                 })
               }
@@ -45,6 +47,7 @@ export function HatSwitcher({ hats, activeHat }: { hats: Hat[]; activeHat: Hat |
           );
         })}
       </div>
+      {error && <p className="text-signal text-xs">{error}</p>}
     </div>
   );
 }

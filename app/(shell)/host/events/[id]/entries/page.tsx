@@ -55,21 +55,25 @@ export default async function EntriesStepPage({ params }: { params: Promise<{ id
             ))}
           </div>
         )}
-        <ActionForm action={requestClub} submitLabel="Send request" className="space-y-3">
-          <input type="hidden" name="eventId" value={event.id} />
-          <select name="clubId" required className={inputClass}>
-            <option value="">Select club</option>
-            {clubs.map((club) => (
-              <option key={club.id} value={club.id}>
-                {club.name}
-              </option>
-            ))}
-          </select>
-          <div className="grid grid-cols-2 gap-3">
-            <input name="weightClass" placeholder="Weight class" required className={inputClass} />
-            <input name="need" type="number" min={1} defaultValue={1} className={inputClass} />
-          </div>
-        </ActionForm>
+        {clubs.length === 0 ? (
+          <p className="text-sm text-mute">No clubs on Pugna yet — add a guest fighter below instead.</p>
+        ) : (
+          <ActionForm action={requestClub} submitLabel="Send request" className="space-y-3">
+            <input type="hidden" name="eventId" value={event.id} />
+            <select name="clubId" required className={inputClass}>
+              <option value="">Select club</option>
+              {clubs.map((club) => (
+                <option key={club.id} value={club.id}>
+                  {club.name}
+                </option>
+              ))}
+            </select>
+            <div className="grid grid-cols-2 gap-3">
+              <input name="weightClass" placeholder="Weight class" required className={inputClass} />
+              <input name="need" type="number" min={1} defaultValue={1} className={inputClass} />
+            </div>
+          </ActionForm>
+        )}
       </section>
 
       <section className="space-y-3">
