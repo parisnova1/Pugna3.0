@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getActor } from "@/lib/actor";
 import { EventPreviewCard } from "@/components/event/EventPreviewCard";
 
 export default async function DiscoverPage() {
-  const [live, upcoming, clubs] = await Promise.all([
+  const actor = await getActor();
+
+  const [live, upcoming, clubs, following] = await Promise.all([
     prisma.event.findMany({
       where: { status: { in: ["LIVE", "INTERMISSION"] } },
       orderBy: { date: "asc" },
@@ -19,6 +22,16 @@ export default async function DiscoverPage() {
       take: 4,
       include: { _count: { select: { roster: true } } },
     }),
+    actor
+      ? prisma.event.findMany({
+          where: {
+            follows: { some: { userId: actor.userId } },
+            status: { in: ["PUBLISHED", "LIVE", "INTERMISSION"] },
+          },
+          orderBy: { date: "asc" },
+          take: 5,
+        })
+      : Promise.resolve([]),
   ]);
 
   return (
@@ -39,6 +52,17 @@ export default async function DiscoverPage() {
           </Link>
         </div>
       </section>
+
+      {following.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Following</h2>
+          <div className="space-y-3">
+            {following.map((event) => (
+              <EventPreviewCard key={event.id} event={event} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {live.length > 0 && (
         <section className="space-y-3">

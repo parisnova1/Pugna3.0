@@ -13,6 +13,7 @@ export async function getEventCardData(slug: string) {
         },
         orderBy: { number: "asc" },
       },
+      _count: { select: { follows: true } },
     },
   });
 

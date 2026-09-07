@@ -23,6 +23,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       ? { id: data.projection.next.id, number: data.projection.next.number, status: data.projection.next.status }
       : null,
     bouts: data.event.bouts.map((b) => ({ id: b.id, number: b.number, status: b.status })),
+    followerCount: data.event._count.follows,
     updatedAt: new Date().toISOString(),
   });
 }

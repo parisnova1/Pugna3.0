@@ -21,8 +21,11 @@ type ProjectionResponse = {
   now: { id: string; number: number; status: BoutStatus; delayMinutes: number | null } | null;
   next: { id: string; number: number; status: BoutStatus } | null;
   bouts: { id: string; number: number; status: BoutStatus }[];
+  followerCount: number;
   updatedAt: string;
 };
+
+const watchingLabel = (count: number) => `${new Intl.NumberFormat("en-US").format(count)} watching`;
 
 const POLL_MS = 15000;
 const LIVE_STATUSES: EventStatus[] = ["PUBLISHED", "LIVE", "INTERMISSION"];
@@ -74,6 +77,7 @@ export function LiveEventCard({
   initialNowLabel,
   initialNowId,
   initialNextId,
+  initialFollowerCount,
 }: {
   slug: string;
   name: string;
@@ -86,12 +90,14 @@ export function LiveEventCard({
   initialNowLabel: ProjectionResponse["nowLabel"];
   initialNowId: string | null;
   initialNextId: string | null;
+  initialFollowerCount: number;
 }) {
   const [status, setStatus] = useState(initialStatus);
   const [bouts, setBouts] = useState(initialBouts);
   const [nowLabel, setNowLabel] = useState(initialNowLabel);
   const [nowId, setNowId] = useState(initialNowId);
   const [nextId, setNextId] = useState(initialNextId);
+  const [followerCount, setFollowerCount] = useState(initialFollowerCount);
   const [updatedAt, setUpdatedAt] = useState<Date>(new Date());
   const [connectionLost, setConnectionLost] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -106,6 +112,7 @@ export function LiveEventCard({
         setNowLabel(data.nowLabel);
         setNowId(data.now?.id ?? null);
         setNextId(data.next?.id ?? null);
+        setFollowerCount(data.followerCount);
         setBouts((prev) =>
           prev.map((b) => {
             const match = data.bouts.find((d) => d.id === b.id);
@@ -140,15 +147,18 @@ export function LiveEventCard({
     <div className="space-y-6">
       <div>
         {pill && (
-          <span
-            className={[
-              "inline-flex items-center gap-1 text-[11px] font-semibold tracking-wide rounded-pill px-2 py-0.5 mb-2",
-              pill.live ? "bg-signal text-onsignal" : "text-mute border border-white/10",
-            ].join(" ")}
-          >
-            {pill.live && <span className="live-pulse w-1.5 h-1.5 rounded-full bg-onsignal" />}
-            {pill.text}
-          </span>
+          <div className="flex items-center gap-2 mb-2">
+            <span
+              className={[
+                "inline-flex items-center gap-1 text-[11px] font-semibold tracking-wide rounded-pill px-2 py-0.5",
+                pill.live ? "bg-signal text-onsignal" : "text-mute border border-white/10",
+              ].join(" ")}
+            >
+              {pill.live && <span className="live-pulse w-1.5 h-1.5 rounded-full bg-onsignal" />}
+              {pill.text}
+            </span>
+            {followerCount > 0 && <span className="text-[11px] text-mute tabular">{watchingLabel(followerCount)}</span>}
+          </div>
         )}
         <h1 className="text-2xl font-semibold">{name}</h1>
         <p className="text-mute text-sm mt-1">

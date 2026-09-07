@@ -80,6 +80,7 @@ export default async function EventCardPage({ params }: { params: Promise<{ slug
         initialNowLabel={projection.nowLabel}
         initialNowId={projection.now?.id ?? null}
         initialNextId={projection.next?.id ?? null}
+        initialFollowerCount={event._count.follows}
       />
     </div>
   );
