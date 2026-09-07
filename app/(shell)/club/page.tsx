@@ -41,9 +41,12 @@ export default async function ClubHomePage({
         </div>
 
         {myClub.requests.length > 0 && (
-          <div className="rounded-card bg-panel border border-signal/30 p-4">
+          <div className="rounded-card bg-panel border border-signal/30 p-4 flex items-center justify-between gap-3">
             <p className="text-sm font-medium">{myClub.requests.length} open request{myClub.requests.length > 1 ? "s" : ""}</p>
-            <Link href="/club/events" className="text-xs text-signal mt-1 inline-block">
+            <Link
+              href="/club/events"
+              className="shrink-0 rounded-pill bg-signal text-onsignal px-3 py-1.5 text-xs font-semibold"
+            >
               Review
             </Link>
           </div>

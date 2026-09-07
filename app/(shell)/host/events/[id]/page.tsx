@@ -36,7 +36,10 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
       )}
 
       {event.slug && (
-        <Link href={`/e/${event.slug}`} className="block text-center text-sm text-mute underline">
+        <Link
+          href={`/e/${event.slug}`}
+          className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-3 text-sm"
+        >
           View public event card
         </Link>
       )}
