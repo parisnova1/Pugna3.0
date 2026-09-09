@@ -10,7 +10,10 @@ export async function requireHostEvent(eventId: string, returnTo: string) {
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { bouts: { include: { fighterA: true, fighterB: true, result: true }, orderBy: { number: "asc" } } },
+    include: {
+      bouts: { include: { fighterA: true, fighterB: true, result: true, ring: true }, orderBy: { number: "asc" } },
+      rings: { orderBy: { number: "asc" } },
+    },
   });
   if (!event) notFound();
 

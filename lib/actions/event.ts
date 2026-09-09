@@ -22,6 +22,7 @@ export async function createEvent(): Promise<{ ok: true; eventId: string } | { o
       createdByUserId: actor!.userId,
       status: "DRAFT",
       hostMembers: { create: [{ userId: actor!.userId }] },
+      rings: { create: [{ number: 1 }] },
     },
   });
 
@@ -48,6 +49,7 @@ export async function createEventFromClub(clubId: string): Promise<ActionResult 
       organizingClubId: clubId,
       status: "DRAFT",
       hostMembers: { create: [{ userId: actor!.userId }] },
+      rings: { create: [{ number: 1 }] },
     },
   });
 
@@ -92,8 +94,40 @@ export async function updateEventStructure(eventId: string, formData: FormData):
   const ringCount = Math.max(1, Number(formData.get("ringCount") ?? 1));
   const dayCount = Math.max(1, Number(formData.get("dayCount") ?? 1));
 
+  const rings = await prisma.ring.findMany({ where: { eventId }, include: { _count: { select: { bouts: true } } } });
+
+  if (ringCount > rings.length) {
+    const highest = rings.reduce((max, r) => Math.max(max, r.number), 0);
+    await prisma.ring.createMany({
+      data: Array.from({ length: ringCount - rings.length }, (_, i) => ({
+        eventId,
+        number: highest + i + 1,
+      })),
+    });
+  } else if (ringCount < rings.length) {
+    const removable = rings.filter((r) => r.number > ringCount);
+    const blocked = removable.some((r) => r._count.bouts > 0);
+    if (blocked) {
+      return { ok: false, code: "CONFLICT", reason: "Can't remove a ring that already has bouts assigned to it." };
+    }
+    await prisma.ring.deleteMany({ where: { id: { in: removable.map((r) => r.id) } } });
+  }
+
   await prisma.event.update({ where: { id: eventId }, data: { sport, ringCount, dayCount } });
   revalidatePath(`/host/events/${eventId}`);
+  revalidatePath(`/host/events/${eventId}/structure`);
+  return { ok: true };
+}
+
+export async function renameRing(ringId: string, eventId: string, formData: FormData): Promise<ActionResult> {
+  const actor = await getActor();
+  const gate = can(actor, "event.edit", { eventId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const name = String(formData.get("name") ?? "").trim() || null;
+  await prisma.ring.update({ where: { id: ringId }, data: { name } });
+
+  revalidatePath(`/host/events/${eventId}/structure`);
   return { ok: true };
 }
 
@@ -155,14 +189,22 @@ export async function createBout(formData: FormData): Promise<ActionResult> {
   const fighterAId = String(formData.get("fighterAId") ?? "") || null;
   const fighterBId = String(formData.get("fighterBId") ?? "") || null;
   const weightClass = String(formData.get("weightClass") ?? "").trim();
+  const day = Math.max(1, Number(formData.get("day") ?? 1));
+  let ringId = String(formData.get("ringId") ?? "") || null;
 
   if (!weightClass) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Weight class is required." };
+
+  if (!ringId) {
+    const firstRing = await prisma.ring.findFirst({ where: { eventId }, orderBy: { number: "asc" } });
+    if (!firstRing) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Event has no rings configured." };
+    ringId = firstRing.id;
+  }
 
   const count = await prisma.bout.count({ where: { eventId } });
   const status = fighterAId && fighterBId ? "CONFIRMED" : "TBD";
 
   await prisma.bout.create({
-    data: { eventId, number: count + 1, weightClass, fighterAId, fighterBId, status },
+    data: { eventId, number: count + 1, weightClass, ringId, day, fighterAId, fighterBId, status },
   });
 
   revalidatePath(`/host/events/${eventId}`);

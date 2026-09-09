@@ -24,7 +24,7 @@ const SCHEDULABLE: BoutStatus[] = ["TBD", "CONFIRMED", "READY", "DELAYED", "IN_P
 export type Projection<T extends ProjectableBout = ProjectableBout> = {
   now: T | null;
   next: T | null;
-  nowLabel: "LIVE" | "DELAYED" | "UP_NEXT" | "INTERMISSION" | null;
+  nowLabel: "LIVE" | "DELAYED" | "UP_NEXT" | "INTERMISSION" | "BREAK" | null;
 };
 
 export function computeProjection<T extends ProjectableBout>(eventStatus: EventStatus, bouts: T[]): Projection<T> {
@@ -64,13 +64,55 @@ export function computeProjection<T extends ProjectableBout>(eventStatus: EventS
   return { now: nowCandidate, next: next ?? null, nowLabel: label };
 }
 
-/** Rejects START while the event is in INTERMISSION (blueprint §6). Throws a modeled 409. */
+export type ProjectableRing = { id: string };
+
+/**
+ * Per-ring projections (Phase 2 — Day/Ring hierarchy). Groups bouts by
+ * `ringId` and computes an independent NOW/NEXT per ring, so one ring's
+ * live state never bleeds into another's. A ring `onBreak` short-circuits
+ * that ring's projection the same way event-wide INTERMISSION does, but
+ * scoped to just that ring.
+ */
+export function computeRingProjections<T extends ProjectableBout & { ringId: string }>(
+  eventStatus: EventStatus,
+  rings: (ProjectableRing & { onBreak: boolean })[],
+  bouts: T[],
+): Map<string, Projection<T>> {
+  const result = new Map<string, Projection<T>>();
+
+  for (const ring of rings) {
+    const ringBouts = bouts.filter((b) => b.ringId === ring.id);
+
+    if (ring.onBreak && eventStatus !== "FINISHED" && eventStatus !== "ARCHIVED" && eventStatus !== "CANCELLED") {
+      const next = ringBouts
+        .filter((b) => b.status !== "DRAFT")
+        .sort((a, b) => a.number - b.number)
+        .find((b) => SCHEDULABLE.includes(b.status) && !TERMINAL.includes(b.status));
+      result.set(ring.id, { now: null, next: next ?? null, nowLabel: "BREAK" });
+      continue;
+    }
+
+    result.set(ring.id, computeProjection(eventStatus, ringBouts));
+  }
+
+  return result;
+}
+
+/** True if any ring is currently showing a LIVE bout. */
+export function isEventLive(ringProjections: Map<string, Projection>): boolean {
+  return Array.from(ringProjections.values()).some((p) => p.nowLabel === "LIVE");
+}
+
+/** Rejects START while the event is in INTERMISSION or the ring is on break (blueprint §6 + Phase 2). Throws a modeled 409. */
 export class ProjectionConflictError extends Error {
   status = 409 as const;
 }
 
-export function assertStartAllowed(eventStatus: EventStatus): void {
+export function assertStartAllowed(eventStatus: EventStatus, ringOnBreak = false): void {
   if (eventStatus === "INTERMISSION") {
     throw new ProjectionConflictError("Cannot start a bout during intermission.");
+  }
+  if (ringOnBreak) {
+    throw new ProjectionConflictError("Cannot start a bout while this ring is on break.");
   }
 }

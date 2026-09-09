@@ -3,9 +3,10 @@ import { getEventCardData } from "@/lib/event-query";
 import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 
-export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const data = await getEventCardData(slug);
+  const ringId = new URL(req.url).searchParams.get("ringId") ?? undefined;
+  const data = await getEventCardData(slug, ringId);
   if (!data) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 
   const actor = await getActor();
@@ -22,7 +23,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
     next: data.projection.next
       ? { id: data.projection.next.id, number: data.projection.next.number, status: data.projection.next.status }
       : null,
-    bouts: data.event.bouts.map((b) => ({ id: b.id, number: b.number, status: b.status })),
+    bouts: data.bouts.map((b) => ({ id: b.id, number: b.number, status: b.status })),
     followerCount: data.event._count.follows,
     updatedAt: new Date().toISOString(),
   });

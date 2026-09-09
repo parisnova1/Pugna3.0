@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { BoutStatus, EventStatus, ScratchReason } from "@prisma/client";
-import { computeProjection } from "@/lib/projection";
+import { computeRingProjections } from "@/lib/projection";
 import {
   startBout,
   finishBout,
@@ -12,6 +12,7 @@ import {
   noShowBout,
   startIntermission,
   endIntermission,
+  setRingBreak,
   finishEvent,
 } from "@/lib/actions/live";
 
@@ -26,6 +27,14 @@ export type ConsoleBout = {
   fighterBId: string | null;
   fighterAName: string | null;
   fighterBName: string | null;
+  ringId: string;
+};
+
+export type ConsoleRing = {
+  id: string;
+  number: number;
+  name: string | null;
+  onBreak: boolean;
 };
 
 type Sheet =
@@ -37,13 +46,37 @@ type Sheet =
 
 const TERMINAL: BoutStatus[] = ["FINAL", "SCRATCHED", "NO_SHOW"];
 
+function ringLabel(ring: ConsoleRing) {
+  return ring.name ?? `Ring ${ring.number}`;
+}
+
+function findRingLabel(rings: ConsoleRing[], ringId: string): string {
+  const ring = rings.find((r) => r.id === ringId);
+  return ring ? ringLabel(ring) : "";
+}
+
+function ringDotClass(label: string | null) {
+  switch (label) {
+    case "LIVE":
+      return "bg-signal";
+    case "DELAYED":
+      return "bg-yellow-500";
+    case "BREAK":
+      return "bg-mute";
+    default:
+      return "bg-white/20";
+  }
+}
+
 export function LiveConsole({
   eventId,
   eventStatus,
+  rings,
   bouts,
 }: {
   eventId: string;
   eventStatus: EventStatus;
+  rings: ConsoleRing[];
   bouts: ConsoleBout[];
 }) {
   const router = useRouter();
@@ -51,13 +84,26 @@ export function LiveConsole({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const projection = computeProjection(eventStatus, bouts);
-  const now = bouts.find((b) => b.id === projection.now?.id) ?? null;
-  const next = bouts.find((b) => b.id === projection.next?.id) ?? null;
+  const ringProjections = useMemo(() => computeRingProjections(eventStatus, rings, bouts), [eventStatus, rings, bouts]);
+
+  const [selectedRingId, setSelectedRingId] = useState<string | null>(null);
+  const activeRingId =
+    selectedRingId ??
+    rings.find((r) => {
+      const label = ringProjections.get(r.id)?.nowLabel;
+      return label === "LIVE" || label === "DELAYED";
+    })?.id ??
+    rings[0]?.id ??
+    null;
+
+  const activeRing = rings.find((r) => r.id === activeRingId) ?? null;
+  const activeProjection = activeRingId ? ringProjections.get(activeRingId) ?? null : null;
+  const ringBouts = bouts.filter((b) => b.ringId === activeRingId);
+  const now = ringBouts.find((b) => b.id === activeProjection?.now?.id) ?? null;
+  const next = ringBouts.find((b) => b.id === activeProjection?.next?.id) ?? null;
+
   const allTerminal = bouts.length > 0 && bouts.every((b) => TERMINAL.includes(b.status));
-  const attention = bouts.filter(
-    (b) => b.status === "DELAYED" || (b.status === "TBD" && !TERMINAL.includes(b.status)),
-  );
+  const attention = bouts.filter((b) => b.status === "DELAYED" || (b.status === "TBD" && !TERMINAL.includes(b.status)));
 
   function run(action: () => Promise<{ ok: boolean; reason?: string }>) {
     setError(null);
@@ -80,10 +126,31 @@ export function LiveConsole({
 
       {error && <p className="text-signal text-sm rounded-card border border-signal/40 bg-signal/5 p-3">{error}</p>}
 
+      {rings.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {rings.map((ring) => {
+            const label = ringProjections.get(ring.id)?.nowLabel ?? null;
+            return (
+              <button
+                key={ring.id}
+                onClick={() => setSelectedRingId(ring.id)}
+                className={[
+                  "flex items-center gap-2 rounded-pill border px-4 py-2 text-sm font-medium whitespace-nowrap",
+                  ring.id === activeRingId ? "border-signal bg-signal/10" : "border-white/15",
+                ].join(" ")}
+              >
+                <span className={`w-2 h-2 rounded-full ${ringDotClass(label)}`} />
+                {ringLabel(ring)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {eventStatus === "INTERMISSION" ? (
         <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Intermission</p>
-          <p className="text-sm text-mute">Public card shows an estimate. Starting a bout is blocked.</p>
+          <p className="text-sm text-mute">Public card shows an estimate. Starting a bout is blocked event-wide.</p>
           <button
             disabled={pending}
             onClick={() => run(() => endIntermission(eventId))}
@@ -92,10 +159,22 @@ export function LiveConsole({
             End intermission
           </button>
         </div>
+      ) : activeRing?.onBreak ? (
+        <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">{ringLabel(activeRing)} · On break</p>
+          <p className="text-sm text-mute">Starting a bout on this ring is blocked. Other rings are unaffected.</p>
+          <button
+            disabled={pending}
+            onClick={() => run(() => setRingBreak(activeRing.id, eventId, false))}
+            className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+          >
+            Resume {ringLabel(activeRing)}
+          </button>
+        </div>
       ) : now ? (
         <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">
-            Now · Bout {now.number} · {now.weightClass}
+            {activeRing ? `${ringLabel(activeRing)} · ` : ""}Now · Bout {now.number} · {now.weightClass}
           </p>
           <p className="text-lg font-semibold">
             {now.fighterAName ?? "TBD"} <span className="text-mute font-normal">vs</span> {now.fighterBName ?? "TBD"}
@@ -125,18 +204,27 @@ export function LiveConsole({
         </div>
       ) : (
         <div className="rounded-card bg-panel border border-white/10 p-5">
-          <p className="text-sm text-mute">No bout in progress.</p>
+          <p className="text-sm text-mute">{activeRing ? `No bout in progress on ${ringLabel(activeRing)}.` : "No bout in progress."}</p>
         </div>
       )}
 
-      {eventStatus !== "INTERMISSION" && now?.status !== "IN_PROGRESS" && (
-        <button
-          disabled={pending}
-          onClick={() => run(() => startIntermission(eventId))}
-          className="w-full rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm"
-        >
-          Start intermission
-        </button>
+      {eventStatus !== "INTERMISSION" && !activeRing?.onBreak && now?.status !== "IN_PROGRESS" && activeRing && (
+        <div className="flex gap-2">
+          <button
+            disabled={pending}
+            onClick={() => run(() => setRingBreak(activeRing.id, eventId, true))}
+            className="flex-1 rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm"
+          >
+            Break {ringLabel(activeRing)}
+          </button>
+          <button
+            disabled={pending}
+            onClick={() => run(() => startIntermission(eventId))}
+            className="flex-1 rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm"
+          >
+            Start intermission (all rings)
+          </button>
+        </div>
       )}
 
       {next && (
@@ -155,7 +243,9 @@ export function LiveConsole({
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Needs attention</p>
           {attention.map((b) => (
             <div key={b.id} className="rounded-card border border-white/10 px-4 py-2 text-sm">
-              Bout {b.number}: {b.status === "DELAYED" ? `Delayed +${b.delayMinutes ?? 0}` : "TBD opponent"}
+              Bout {b.number}
+              {rings.length > 1 ? ` · ${findRingLabel(rings, b.ringId)}` : ""}:{" "}
+              {b.status === "DELAYED" ? `Delayed +${b.delayMinutes ?? 0}` : "TBD opponent"}
             </div>
           ))}
         </div>
@@ -167,6 +257,9 @@ export function LiveConsole({
           <div key={b.id} className="flex items-center justify-between rounded-card border border-white/10 px-4 py-2 text-sm">
             <span>
               {b.number}. {b.fighterAName ?? "TBD"} vs {b.fighterBName ?? "TBD"}
+              {rings.length > 1 ? (
+                <span className="text-mute"> · {findRingLabel(rings, b.ringId)}</span>
+              ) : null}
             </span>
             <span className="text-xs text-mute">{b.status}</span>
           </div>

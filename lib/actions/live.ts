@@ -27,11 +27,14 @@ export async function startBout(boutId: string, eventId: string): Promise<Action
   if (denied) return denied;
 
   const event = await prisma.event.findUnique({ where: { id: eventId } });
-  const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true } });
+  const bout = await prisma.bout.findUnique({
+    where: { id: boutId },
+    include: { fighterA: true, fighterB: true, ring: true },
+  });
   if (!event || !bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
 
   try {
-    assertStartAllowed(event.status);
+    assertStartAllowed(event.status, bout.ring.onBreak);
     const nextStatus = applyBoutAction(bout.status, "START");
 
     const nextEventStatus = event.status === "PUBLISHED" ? transitionEvent("PUBLISHED", "LIVE") : event.status;
@@ -195,6 +198,19 @@ export async function endIntermission(eventId: string): Promise<ActionResult> {
     if (error instanceof IllegalTransitionError) return { ok: false, code: "CONFLICT", reason: error.message };
     throw error;
   }
+
+  revalidateLive(eventId);
+  return { ok: true };
+}
+
+export async function setRingBreak(ringId: string, eventId: string, onBreak: boolean): Promise<ActionResult> {
+  const denied = await gateLive(eventId);
+  if (denied) return denied;
+
+  const ring = await prisma.ring.findUnique({ where: { id: ringId } });
+  if (!ring || ring.eventId !== eventId) return { ok: false, code: "NOT_FOUND", reason: "Ring not found." };
+
+  await prisma.ring.update({ where: { id: ringId }, data: { onBreak } });
 
   revalidateLive(eventId);
   return { ok: true };

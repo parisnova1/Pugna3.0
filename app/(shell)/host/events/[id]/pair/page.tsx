@@ -33,7 +33,8 @@ export default async function PairStepPage({ params }: { params: Promise<{ id: s
                 {bout.fighterA?.displayName ?? "TBD"} <span className="text-mute">vs</span> {bout.fighterB?.displayName ?? "TBD"}
               </p>
               <p className="text-xs text-mute mt-0.5">
-                Bout {bout.number} · {bout.weightClass} · {bout.status}
+                Bout {bout.number} · {bout.weightClass} · Day {bout.day} · {bout.ring.name ?? `Ring ${bout.ring.number}`} ·{" "}
+                {bout.status}
               </p>
             </div>
           ))
@@ -62,6 +63,22 @@ export default async function PairStepPage({ params }: { params: Promise<{ id: s
             ))}
           </select>
           <input name="weightClass" placeholder="Weight class" required className={inputClass} />
+          <div className="grid grid-cols-2 gap-3">
+            <select name="ringId" className={inputClass} defaultValue={event.rings[0]?.id}>
+              {event.rings.map((ring) => (
+                <option key={ring.id} value={ring.id}>
+                  {ring.name ?? `Ring ${ring.number}`}
+                </option>
+              ))}
+            </select>
+            <select name="day" className={inputClass} defaultValue={1}>
+              {Array.from({ length: event.dayCount }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>
+                  Day {d}
+                </option>
+              ))}
+            </select>
+          </div>
         </ActionForm>
       )}
     </div>

@@ -93,6 +93,21 @@ async function main() {
     });
   }
 
+  // Ensure a real 2-ring demo path — bump ringCount and name the rings
+  // regardless of whether the event pre-dates the Ring model (Phase 2 backfill
+  // would have given it a single default "Ring 1" row).
+  await prisma.event.update({ where: { id: event.id }, data: { ringCount: 2 } });
+  const mainRing = await prisma.ring.upsert({
+    where: { eventId_number: { eventId: event.id, number: 1 } },
+    update: { name: "Main Ring" },
+    create: { eventId: event.id, number: 1, name: "Main Ring" },
+  });
+  const youthRing = await prisma.ring.upsert({
+    where: { eventId_number: { eventId: event.id, number: 2 } },
+    update: { name: "Youth Ring" },
+    create: { eventId: event.id, number: 2, name: "Youth Ring" },
+  });
+
   for (const [fighter, weight] of [
     [morales, "75kg"],
     [lee, "75kg"],
@@ -114,6 +129,7 @@ async function main() {
         eventId: event.id,
         number: 1,
         weightClass: "75kg",
+        ringId: mainRing.id,
         fighterAId: morales.id,
         fighterBId: lee.id,
         status: "READY",
@@ -124,11 +140,16 @@ async function main() {
         eventId: event.id,
         number: 2,
         weightClass: "68kg",
+        ringId: youthRing.id,
         fighterAId: rivera.id,
         fighterBId: kim.id,
         status: "READY",
       },
     });
+  } else {
+    // Re-splits a pre-Phase-2 seed run's bouts across the two named rings.
+    await prisma.bout.updateMany({ where: { eventId: event.id, number: 1 }, data: { ringId: mainRing.id } });
+    await prisma.bout.updateMany({ where: { eventId: event.id, number: 2 }, data: { ringId: youthRing.id } });
   }
 
   if (event.status === "DRAFT") {
@@ -149,9 +170,10 @@ async function main() {
   console.log("  morales@pugna.local    (Boxer + Club admin — dual-context demo account)");
   console.log("  lee/rivera/kim@pugna.local  (Boxer context, nominated + confirmed)");
   console.log("  fan@pugna.local        (viewer, already follows the event)");
-  console.log(`\nPublic event card: /e/${event.slug}`);
-  console.log(`Share link:         /go/${event.code}`);
-  console.log(`Live console:       /host/events/${event.id}/live (sign in as organizer@pugna.local)`);
+  console.log(`\nEvent has 2 rings: Main Ring (Bout 1) and Youth Ring (Bout 2).`);
+  console.log(`Public tournament overview: /e/${event.slug}`);
+  console.log(`Share link:                 /go/${event.code}`);
+  console.log(`Live console (multi-ring):  /host/events/${event.id}/live (sign in as organizer@pugna.local)`);
 }
 
 main()

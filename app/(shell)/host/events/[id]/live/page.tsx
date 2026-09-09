@@ -1,5 +1,5 @@
 import { requireHostEvent } from "@/lib/host-guard";
-import { LiveConsole, type ConsoleBout } from "@/components/live/LiveConsole";
+import { LiveConsole, type ConsoleBout, type ConsoleRing } from "@/components/live/LiveConsole";
 
 export default async function LiveConsolePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,11 +16,19 @@ export default async function LiveConsolePage({ params }: { params: Promise<{ id
     fighterBId: b.fighterBId,
     fighterAName: b.fighterA?.displayName ?? null,
     fighterBName: b.fighterB?.displayName ?? null,
+    ringId: b.ringId,
+  }));
+
+  const rings: ConsoleRing[] = event.rings.map((r) => ({
+    id: r.id,
+    number: r.number,
+    name: r.name,
+    onBreak: r.onBreak,
   }));
 
   return (
     <div className="pt-2">
-      <LiveConsole eventId={event.id} eventStatus={event.status} bouts={bouts} />
+      <LiveConsole eventId={event.id} eventStatus={event.status} rings={rings} bouts={bouts} />
     </div>
   );
 }

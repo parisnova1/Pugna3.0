@@ -17,7 +17,7 @@ export type BoutView = {
 
 type ProjectionResponse = {
   status: EventStatus;
-  nowLabel: "LIVE" | "DELAYED" | "UP_NEXT" | "INTERMISSION" | null;
+  nowLabel: "LIVE" | "DELAYED" | "UP_NEXT" | "INTERMISSION" | "BREAK" | null;
   now: { id: string; number: number; status: BoutStatus; delayMinutes: number | null } | null;
   next: { id: string; number: number; status: BoutStatus } | null;
   bouts: { id: string; number: number; status: BoutStatus }[];
@@ -38,6 +38,7 @@ function statusPillFor(
   if (status === "FINISHED" || status === "ARCHIVED") return { text: "Finished", live: false };
   if (nowLabel === "LIVE") return { text: "Live", live: true };
   if (nowLabel === "INTERMISSION") return { text: "Intermission", live: false };
+  if (nowLabel === "BREAK") return { text: "On break", live: false };
   if (status === "PUBLISHED") return { text: "Upcoming", live: false };
   if (status === "LIVE") return { text: "In progress", live: false };
   return null;
@@ -78,6 +79,8 @@ export function LiveEventCard({
   initialNowId,
   initialNextId,
   initialFollowerCount,
+  ringId,
+  ringName,
 }: {
   slug: string;
   name: string;
@@ -91,6 +94,8 @@ export function LiveEventCard({
   initialNowId: string | null;
   initialNextId: string | null;
   initialFollowerCount: number;
+  ringId?: string;
+  ringName?: string;
 }) {
   const [status, setStatus] = useState(initialStatus);
   const [bouts, setBouts] = useState(initialBouts);
@@ -105,7 +110,8 @@ export function LiveEventCard({
   useEffect(() => {
     async function poll() {
       try {
-        const res = await fetch(`/api/events/${slug}/projection`, { cache: "no-store" });
+        const url = ringId ? `/api/events/${slug}/projection?ringId=${ringId}` : `/api/events/${slug}/projection`;
+        const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) throw new Error("bad status");
         const data: ProjectionResponse = await res.json();
         setStatus(data.status);
@@ -136,7 +142,7 @@ export function LiveEventCard({
       if (timerRef.current) clearInterval(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, status === "FINISHED" || status === "ARCHIVED" || status === "CANCELLED"]);
+  }, [slug, ringId, status === "FINISHED" || status === "ARCHIVED" || status === "CANCELLED"]);
 
   const now = bouts.find((b) => b.id === nowId) ?? null;
   const next = bouts.find((b) => b.id === nextId) ?? null;
@@ -160,7 +166,16 @@ export function LiveEventCard({
             {followerCount > 0 && <span className="text-[11px] text-mute tabular">{watchingLabel(followerCount)}</span>}
           </div>
         )}
-        <h1 className="text-2xl font-semibold">{name}</h1>
+        {ringName ? (
+          <>
+            <Link href={`/e/${slug}`} className="text-xs text-mute underline">
+              {name}
+            </Link>
+            <h1 className="text-2xl font-semibold mt-0.5">{ringName}</h1>
+          </>
+        ) : (
+          <h1 className="text-2xl font-semibold">{name}</h1>
+        )}
         <p className="text-mute text-sm mt-1">
           {dateLabel} · {venueLabel}
         </p>
@@ -194,6 +209,12 @@ export function LiveEventCard({
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Now</p>
           <p className="mt-2 text-lg font-semibold">Intermission</p>
           <p className="text-sm text-mute mt-1">Resuming shortly.</p>
+        </div>
+      ) : nowLabel === "BREAK" ? (
+        <div className="rounded-card bg-panel border border-white/10 p-5">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Now</p>
+          <p className="mt-2 text-lg font-semibold">On break</p>
+          <p className="text-sm text-mute mt-1">This ring is paused. Resuming shortly.</p>
         </div>
       ) : now ? (
         <BoutHero bout={now} slug={slug} label={nowLabel} />

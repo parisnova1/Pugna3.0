@@ -195,7 +195,23 @@ model Event {
   requests     EventRequest[]
   nominations  Nomination[]
   bouts        Bout[]
+  rings        Ring[]
   follows      Follow[]
+}
+
+/** A physical ring/station within an event — nameable, independently live/on-break. */
+model Ring {
+  id        String   @id @default(cuid())
+  eventId   String
+  number    Int
+  name      String?
+  onBreak   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  event Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bouts Bout[]
+
+  @@unique([eventId, number])
 }
 
 // hostMemberUserIds[] modeled as a join table
@@ -244,7 +260,7 @@ model Bout {
   eventId        String
   number         Int
   weightClass    String
-  ring           Int           @default(1)
+  ringId         String
   day            Int           @default(1)
   fighterAId     String?
   fighterBId     String?
@@ -256,6 +272,7 @@ model Bout {
   updatedAt      DateTime      @updatedAt
 
   event     Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ring      Ring            @relation(fields: [ringId], references: [id])
   fighterA  FighterProfile? @relation("BoutFighterA", fields: [fighterAId], references: [id])
   fighterB  FighterProfile? @relation("BoutFighterB", fields: [fighterBId], references: [id])
   result    Result?
