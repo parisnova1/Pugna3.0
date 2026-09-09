@@ -10,6 +10,7 @@ import { BackButton } from "@/components/event/ContextBar";
 import { FollowButton } from "@/components/event/FollowButton";
 import { ShareSheet } from "@/components/event/ShareSheet";
 import { LiveEventCard, type BoutView } from "@/components/event/LiveEventCard";
+import { BracketDiagram, isValidBracket, roundLabelForSize, type BracketRound } from "@/components/event/BracketDiagram";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -134,6 +135,27 @@ export default async function EventCardPage({
     .filter((b) => b.status !== "DRAFT" && (!weight || b.weightClass === weight))
     .sort((a, b) => a.day - b.day || a.number - b.number);
 
+  const rounds: BracketRound[] = [];
+  if (weight) {
+    const byDay = new Map<number, typeof bracketBouts>();
+    for (const b of bracketBouts) byDay.set(b.day, [...(byDay.get(b.day) ?? []), b]);
+    for (const d of [...byDay.keys()].sort((a, b) => a - b)) {
+      const bouts = byDay.get(d)!;
+      rounds.push({
+        label: roundLabelForSize(bouts.length),
+        bouts: bouts.map((b) => ({
+          id: b.id,
+          fighterAName: b.fighterA?.displayName ?? null,
+          fighterBName: b.fighterB?.displayName ?? null,
+          status: b.status,
+          resultSummary: b.result ? `${b.result.method}${b.result.round ? ` · Rd ${b.result.round}` : ""}` : null,
+          aWon: b.result ? b.result.winnerId === b.fighterAId : null,
+        })),
+      });
+    }
+  }
+  const showBracket = weight && isValidBracket(rounds);
+
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10">
       {header}
@@ -235,6 +257,9 @@ export default async function EventCardPage({
           ))}
         </div>
 
+        {showBracket ? (
+          <BracketDiagram slug={slug} rounds={rounds} />
+        ) : (
         <div className="space-y-2">
           {bracketBouts.map((bout) => {
             const ringLabel = event.rings.find((r) => r.id === bout.ringId);
@@ -272,6 +297,7 @@ export default async function EventCardPage({
             );
           })}
         </div>
+        )}
       </div>
     </div>
   );
