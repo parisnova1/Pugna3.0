@@ -5,7 +5,7 @@ import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { computeRingProjections } from "@/lib/projection";
-import { formatEventDate, formatTime } from "@/lib/format";
+import { formatEventDate, formatTime, currentDayNumber } from "@/lib/format";
 import { BackButton } from "@/components/event/ContextBar";
 import { FollowButton } from "@/components/event/FollowButton";
 import { ShareSheet } from "@/components/event/ShareSheet";
@@ -110,7 +110,8 @@ export default async function EventCardPage({
     );
   }
 
-  const selectedDay = Math.min(Math.max(1, Number(day ?? 1)), event.dayCount);
+  const defaultDay = currentDayNumber(event.date, event.dayCount);
+  const selectedDay = day ? Math.min(Math.max(1, Number(day)), event.dayCount) : defaultDay;
   const dayBouts = event.bouts.filter((b) => b.day === selectedDay);
   const ringProjections = computeRingProjections(event.status, event.rings, dayBouts);
 
