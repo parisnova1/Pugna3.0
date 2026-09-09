@@ -11,15 +11,29 @@ import { FollowButton } from "@/components/event/FollowButton";
 import { ShareSheet } from "@/components/event/ShareSheet";
 import { LiveEventCard, type BoutView } from "@/components/event/LiveEventCard";
 
+function weightKg(weightClass: string): number {
+  const match = weightClass.match(/\d+/);
+  return match ? Number(match[0]) : 0;
+}
+
+function buildQuery(current: { day?: string; weight?: string }, changes: { day?: string; weight?: string }): string {
+  const next = { ...current, ...changes };
+  const params = new URLSearchParams();
+  if (next.day) params.set("day", next.day);
+  if (next.weight) params.set("weight", next.weight);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
 export default async function EventCardPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ day?: string }>;
+  searchParams: Promise<{ day?: string; weight?: string }>;
 }) {
   const { slug } = await params;
-  const { day } = await searchParams;
+  const { day, weight } = await searchParams;
   const data = await getEventCardData(slug);
   if (!data) notFound();
 
@@ -115,6 +129,11 @@ export default async function EventCardPage({
   const dayBouts = event.bouts.filter((b) => b.day === selectedDay);
   const ringProjections = computeRingProjections(event.status, event.rings, dayBouts);
 
+  const weightClasses = [...new Set(event.bouts.map((b) => b.weightClass))].sort((a, b) => weightKg(a) - weightKg(b));
+  const bracketBouts = [...event.bouts]
+    .filter((b) => b.status !== "DRAFT" && (!weight || b.weightClass === weight))
+    .sort((a, b) => a.day - b.day || a.number - b.number);
+
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10">
       {header}
@@ -134,7 +153,7 @@ export default async function EventCardPage({
           {Array.from({ length: event.dayCount }, (_, i) => i + 1).map((d) => (
             <Link
               key={d}
-              href={`/e/${slug}?day=${d}`}
+              href={`/e/${slug}${buildQuery({ day, weight }, { day: String(d) })}`}
               className={[
                 "rounded-pill border px-4 py-2 text-sm font-medium whitespace-nowrap",
                 d === selectedDay ? "border-signal bg-signal/10" : "border-white/15 text-mute",
@@ -188,6 +207,71 @@ export default async function EventCardPage({
             </Link>
           );
         })}
+      </div>
+
+      <div className="mt-8 space-y-3">
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Weight classes</p>
+        <div className="flex gap-2 overflow-x-auto">
+          <Link
+            href={`/e/${slug}${buildQuery({ day, weight }, { weight: undefined })}`}
+            className={[
+              "rounded-pill border px-4 py-2 text-sm font-medium whitespace-nowrap",
+              !weight ? "border-signal bg-signal/10" : "border-white/15 text-mute",
+            ].join(" ")}
+          >
+            All
+          </Link>
+          {weightClasses.map((w) => (
+            <Link
+              key={w}
+              href={`/e/${slug}${buildQuery({ day, weight }, { weight: w })}`}
+              className={[
+                "rounded-pill border px-4 py-2 text-sm font-medium whitespace-nowrap",
+                w === weight ? "border-signal bg-signal/10" : "border-white/15 text-mute",
+              ].join(" ")}
+            >
+              {w}
+            </Link>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          {bracketBouts.map((bout) => {
+            const ringLabel = event.rings.find((r) => r.id === bout.ringId);
+            const isLive = bout.status === "IN_PROGRESS";
+            const isFinal = bout.status === "FINAL";
+            return (
+              <Link
+                key={bout.id}
+                href={`/e/${slug}/bout/${bout.id}`}
+                className={[
+                  "block rounded-card border px-4 py-3",
+                  isLive ? "border-signal/40 bg-signal/5" : "border-white/10 bg-panel",
+                ].join(" ")}
+              >
+                <div className="flex items-center justify-between text-[11px] text-mute">
+                  <span>
+                    Day {bout.day} · {ringLabel?.name ?? "Ring"} · {bout.weightClass}
+                    {bout.scheduledTime ? ` · ${formatTime(bout.scheduledTime)}` : ""}
+                  </span>
+                  <span className={isLive ? "text-signal font-semibold" : ""}>
+                    {isLive ? "Live" : isFinal ? "Final" : bout.status === "SCRATCHED" ? "Scratched" : bout.status === "NO_SHOW" ? "No-show" : "Scheduled"}
+                  </span>
+                </div>
+                <p className="text-sm font-medium mt-1">
+                  {bout.fighterA?.displayName ?? "TBD"} <span className="text-mute font-normal">vs</span>{" "}
+                  {bout.fighterB?.displayName ?? "TBD"}
+                </p>
+                {isFinal && bout.result && (
+                  <p className="text-xs text-mute mt-0.5">
+                    {bout.result.method}
+                    {bout.result.round ? ` · Round ${bout.result.round}` : ""}
+                  </p>
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
