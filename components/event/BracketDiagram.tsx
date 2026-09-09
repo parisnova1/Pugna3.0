@@ -23,15 +23,17 @@ const LABEL_H = 28;
 
 /** A bracket only makes sense to draw when round sizes actually halve down to 1 (4 -> 2 -> 1, etc). */
 export function isValidBracket(rounds: BracketRound[]): boolean {
-  if (rounds.length < 2) return false;
-  const first = rounds[0].bouts.length;
+  const firstRound = rounds[0];
+  const lastRound = rounds[rounds.length - 1];
+  if (rounds.length < 2 || !firstRound || !lastRound) return false;
+  const first = firstRound.bouts.length;
   if (first < 2 || (first & (first - 1)) !== 0) return false;
   let expected = first;
   for (const round of rounds) {
     if (round.bouts.length !== expected) return false;
     expected = expected / 2;
   }
-  return rounds[rounds.length - 1].bouts.length === 1;
+  return lastRound.bouts.length === 1;
 }
 
 export function roundLabelForSize(size: number): string {
@@ -47,12 +49,12 @@ export function BracketDiagram({ slug, rounds }: { slug: string; rounds: Bracket
     if (r === 0) {
       centers.push(round.bouts.map((_, i) => i * (BOX_H + GAP_Y) + BOX_H / 2));
     } else {
-      const prev = centers[r - 1];
-      centers.push(round.bouts.map((_, j) => (prev[2 * j] + prev[2 * j + 1]) / 2));
+      const prev = centers[r - 1]!;
+      centers.push(round.bouts.map((_, j) => (prev[2 * j]! + prev[2 * j + 1]!) / 2));
     }
   });
 
-  const bodyHeight = Math.max(...centers[0]) + BOX_H / 2;
+  const bodyHeight = Math.max(...centers[0]!) + BOX_H / 2;
   const totalHeight = bodyHeight + LABEL_H;
   const totalWidth = rounds.length * BOX_W + (rounds.length - 1) * COL_GAP;
 
@@ -66,9 +68,9 @@ export function BracketDiagram({ slug, rounds }: { slug: string; rounds: Bracket
               const xRight = r * (BOX_W + COL_GAP) + BOX_W;
               const xMid = xRight + COL_GAP / 2;
               const xNext = (r + 1) * (BOX_W + COL_GAP);
-              const y0 = centers[r][i];
-              const y1 = centers[r][i + 1];
-              const yNext = centers[r + 1][i / 2];
+              const y0 = centers[r]![i]!;
+              const y1 = centers[r]![i + 1]!;
+              const yNext = centers[r + 1]![i / 2]!;
               return (
                 <g key={`${r}-${i}`} stroke="rgba(255,255,255,0.22)" strokeWidth={1.5} fill="none">
                   <line x1={xRight} y1={y0} x2={xMid} y2={y0} />
@@ -102,7 +104,7 @@ export function BracketDiagram({ slug, rounds }: { slug: string; rounds: Bracket
                   ].join(" ")}
                   style={{
                     left: r * (BOX_W + COL_GAP),
-                    top: LABEL_H + centers[r][i] - BOX_H / 2,
+                    top: LABEL_H + centers[r]![i]! - BOX_H / 2,
                     width: BOX_W,
                     height: BOX_H,
                   }}
