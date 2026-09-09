@@ -50,7 +50,20 @@ export async function startBout(boutId: string, eventId: string): Promise<Action
     throw error;
   }
 
-  await notifyMany(boutFighterUserIds(bout), "BOUT_LIVE", `Your bout at ${event.name} is starting now.`, `/e/${event.slug ?? ""}`);
+  const fighterUserIds = boutFighterUserIds(bout);
+  await notifyMany(fighterUserIds, "BOUT_LIVE", `Your bout at ${event.name} is starting now.`, `/e/${event.slug ?? ""}`);
+
+  // Separately notify followers who tapped "Notify me" on this specific fight —
+  // distinct wording (who's fighting, not "your bout") and links straight to it.
+  const followerIds = (await getFollowerUserIds(eventId)).filter((id) => !fighterUserIds.includes(id));
+  const fighterAName = bout.fighterA?.displayName ?? "TBD";
+  const fighterBName = bout.fighterB?.displayName ?? "TBD";
+  await notifyMany(
+    followerIds,
+    "BOUT_LIVE",
+    `${fighterAName} vs ${fighterBName} is live now at ${event.name}.`,
+    `/e/${event.slug ?? ""}/bout/${boutId}`,
+  );
 
   revalidateLive(eventId);
   return { ok: true };

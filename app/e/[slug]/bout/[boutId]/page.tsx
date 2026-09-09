@@ -5,6 +5,8 @@ import { can } from "@/lib/rbac";
 import { deleteMedia } from "@/lib/actions/media";
 import { MediaUploader } from "@/components/host/MediaUploader";
 import { BackButton } from "@/components/event/ContextBar";
+import { NotifyButton } from "@/components/event/NotifyButton";
+import type { BoutStatus } from "@prisma/client";
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Draft",
@@ -17,6 +19,9 @@ const STATUS_LABEL: Record<string, string> = {
   SCRATCHED: "Scratched",
   NO_SHOW: "No-show",
 };
+
+// A fight is "upcoming" — worth notifying about — before it's live and before it's over.
+const UPCOMING_STATUSES: BoutStatus[] = ["TBD", "CONFIRMED", "READY", "DELAYED"];
 
 export default async function BoutDetailPage({
   params,
@@ -43,9 +48,25 @@ export default async function BoutDetailPage({
     orderBy: { createdAt: "desc" },
   });
 
+  const isUpcoming = UPCOMING_STATUSES.includes(bout.status);
+  const following = actor
+    ? Boolean(await prisma.follow.findUnique({ where: { userId_eventId: { userId: actor.userId, eventId: bout.event.id } } }))
+    : false;
+
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10 space-y-6">
-      <BackButton />
+      <div className="flex items-center justify-between">
+        <BackButton />
+        {isUpcoming && (
+          <NotifyButton
+            eventId={bout.event.id}
+            slug={slug}
+            returnTo={`/e/${slug}/bout/${bout.id}`}
+            isGuest={!actor}
+            following={following}
+          />
+        )}
+      </div>
 
       <div className="text-center space-y-1">
         <p className="text-xs text-mute">
