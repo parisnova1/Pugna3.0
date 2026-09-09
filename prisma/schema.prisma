@@ -11,12 +11,6 @@ datasource db {
 // Enums (blueprint §4 / §5)
 // ---------------------------------------------------------------------------
 
-enum Hat {
-  FIGHTER
-  CLUB
-  ORGANIZER
-}
-
 enum EventStatus {
   DRAFT
   READY
@@ -104,14 +98,14 @@ model User {
   email          String   @unique
   passwordHash   String
   name           String?
-  hats           Hat[]    @default([])
-  activeHat      Hat?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  fighterProfile   FighterProfile?
+  // Contexts (existence-based, never exclusive — see components/nav/TabBar.tsx):
+  fighterProfile   FighterProfile?   // "Boxer" context
+  organizerProfile OrganizerProfile? // "Organizer" context (independent, no club needed)
 
-  // Club admin memberships (many-to-many via join table)
+  // Club admin memberships (many-to-many via join table) — the "Club" context(s)
   clubAdminships   ClubAdmin[]
 
   // Events this user may host-manage (creator + club admins at event creation)
@@ -163,6 +157,15 @@ model FighterProfile {
   nominations     Nomination[]
   boutsAsFighterA Bout[] @relation("BoutFighterA")
   boutsAsFighterB Bout[] @relation("BoutFighterB")
+}
+
+/** The standalone "Organizer" context — for organizing without a club. */
+model OrganizerProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName String
+  createdAt   DateTime @default(now())
 }
 
 model Event {

@@ -39,7 +39,7 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ id
       <section className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Roster</p>
         {club.roster.length === 0 ? (
-          <p className="text-sm text-mute">No fighters listed yet.</p>
+          <p className="text-sm text-mute">No boxers listed yet.</p>
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {club.roster.map((fighter) => (

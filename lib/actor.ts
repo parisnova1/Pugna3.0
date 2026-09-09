@@ -7,9 +7,9 @@ export async function getActor(): Promise<Actor> {
   if (!session?.user) return null;
   return {
     userId: session.user.id,
-    hats: session.user.hats,
-    activeHat: session.user.activeHat,
-    adminClubIds: session.user.adminClubIds,
+    isBoxer: session.user.isBoxer,
+    clubIds: session.user.clubIds,
+    isOrganizer: session.user.isOrganizer,
     hostEventIds: session.user.hostEventIds,
   };
 }

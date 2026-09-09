@@ -6,46 +6,60 @@ import { createClub, claimClub } from "@/lib/actions/club";
 import { createEventFromClub } from "@/lib/actions/event";
 import { ActionForm } from "@/components/host/ActionForm";
 import { BellLink } from "@/components/nav/BellLink";
+import { formatEventDate } from "@/lib/format";
 
 const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
 
 export default async function ClubHomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; club?: string }>;
 }) {
   const actor = await getActor();
   if (!actor) redirect("/account?returnTo=/club");
 
-  const myClub = actor.adminClubIds.length > 0
+  const { club: requestedClubId } = await searchParams;
+  const activeClubId =
+    requestedClubId && actor.clubIds.includes(requestedClubId) ? requestedClubId : actor.clubIds[0];
+
+  const myClub = activeClubId
     ? await prisma.club.findUnique({
-        where: { id: actor.adminClubIds[0] },
+        where: { id: activeClubId },
         include: {
           _count: { select: { roster: true } },
           requests: { where: { status: { in: ["PENDING", "PARTIAL"] } } },
-          organizedEvents: { where: { status: { in: ["PUBLISHED", "LIVE", "INTERMISSION"] } }, take: 3 },
+          organizedEvents: { where: { status: { in: ["PUBLISHED", "LIVE", "INTERMISSION"] } }, orderBy: { date: "asc" }, take: 1 },
         },
       })
     : null;
 
   if (myClub) {
     const unreadCount = await prisma.notification.count({ where: { userId: actor.userId, read: false } });
+    const nextTournament = myClub.organizedEvents[0] ?? null;
 
     return (
       <div className="space-y-6 pt-2">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{myClub.name}</h1>
-            <p className="text-mute text-sm mt-1">{myClub.city ?? "—"} · {myClub._count.roster} fighters</p>
+            <p className="text-mute text-sm mt-1">{myClub.city ?? "—"} · {myClub._count.roster} boxers</p>
           </div>
           <BellLink unreadCount={unreadCount} />
         </div>
+
+        {nextTournament && (
+          <div className="rounded-card bg-panel border border-white/10 p-4">
+            <p className="text-xs font-semibold text-mute uppercase tracking-wide">Next tournament</p>
+            <p className="font-semibold mt-1">{nextTournament.name}</p>
+            <p className="text-sm text-mute mt-0.5">{formatEventDate(nextTournament.date)}</p>
+          </div>
+        )}
 
         {myClub.requests.length > 0 && (
           <div className="rounded-card bg-panel border border-signal/30 p-4 flex items-center justify-between gap-3">
             <p className="text-sm font-medium">{myClub.requests.length} open request{myClub.requests.length > 1 ? "s" : ""}</p>
             <Link
-              href="/club/events"
+              href="/club/requests"
               className="shrink-0 rounded-pill bg-signal text-onsignal px-3 py-1.5 text-xs font-semibold"
             >
               Review
@@ -53,36 +67,35 @@ export default async function ClubHomePage({
           </div>
         )}
 
+        <form
+          action={async () => {
+            "use server";
+            await createEventFromClub(myClub.id);
+          }}
+        >
+          <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+            + Create tournament
+          </button>
+        </form>
+
         <div className="grid grid-cols-2 gap-3">
           <Link href="/club/roster" className="rounded-card bg-panel border border-white/10 p-4">
             <p className="font-semibold text-sm">Roster</p>
-            <p className="text-xs text-mute mt-1">Manage fighters</p>
+            <p className="text-xs text-mute mt-1">Manage boxers</p>
           </Link>
-          <Link href="/club/events" className="rounded-card bg-panel border border-white/10 p-4">
-            <p className="font-semibold text-sm">Events</p>
-            <p className="text-xs text-mute mt-1">Hosting &amp; requests</p>
+          <Link href="/club/requests" className="rounded-card bg-panel border border-white/10 p-4">
+            <p className="font-semibold text-sm">Requests</p>
+            <p className="text-xs text-mute mt-1">Nominate boxers</p>
+          </Link>
+          <Link href="/club/tournaments" className="rounded-card bg-panel border border-white/10 p-4">
+            <p className="font-semibold text-sm">Tournaments</p>
+            <p className="text-xs text-mute mt-1">Hosting</p>
+          </Link>
+          <Link href="/club/sparring" className="rounded-card bg-panel border border-white/10 p-4">
+            <p className="font-semibold text-sm">Sparring</p>
+            <p className="text-xs text-mute mt-1">Club-to-club</p>
           </Link>
         </div>
-
-        <details className="rounded-card border border-white/10 p-4">
-          <summary className="text-center font-semibold cursor-pointer list-none">Host an event</summary>
-          <div className="mt-4 space-y-3 text-center">
-            <p className="text-sm text-mute">
-              You&apos;ll continue as Organizer for {myClub.name}. This switches your active hat and links the
-              event to your club.
-            </p>
-            <form
-              action={async () => {
-                "use server";
-                await createEventFromClub(myClub.id);
-              }}
-            >
-              <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
-                Continue as Organizer
-              </button>
-            </form>
-          </div>
-        </details>
       </div>
     );
   }

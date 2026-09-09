@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
-import type { ActionResult } from "@/lib/actions/hat";
+import type { ActionResult } from "@/lib/actions/types";
 
 export async function toggleFollow(eventId: string, slug: string): Promise<ActionResult> {
   const actor = await getActor();

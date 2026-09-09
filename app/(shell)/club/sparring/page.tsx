@@ -10,7 +10,7 @@ const STATUS_LABEL: Record<string, string> = { PENDING: "Pending", ACCEPTED: "Ac
 export default async function ClubSparringPage() {
   const actor = await getActor();
   if (!actor) redirect("/account?returnTo=/club/sparring");
-  const clubId = actor.adminClubIds[0];
+  const clubId = actor.clubIds[0];
   if (!clubId) redirect("/club");
 
   const [ownPosts, openPosts] = await Promise.all([

@@ -56,7 +56,7 @@ export default async function EntriesStepPage({ params }: { params: Promise<{ id
           </div>
         )}
         {clubs.length === 0 ? (
-          <p className="text-sm text-mute">No clubs on Pugna yet — add a guest fighter below instead.</p>
+          <p className="text-sm text-mute">No clubs on Pugna yet — add a guest boxer below instead.</p>
         ) : (
           <ActionForm action={requestClub} submitLabel="Send request" className="space-y-3">
             <input type="hidden" name="eventId" value={event.id} />
@@ -77,11 +77,11 @@ export default async function EntriesStepPage({ params }: { params: Promise<{ id
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Guest fighter</h2>
+        <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Guest boxer</h2>
         <p className="text-xs text-mute">Not in the app.</p>
-        <ActionForm action={addGuestFighter} submitLabel="Add guest fighter" className="space-y-3">
+        <ActionForm action={addGuestFighter} submitLabel="Add guest boxer" className="space-y-3">
           <input type="hidden" name="eventId" value={event.id} />
-          <input name="name" placeholder="Fighter name" required className={inputClass} />
+          <input name="name" placeholder="Boxer name" required className={inputClass} />
           <input name="clubText" placeholder="Club (text)" className={inputClass} />
           <input name="weightClass" placeholder="Weight class" className={inputClass} />
         </ActionForm>

@@ -4,6 +4,7 @@ import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { formatCountdown } from "@/lib/format";
 import { BellLink } from "@/components/nav/BellLink";
+import { becomeBoxer } from "@/lib/actions/profile";
 
 export default async function YouHomePage() {
   const actor = await getActor();
@@ -18,10 +19,17 @@ export default async function YouHomePage() {
         <div className="flex justify-end">
           <BellLink unreadCount={unreadCount} />
         </div>
-        <p className="text-mute text-sm">No fighter profile yet.</p>
-        <Link href="/account" className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
-          Set up
-        </Link>
+        <p className="text-mute text-sm">No boxer profile yet.</p>
+        <form
+          action={async () => {
+            "use server";
+            await becomeBoxer();
+          }}
+        >
+          <button type="submit" className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
+            Register as boxer
+          </button>
+        </form>
       </div>
     );
   }

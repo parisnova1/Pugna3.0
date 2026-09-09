@@ -7,7 +7,7 @@ import { transitionEvent, IllegalTransitionError } from "@/lib/state/event";
 import { slugify, generateEventCode } from "@/lib/slug";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { ActionResult } from "@/lib/actions/hat";
+import type { ActionResult } from "@/lib/actions/types";
 import { notifyMany } from "@/lib/actions/notify";
 
 export async function createEvent(): Promise<{ ok: true; eventId: string } | { ok: false; code: string; reason: string }> {
@@ -30,26 +30,15 @@ export async function createEvent(): Promise<{ ok: true; eventId: string } | { o
 }
 
 /**
- * "Continue as Organizer" interstitial from /club (blueprint §7): sets
- * organizingClubId, grants/switches the Organizer hat, creates the event,
- * and lands on /host/events/:id/build — all in one confirmed step.
+ * "Create tournament" from within a Club's context: sets organizingClubId
+ * and host membership, then lands on /host/events/:id/build. No hat/role to
+ * grant or switch — a club admin already has full organizer capability for
+ * their own club's events.
  */
 export async function createEventFromClub(clubId: string): Promise<ActionResult & { eventId?: string }> {
   const actor = await getActor();
   const gate = can(actor, "club.admin", { clubId });
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
-
-  const user = await prisma.user.findUnique({ where: { id: actor!.userId } });
-  if (!user) return { ok: false, code: "AUTH_REQUIRED", reason: "Sign in required." };
-
-  if (!user.hats.includes("ORGANIZER")) {
-    await prisma.user.update({
-      where: { id: actor!.userId },
-      data: { hats: { set: [...user.hats, "ORGANIZER"] }, activeHat: "ORGANIZER" },
-    });
-  } else if (user.activeHat !== "ORGANIZER") {
-    await prisma.user.update({ where: { id: actor!.userId }, data: { activeHat: "ORGANIZER" } });
-  }
 
   const event = await prisma.event.create({
     data: {
@@ -120,12 +109,12 @@ export async function addGuestFighter(formData: FormData): Promise<ActionResult>
   const weightClass = String(formData.get("weightClass") ?? "").trim() || null;
   const clubName = String(formData.get("clubText") ?? "").trim();
 
-  if (!displayName) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Fighter name is required." };
+  if (!displayName) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Boxer name is required." };
 
   // Guest fighters get a placeholder user + fighter profile ("Not in the app").
   const placeholderEmail = `guest.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@pugna.local`;
   const placeholderUser = await prisma.user.create({
-    data: { email: placeholderEmail, passwordHash: "GUEST_NO_LOGIN", name: displayName, hats: [] },
+    data: { email: placeholderEmail, passwordHash: "GUEST_NO_LOGIN", name: displayName },
   });
 
   let club = clubName ? await prisma.club.findFirst({ where: { name: clubName } }) : null;
@@ -230,7 +219,7 @@ export async function publishEvent(eventId: string): Promise<ActionResult> {
   }
   const emptyBout = event.bouts.find((b) => !b.fighterAId && !b.fighterBId);
   if (emptyBout) {
-    return { ok: false, code: "VALIDATION_BLOCKED", reason: `Bout ${emptyBout.number} has no fighters.` };
+    return { ok: false, code: "VALIDATION_BLOCKED", reason: `Bout ${emptyBout.number} has no boxers.` };
   }
 
   const slug = event.slug ?? slugify(event.name, event.date);

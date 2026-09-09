@@ -12,7 +12,7 @@ export default async function ReviewStepPage({ params }: { params: Promise<{ id:
   if (!event.venue && !event.city) blockers.push("Add a venue or city.");
   if (event.bouts.length === 0) blockers.push("Add at least one bout.");
   for (const bout of event.bouts) {
-    if (!bout.fighterAId && !bout.fighterBId) blockers.push(`Bout ${bout.number} has no fighters.`);
+    if (!bout.fighterAId && !bout.fighterBId) blockers.push(`Bout ${bout.number} has no boxers.`);
     else if (!bout.fighterAId || !bout.fighterBId) warnings.push(`Bout ${bout.number} has a TBD opponent.`);
   }
 

@@ -41,12 +41,12 @@ export default async function PairStepPage({ params }: { params: Promise<{ id: s
       </div>
 
       {nominations.length < 1 ? (
-        <p className="text-sm text-mute">Accept nominations or add guest fighters in Entries first.</p>
+        <p className="text-sm text-mute">Accept nominations or add guest boxers in Entries first.</p>
       ) : (
         <ActionForm action={createBout} submitLabel="Add bout" className="space-y-3">
           <input type="hidden" name="eventId" value={event.id} />
           <select name="fighterAId" className={inputClass}>
-            <option value="">Fighter A (or TBD)</option>
+            <option value="">Boxer A (or TBD)</option>
             {nominations.map((nom) => (
               <option key={nom.fighter.id} value={nom.fighter.id}>
                 {nom.fighter.displayName} · {nom.club.name}
@@ -54,7 +54,7 @@ export default async function PairStepPage({ params }: { params: Promise<{ id: s
             ))}
           </select>
           <select name="fighterBId" className={inputClass}>
-            <option value="">Fighter B (or TBD)</option>
+            <option value="">Boxer B (or TBD)</option>
             {nominations.map((nom) => (
               <option key={nom.fighter.id} value={nom.fighter.id}>
                 {nom.fighter.displayName} · {nom.club.name}

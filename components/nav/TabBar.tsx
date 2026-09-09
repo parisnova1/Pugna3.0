@@ -2,18 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { Hat } from "@prisma/client";
 import {
   CompassIcon,
   CalendarIcon,
   ScanIcon,
   BuildingIcon,
   PersonIcon,
-  BellIcon,
   GloveIcon,
-  ClockIcon,
   ListIcon,
-  SwapIcon,
   FlagIcon,
   BroadcastIcon,
   TrophyIcon,
@@ -22,46 +18,57 @@ import type { ComponentType } from "react";
 
 type Tab = { label: string; href: string; icon: ComponentType<{ className?: string }>; prominent?: boolean };
 
-function tabsFor(activeHat: Hat | null): Tab[] {
-  switch (activeHat) {
-    case "FIGHTER":
-      return [
-        { label: "You", href: "/you", icon: PersonIcon },
-        { label: "Noms", href: "/you/noms", icon: BellIcon },
-        { label: "Fights", href: "/you/fights", icon: GloveIcon },
-        { label: "History", href: "/you/history", icon: ClockIcon },
-        { label: "Account", href: "/account", icon: PersonIcon },
-      ];
-    case "CLUB":
-      return [
-        { label: "Club", href: "/club", icon: BuildingIcon },
-        { label: "Events", href: "/club/events", icon: CalendarIcon },
-        { label: "Roster", href: "/club/roster", icon: ListIcon },
-        { label: "Sparring", href: "/club/sparring", icon: SwapIcon },
-        { label: "Account", href: "/account", icon: PersonIcon },
-      ];
-    case "ORGANIZER":
-      return [
-        { label: "Host", href: "/host", icon: FlagIcon },
-        { label: "Events", href: "/host/events", icon: CalendarIcon },
-        { label: "Live", href: "/host/events/live", icon: BroadcastIcon },
-        { label: "Results", href: "/host/results", icon: TrophyIcon },
-        { label: "Account", href: "/account", icon: PersonIcon },
-      ];
-    default:
-      return [
-        { label: "Discover", href: "/", icon: CompassIcon },
-        { label: "Events", href: "/events", icon: CalendarIcon },
-        { label: "Scan", href: "/scan", icon: ScanIcon, prominent: true },
-        { label: "Clubs", href: "/clubs", icon: BuildingIcon },
-        { label: "Account", href: "/account", icon: PersonIcon },
-      ];
+/**
+ * Navigation is a pure function of the current route — never of the user's
+ * capabilities. A Boxer who also admins a Club sees Boxer nav on /you/* and
+ * Club nav on /club/*; there is no "active role" to pick between. Neutral
+ * routes (Discover/Events/Scan/Clubs/Account) show the same bar to everyone,
+ * signed in or not.
+ */
+function tabsFor(pathname: string): Tab[] {
+  if (pathname.startsWith("/club")) {
+    return [
+      { label: "Club", href: "/club", icon: BuildingIcon },
+      { label: "Tournaments", href: "/club/tournaments", icon: CalendarIcon },
+      { label: "Roster", href: "/club/roster", icon: ListIcon },
+      { label: "Requests", href: "/club/requests", icon: GloveIcon },
+      { label: "Account", href: "/account", icon: PersonIcon },
+    ];
   }
+
+  if (pathname.startsWith("/host")) {
+    return [
+      { label: "Dashboard", href: "/host", icon: FlagIcon },
+      { label: "Events", href: "/host/events", icon: CalendarIcon },
+      { label: "Live", href: "/host/events/live", icon: BroadcastIcon },
+      { label: "Results", href: "/host/results", icon: TrophyIcon },
+      { label: "Account", href: "/account", icon: PersonIcon },
+    ];
+  }
+
+  if (pathname.startsWith("/you")) {
+    return [
+      { label: "Home", href: "/you", icon: PersonIcon },
+      { label: "My Fights", href: "/you/fights", icon: GloveIcon },
+      { label: "Events", href: "/events", icon: CalendarIcon },
+      { label: "Scan", href: "/scan", icon: ScanIcon, prominent: true },
+      { label: "Account", href: "/account", icon: PersonIcon },
+    ];
+  }
+
+  // Neutral — Discover, Events, Scan, Clubs, Account, and anything else.
+  return [
+    { label: "Discover", href: "/", icon: CompassIcon },
+    { label: "Events", href: "/events", icon: CalendarIcon },
+    { label: "Scan", href: "/scan", icon: ScanIcon, prominent: true },
+    { label: "Clubs", href: "/clubs", icon: BuildingIcon },
+    { label: "Account", href: "/account", icon: PersonIcon },
+  ];
 }
 
-export function TabBar({ activeHat }: { activeHat: Hat | null }) {
+export function TabBar() {
   const pathname = usePathname();
-  const tabs = tabsFor(activeHat);
+  const tabs = tabsFor(pathname);
 
   return (
     <nav className="glass fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)]">

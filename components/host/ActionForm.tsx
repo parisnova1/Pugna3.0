@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import type { ReactNode } from "react";
-import type { ActionResult } from "@/lib/actions/hat";
+import type { ActionResult } from "@/lib/actions/types";
 
 export function ActionForm({
   action,

@@ -6,21 +6,27 @@ const prisma = new PrismaClient();
 
 const PASSWORD = "password123";
 
-async function upsertUser(email: string, name: string, hats: ("FIGHTER" | "CLUB" | "ORGANIZER")[], activeHat: "FIGHTER" | "CLUB" | "ORGANIZER" | null) {
+async function upsertUser(email: string, name: string) {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
   return prisma.user.upsert({
     where: { email },
-    update: { hats, activeHat },
-    create: { email, name, passwordHash, hats, activeHat },
+    update: { name },
+    create: { email, name, passwordHash },
   });
 }
 
 async function main() {
   console.log("Seeding the north-star demo path...");
 
-  const organizer = await upsertUser("organizer@pugna.local", "Organizer Olsen", ["ORGANIZER"], "ORGANIZER");
-  const clubAdmin = await upsertUser("club@pugna.local", "Club Casey", ["CLUB"], "CLUB");
-  const fan = await upsertUser("fan@pugna.local", "Fan Frankie", [], null);
+  const organizer = await upsertUser("organizer@pugna.local", "Organizer Olsen");
+  await prisma.organizerProfile.upsert({
+    where: { userId: organizer.id },
+    update: {},
+    create: { userId: organizer.id, displayName: "Organizer Olsen" },
+  });
+
+  const clubAdmin = await upsertUser("club@pugna.local", "Club Casey");
+  const fan = await upsertUser("fan@pugna.local", "Fan Frankie");
 
   const club =
     (await prisma.club.findFirst({ where: { name: "Golden Gate Combat Club" } })) ??
@@ -41,7 +47,7 @@ async function main() {
 
   const fighters = [];
   for (const f of fighterSeeds) {
-    const user = await upsertUser(f.email, f.name, ["FIGHTER"], "FIGHTER");
+    const user = await upsertUser(f.email, f.name);
     const profile = await prisma.fighterProfile.upsert({
       where: { userId: user.id },
       update: { clubId: club.id, weightClass: f.weight, displayName: f.name },
@@ -55,6 +61,17 @@ async function main() {
     (typeof fighters)[number],
     (typeof fighters)[number],
   ];
+
+  // Morales is both a Boxer and a Club admin — a real dual-context account for
+  // exercising the Account hub's "more than one card" case.
+  const moralesUser = await prisma.user.findUnique({ where: { email: "morales@pugna.local" } });
+  if (moralesUser) {
+    await prisma.clubAdmin.upsert({
+      where: { clubId_userId: { clubId: club.id, userId: moralesUser.id } },
+      update: {},
+      create: { clubId: club.id, userId: moralesUser.id },
+    });
+  }
 
   const eventDate = new Date();
   eventDate.setHours(19, 0, 0, 0);
@@ -127,10 +144,11 @@ async function main() {
   });
 
   console.log("\nSeed complete. Demo accounts (password: %s):", PASSWORD);
-  console.log("  organizer@pugna.local  (Organizer hat, hosts the event, runs the live console)");
-  console.log("  club@pugna.local       (Club hat, admins Golden Gate Combat Club)");
-  console.log("  morales@pugna.local … kim@pugna.local  (Fighter hat, nominated + confirmed)");
-  console.log("  fan@pugna.local        (guest-equivalent account, already follows the event)");
+  console.log("  organizer@pugna.local  (Organizer context, hosts the event, runs the live console)");
+  console.log("  club@pugna.local       (Club context, admins Golden Gate Combat Club)");
+  console.log("  morales@pugna.local    (Boxer + Club admin — dual-context demo account)");
+  console.log("  lee/rivera/kim@pugna.local  (Boxer context, nominated + confirmed)");
+  console.log("  fan@pugna.local        (viewer, already follows the event)");
   console.log(`\nPublic event card: /e/${event.slug}`);
   console.log(`Share link:         /go/${event.code}`);
   console.log(`Live console:       /host/events/${event.id}/live (sign in as organizer@pugna.local)`);

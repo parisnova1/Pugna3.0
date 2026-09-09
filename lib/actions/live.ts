@@ -7,7 +7,7 @@ import { applyBoutAction } from "@/lib/state/bout";
 import { transitionEvent, IllegalTransitionError } from "@/lib/state/event";
 import { assertStartAllowed, ProjectionConflictError } from "@/lib/projection";
 import { revalidatePath } from "next/cache";
-import type { ActionResult } from "@/lib/actions/hat";
+import type { ActionResult } from "@/lib/actions/types";
 import type { ScratchReason } from "@prisma/client";
 import { notifyMany } from "@/lib/actions/notify";
 import { getFollowerUserIds } from "@/lib/actions/event";

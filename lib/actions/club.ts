@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
-import type { ActionResult } from "@/lib/actions/hat";
+import type { ActionResult } from "@/lib/actions/types";
 
 export async function createClub(formData: FormData): Promise<ActionResult> {
   const actor = await getActor();
@@ -17,17 +17,7 @@ export async function createClub(formData: FormData): Promise<ActionResult> {
   const club = await prisma.club.create({ data: { name, city } });
   await prisma.clubAdmin.create({ data: { clubId: club.id, userId: actor.userId } });
 
-  const user = await prisma.user.findUnique({ where: { id: actor.userId } });
-  if (user && !user.hats.includes("CLUB")) {
-    await prisma.user.update({
-      where: { id: actor.userId },
-      data: { hats: { set: [...user.hats, "CLUB"] }, activeHat: "CLUB" },
-    });
-  } else {
-    await prisma.user.update({ where: { id: actor.userId }, data: { activeHat: "CLUB" } });
-  }
-
-  revalidatePath("/club");
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -40,17 +30,7 @@ export async function claimClub(clubId: string): Promise<ActionResult> {
 
   await prisma.clubAdmin.create({ data: { clubId, userId: actor!.userId } });
 
-  const user = await prisma.user.findUnique({ where: { id: actor!.userId } });
-  if (user && !user.hats.includes("CLUB")) {
-    await prisma.user.update({
-      where: { id: actor!.userId },
-      data: { hats: { set: [...user.hats, "CLUB"] }, activeHat: "CLUB" },
-    });
-  } else {
-    await prisma.user.update({ where: { id: actor!.userId }, data: { activeHat: "CLUB" } });
-  }
-
-  revalidatePath("/club");
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -62,11 +42,11 @@ export async function addRosterFighter(formData: FormData): Promise<ActionResult
 
   const displayName = String(formData.get("name") ?? "").trim();
   const weightClass = String(formData.get("weightClass") ?? "").trim() || null;
-  if (!displayName) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Fighter name is required." };
+  if (!displayName) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Boxer name is required." };
 
   const placeholderEmail = `roster.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@pugna.local`;
   const placeholderUser = await prisma.user.create({
-    data: { email: placeholderEmail, passwordHash: "GUEST_NO_LOGIN", name: displayName, hats: [] },
+    data: { email: placeholderEmail, passwordHash: "GUEST_NO_LOGIN", name: displayName },
   });
 
   await prisma.fighterProfile.create({

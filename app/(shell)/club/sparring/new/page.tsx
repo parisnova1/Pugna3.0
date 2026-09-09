@@ -9,7 +9,7 @@ const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-
 export default async function NewSparringPostPage() {
   const actor = await getActor();
   if (!actor) redirect("/account?returnTo=/club/sparring/new");
-  const clubId = actor.adminClubIds[0];
+  const clubId = actor.clubIds[0];
   if (!clubId) redirect("/club");
 
   return (

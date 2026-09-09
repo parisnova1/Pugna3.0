@@ -6,7 +6,7 @@ import { formatEventDate } from "@/lib/format";
 const STEPS = [
   { href: "build", label: "Skeleton", desc: "Name, date, venue" },
   { href: "structure", label: "Structure", desc: "Sport, rings, days" },
-  { href: "entries", label: "Entries", desc: "Fighters and clubs" },
+  { href: "entries", label: "Entries", desc: "Boxers and clubs" },
   { href: "pair", label: "Pair", desc: "Match bouts" },
   { href: "schedule", label: "Schedule", desc: "Times and order" },
   { href: "review", label: "Review & publish", desc: "Blockers, warnings" },

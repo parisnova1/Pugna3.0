@@ -3,7 +3,6 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import type { Hat } from "@prisma/client";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -32,10 +31,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     // Runs on every server-side session read (not just sign-in), so this
-    // always re-derives hats/activeHat/adminClubIds/hostEventIds from the DB
-    // rather than freezing them at login. Without this, actions taken mid-
-    // session (switching hats, creating an event, claiming a club) would
-    // never take effect for RBAC checks until the user signed out and back in.
+    // always re-derives capabilities from the DB rather than freezing them at
+    // login. Capabilities are existence-based (Boxer profile / club admin
+    // rows / Organizer profile) — never a stored "active role".
     async jwt({ token, user }) {
       const userId = user?.id ?? (token.userId as string | undefined);
       if (!userId) return token;
@@ -43,12 +41,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       token.userId = userId;
       const dbUser = await prisma.user.findUnique({
         where: { id: userId },
-        include: { clubAdminships: true, hostEvents: true },
+        include: { fighterProfile: true, organizerProfile: true, clubAdminships: true, hostEvents: true },
       });
       if (dbUser) {
-        token.hats = dbUser.hats;
-        token.activeHat = dbUser.activeHat;
-        token.adminClubIds = dbUser.clubAdminships.map((a) => a.clubId);
+        token.isBoxer = Boolean(dbUser.fighterProfile);
+        token.isOrganizer = Boolean(dbUser.organizerProfile);
+        token.clubIds = dbUser.clubAdminships.map((a) => a.clubId);
         token.hostEventIds = dbUser.hostEvents.map((h) => h.eventId);
       }
       return token;
@@ -56,9 +54,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.userId as string;
-        session.user.hats = (token.hats as Hat[]) ?? [];
-        session.user.activeHat = (token.activeHat as Hat | null) ?? null;
-        session.user.adminClubIds = (token.adminClubIds as string[]) ?? [];
+        session.user.isBoxer = Boolean(token.isBoxer);
+        session.user.isOrganizer = Boolean(token.isOrganizer);
+        session.user.clubIds = (token.clubIds as string[]) ?? [];
         session.user.hostEventIds = (token.hostEventIds as string[]) ?? [];
       }
       return session;

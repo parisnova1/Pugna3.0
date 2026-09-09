@@ -3,17 +3,30 @@ import { redirect } from "next/navigation";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { createEvent } from "@/lib/actions/event";
+import { becomeOrganizer } from "@/lib/actions/profile";
 import { formatEventDate } from "@/lib/format";
 
 export default async function HostHomePage() {
   const actor = await getActor();
   if (!actor) redirect("/account?returnTo=/host");
-  if (actor.activeHat !== "ORGANIZER") {
+  if (!actor.isOrganizer && actor.clubIds.length === 0) {
     return (
       <div className="pt-10 text-center space-y-4">
-        <p className="text-mute text-sm">Switch to your Organizer hat to host events.</p>
-        <Link href="/account" className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
-          Go to Account
+        <p className="text-mute text-sm">
+          Your clubs can host tournaments from their Club page. Want to organize independently too?
+        </p>
+        <form
+          action={async () => {
+            "use server";
+            await becomeOrganizer();
+          }}
+        >
+          <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+            Become an organizer
+          </button>
+        </form>
+        <Link href="/club" className="inline-block text-sm text-mute underline">
+          Or go to your club
         </Link>
       </div>
     );

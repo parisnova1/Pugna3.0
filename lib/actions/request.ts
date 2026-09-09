@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
-import type { ActionResult } from "@/lib/actions/hat";
+import type { ActionResult } from "@/lib/actions/types";
 import type { Prisma } from "@prisma/client";
 import { notify, notifyMany } from "@/lib/actions/notify";
 
@@ -49,7 +49,7 @@ export async function nominateFighter(formData: FormData): Promise<ActionResult>
   const weightClass = String(formData.get("weightClass") ?? "").trim();
 
   if (!eventId || !fighterId || !weightClass) {
-    return { ok: false, code: "VALIDATION_BLOCKED", reason: "Fighter, event, and weight class are required." };
+    return { ok: false, code: "VALIDATION_BLOCKED", reason: "Boxer, event, and weight class are required." };
   }
 
   const [nomination, event] = await Promise.all([
@@ -65,7 +65,7 @@ export async function nominateFighter(formData: FormData): Promise<ActionResult>
   );
 
   revalidatePath(`/host/events/${eventId}/entries`);
-  revalidatePath("/club/events");
+  revalidatePath("/club/requests");
   revalidatePath("/you/noms");
   return { ok: true };
 }
@@ -92,7 +92,7 @@ export async function respondToNomination(nominationId: string, accept: boolean)
       clubAdminIds,
       "NOMINATION_ACCEPTED",
       `${nomination.fighter.displayName} accepted the nomination for ${nomination.event.name}.`,
-      "/club/events",
+      "/club/requests",
     );
   } else {
     // Replacement banner: flip to REPLACEMENT so the club sees it needs a new fighter.
@@ -101,11 +101,11 @@ export async function respondToNomination(nominationId: string, accept: boolean)
       clubAdminIds,
       "NOMINATION_DECLINED",
       `${nomination.fighter.displayName} declined the nomination for ${nomination.event.name} — a replacement is needed.`,
-      "/club/events",
+      "/club/requests",
     );
   }
 
   revalidatePath("/you/noms");
-  revalidatePath("/club/events");
+  revalidatePath("/club/requests");
   return { ok: true };
 }

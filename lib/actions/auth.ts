@@ -24,7 +24,7 @@ export async function registerAction(_prev: AuthActionResult | null, formData: F
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  await prisma.user.create({ data: { email, passwordHash, name, hats: [] } });
+  await prisma.user.create({ data: { email, passwordHash, name } });
 
   return credentialsSignIn(email, password, returnTo);
 }

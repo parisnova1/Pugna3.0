@@ -109,7 +109,7 @@ export default async function DiscoverPage() {
               >
                 <p className="font-semibold text-sm">{club.name}</p>
                 <p className="text-xs text-mute mt-1">
-                  {club.city ?? "—"} · {club._count.roster} fighters
+                  {club.city ?? "—"} · {club._count.roster} boxers
                 </p>
               </Link>
             ))}

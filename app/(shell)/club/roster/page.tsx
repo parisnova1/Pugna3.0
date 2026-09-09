@@ -9,7 +9,7 @@ const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-
 export default async function ClubRosterPage() {
   const actor = await getActor();
   if (!actor) redirect("/account?returnTo=/club/roster");
-  const clubId = actor.adminClubIds[0];
+  const clubId = actor.clubIds[0];
   if (!clubId) redirect("/club");
 
   const fighters = await prisma.fighterProfile.findMany({ where: { clubId }, orderBy: { displayName: "asc" } });
@@ -19,7 +19,7 @@ export default async function ClubRosterPage() {
       <h1 className="text-2xl font-semibold">Roster</h1>
 
       {fighters.length === 0 ? (
-        <p className="text-mute text-sm">No fighters yet.</p>
+        <p className="text-mute text-sm">No boxers yet.</p>
       ) : (
         <div className="space-y-2">
           {fighters.map((f) => (
@@ -31,9 +31,9 @@ export default async function ClubRosterPage() {
         </div>
       )}
 
-      <ActionForm action={addRosterFighter} submitLabel="Add fighter" className="space-y-3">
+      <ActionForm action={addRosterFighter} submitLabel="Add boxer" className="space-y-3">
         <input type="hidden" name="clubId" value={clubId} />
-        <input name="name" placeholder="Fighter name" required className={inputClass} />
+        <input name="name" placeholder="Boxer name" required className={inputClass} />
         <input name="weightClass" placeholder="Weight class" className={inputClass} />
       </ActionForm>
     </div>

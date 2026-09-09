@@ -40,7 +40,7 @@ export default async function ClubsPage({
             >
               <div>
                 <p className="font-medium">{club.name}</p>
-                <p className="text-xs text-mute mt-0.5">{club.city ?? "—"} · {club._count.roster} fighters</p>
+                <p className="text-xs text-mute mt-0.5">{club.city ?? "—"} · {club._count.roster} boxers</p>
               </div>
             </Link>
           ))}
