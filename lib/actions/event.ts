@@ -29,6 +29,43 @@ export async function createEvent(): Promise<{ ok: true; eventId: string } | { o
   return { ok: true, eventId: event.id };
 }
 
+/**
+ * "Continue as Organizer" interstitial from /club (blueprint §7): sets
+ * organizingClubId, grants/switches the Organizer hat, creates the event,
+ * and lands on /host/events/:id/build — all in one confirmed step.
+ */
+export async function createEventFromClub(clubId: string): Promise<ActionResult & { eventId?: string }> {
+  const actor = await getActor();
+  const gate = can(actor, "club.admin", { clubId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const user = await prisma.user.findUnique({ where: { id: actor!.userId } });
+  if (!user) return { ok: false, code: "AUTH_REQUIRED", reason: "Sign in required." };
+
+  if (!user.hats.includes("ORGANIZER")) {
+    await prisma.user.update({
+      where: { id: actor!.userId },
+      data: { hats: { set: [...user.hats, "ORGANIZER"] }, activeHat: "ORGANIZER" },
+    });
+  } else if (user.activeHat !== "ORGANIZER") {
+    await prisma.user.update({ where: { id: actor!.userId }, data: { activeHat: "ORGANIZER" } });
+  }
+
+  const event = await prisma.event.create({
+    data: {
+      name: "Untitled event",
+      date: new Date(),
+      createdByUserId: actor!.userId,
+      organizingClubId: clubId,
+      status: "DRAFT",
+      hostMembers: { create: [{ userId: actor!.userId }] },
+    },
+  });
+
+  revalidatePath("/host");
+  redirect(`/host/events/${event.id}/build`);
+}
+
 export async function updateEventSkeleton(eventId: string, formData: FormData): Promise<ActionResult> {
   const actor = await getActor();
   const event = await prisma.event.findUnique({ where: { id: eventId } });

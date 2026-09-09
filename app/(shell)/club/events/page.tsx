@@ -3,8 +3,8 @@ import Link from "next/link";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { nominateFighter } from "@/lib/actions/request";
+import { createEventFromClub } from "@/lib/actions/event";
 import { ActionForm } from "@/components/host/ActionForm";
-import { SeeAllLink } from "@/components/event/SeeAllLink";
 import { formatEventDate } from "@/lib/format";
 import type { Requirement } from "@/lib/actions/request";
 
@@ -32,7 +32,16 @@ export default async function ClubEventsPage() {
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Hosting</h2>
-          <SeeAllLink href="/host" label="Host event" />
+          <form
+            action={async () => {
+              "use server";
+              await createEventFromClub(clubId);
+            }}
+          >
+            <button type="submit" className="rounded-pill border border-white/15 px-3 py-1 text-xs font-medium text-ink">
+              Host event
+            </button>
+          </form>
         </div>
         {hosting.length === 0 ? (
           <p className="text-sm text-mute">Not hosting anything.</p>

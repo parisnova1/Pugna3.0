@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { createClub, claimClub } from "@/lib/actions/club";
+import { createEventFromClub } from "@/lib/actions/event";
 import { ActionForm } from "@/components/host/ActionForm";
 import { BellLink } from "@/components/nav/BellLink";
 
@@ -63,12 +64,25 @@ export default async function ClubHomePage({
           </Link>
         </div>
 
-        <Link
-          href="/host"
-          className="block text-center rounded-pill border border-white/20 text-ink font-semibold py-3"
-        >
-          Host an event
-        </Link>
+        <details className="rounded-card border border-white/10 p-4">
+          <summary className="text-center font-semibold cursor-pointer list-none">Host an event</summary>
+          <div className="mt-4 space-y-3 text-center">
+            <p className="text-sm text-mute">
+              You&apos;ll continue as Organizer for {myClub.name}. This switches your active hat and links the
+              event to your club.
+            </p>
+            <form
+              action={async () => {
+                "use server";
+                await createEventFromClub(myClub.id);
+              }}
+            >
+              <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+                Continue as Organizer
+              </button>
+            </form>
+          </div>
+        </details>
       </div>
     );
   }
