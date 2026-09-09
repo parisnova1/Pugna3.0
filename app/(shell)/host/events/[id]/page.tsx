@@ -9,6 +9,7 @@ const STEPS = [
   { href: "entries", label: "Entries", desc: "Boxers and clubs" },
   { href: "pair", label: "Pair", desc: "Match bouts" },
   { href: "schedule", label: "Schedule", desc: "Times and order" },
+  { href: "media", label: "Media", desc: "Cover, gallery, sponsors" },
   { href: "review", label: "Review & publish", desc: "Blockers, warnings" },
 ];
 
@@ -41,6 +42,15 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
           className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-3 text-sm"
         >
           View public event card
+        </Link>
+      )}
+
+      {!event.slug && event.ringCount === 1 && event.dayCount === 1 && (
+        <Link
+          href={`/host/events/${event.id}/preview`}
+          className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-3 text-sm"
+        >
+          Preview public event card
         </Link>
       )}
 

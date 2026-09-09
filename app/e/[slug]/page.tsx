@@ -51,6 +51,14 @@ export default async function EventCardPage({
   const venueLabel = event.venue ?? event.city ?? "TBD";
   const isSimple = event.ringCount === 1 && event.dayCount === 1;
 
+  const media = await prisma.media.findMany({
+    where: { attachedType: "EVENT", attachedId: event.id },
+    orderBy: { createdAt: "desc" },
+  });
+  const coverUrl = media.find((m) => m.kind === "EVENT_COVER")?.url ?? null;
+  const galleryUrls = media.filter((m) => m.kind === "EVENT_GALLERY").map((m) => m.url);
+  const sponsorUrls = media.filter((m) => m.kind === "SPONSOR").map((m) => m.url);
+
   const header = (
     <div className="flex items-center justify-between mb-5">
       <BackButton />
@@ -94,6 +102,9 @@ export default async function EventCardPage({
           initialNowId={projection.now?.id ?? null}
           initialNextId={projection.next?.id ?? null}
           initialFollowerCount={event._count.follows}
+          coverUrl={coverUrl}
+          galleryUrls={galleryUrls}
+          sponsorUrls={sponsorUrls}
         />
       </div>
     );
@@ -106,6 +117,10 @@ export default async function EventCardPage({
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10">
       {header}
+      {coverUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card mb-5" />
+      )}
       <div className="space-y-1 mb-5">
         <h1 className="text-2xl font-semibold">{event.name}</h1>
         <p className="text-mute text-sm">

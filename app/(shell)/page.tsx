@@ -35,6 +35,16 @@ export default async function DiscoverPage() {
       : Promise.resolve([]),
   ]);
 
+  const eventIds = [...live, ...upcoming, ...following].map((e) => e.id);
+  const covers =
+    eventIds.length > 0
+      ? await prisma.media.findMany({
+          where: { attachedType: "EVENT", attachedId: { in: eventIds }, kind: "EVENT_COVER" },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+  const coverFor = (eventId: string) => covers.find((m) => m.attachedId === eventId)?.url ?? null;
+
   return (
     <div className="space-y-10">
       <section className="space-y-3 pt-2">
@@ -59,7 +69,7 @@ export default async function DiscoverPage() {
           <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Following</h2>
           <div className="space-y-3">
             {following.map((event) => (
-              <EventPreviewCard key={event.id} event={event} />
+              <EventPreviewCard key={event.id} event={event} coverUrl={coverFor(event.id)} />
             ))}
           </div>
         </section>
@@ -70,7 +80,7 @@ export default async function DiscoverPage() {
           <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Live now</h2>
           <div className="space-y-3">
             {live.map((event) => (
-              <EventPreviewCard key={event.id} event={event} />
+              <EventPreviewCard key={event.id} event={event} coverUrl={coverFor(event.id)} />
             ))}
           </div>
         </section>
@@ -86,7 +96,7 @@ export default async function DiscoverPage() {
         ) : (
           <div className="space-y-3">
             {upcoming.map((event) => (
-              <EventPreviewCard key={event.id} event={event} />
+              <EventPreviewCard key={event.id} event={event} coverUrl={coverFor(event.id)} />
             ))}
           </div>
         )}

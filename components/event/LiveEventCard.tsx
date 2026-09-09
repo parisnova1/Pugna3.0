@@ -81,6 +81,9 @@ export function LiveEventCard({
   initialFollowerCount,
   ringId,
   ringName,
+  coverUrl,
+  galleryUrls,
+  sponsorUrls,
 }: {
   slug: string;
   name: string;
@@ -96,6 +99,9 @@ export function LiveEventCard({
   initialFollowerCount: number;
   ringId?: string;
   ringName?: string;
+  coverUrl?: string | null;
+  galleryUrls?: string[];
+  sponsorUrls?: string[];
 }) {
   const [status, setStatus] = useState(initialStatus);
   const [bouts, setBouts] = useState(initialBouts);
@@ -151,6 +157,10 @@ export function LiveEventCard({
 
   return (
     <div className="space-y-6">
+      {coverUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card" />
+      )}
       <div>
         {pill && (
           <div className="flex items-center gap-2 mb-2">
@@ -229,17 +239,14 @@ export function LiveEventCard({
       {next && (
         <div>
           <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Next</p>
-          <Link
-            href={`/e/${slug}/bout/${next.id}`}
-            className="block rounded-card bg-panel border border-white/10 p-4"
-          >
+          <BoutLink slug={slug} boutId={next.id} className="block rounded-card bg-panel border border-white/10 p-4">
             <p className="font-medium">
               {next.fighterAName ?? "TBD"} <span className="text-mute">vs</span> {next.fighterBName ?? "TBD"}
             </p>
             <p className="text-xs text-mute mt-1">
               Bout {next.number} · {statusLabel(next)}
             </p>
-          </Link>
+          </BoutLink>
         </div>
       )}
 
@@ -247,9 +254,10 @@ export function LiveEventCard({
         <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Full card</p>
         <div className="space-y-2">
           {bouts.map((bout) => (
-            <Link
+            <BoutLink
               key={bout.id}
-              href={`/e/${slug}/bout/${bout.id}`}
+              slug={slug}
+              boutId={bout.id}
               className={[
                 "flex items-center justify-between rounded-card border px-4 py-3",
                 bout.id === nowId ? "border-signal/40 bg-signal/5" : "border-white/10 bg-panel",
@@ -264,11 +272,52 @@ export function LiveEventCard({
                 </p>
               </div>
               <span className="text-xs text-mute shrink-0 ml-2">{statusLabel(bout)}</span>
-            </Link>
+            </BoutLink>
           ))}
         </div>
       </div>
+
+      {galleryUrls && galleryUrls.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Gallery</p>
+          <div className="flex gap-2 overflow-x-auto">
+            {galleryUrls.map((url) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={url} src={url} alt="" className="h-28 w-28 object-cover rounded-card shrink-0" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sponsorUrls && sponsorUrls.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-white/10">
+          {sponsorUrls.map((url) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={url} src={url} alt="" className="h-8 w-auto object-contain opacity-80" />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+/** Bout Detail only exists once an event has a public slug — plain, non-clickable in the (host-only) preview page. */
+function BoutLink({
+  slug,
+  boutId,
+  className,
+  children,
+}: {
+  slug: string;
+  boutId: string;
+  className: string;
+  children: React.ReactNode;
+}) {
+  if (!slug) return <div className={className}>{children}</div>;
+  return (
+    <Link href={`/e/${slug}/bout/${boutId}`} className={className}>
+      {children}
+    </Link>
   );
 }
 
@@ -283,7 +332,7 @@ function BoutHero({
 }) {
   const isLive = label === "LIVE";
   return (
-    <Link href={`/e/${slug}/bout/${bout.id}`} className="block rounded-card bg-panel border border-white/10 p-5">
+    <BoutLink slug={slug} boutId={bout.id} className="block rounded-card bg-panel border border-white/10 p-5">
       <div className="flex items-center gap-2">
         {isLive && <span className="live-pulse w-2 h-2 rounded-full bg-signal" />}
         <p className="text-xs font-semibold uppercase tracking-wide text-signal">
@@ -296,6 +345,6 @@ function BoutHero({
       <p className="text-sm text-mute mt-1">
         Bout {bout.number} · {bout.weightClass}
       </p>
-    </Link>
+    </BoutLink>
   );
 }

@@ -60,6 +60,20 @@ enum ScratchReason {
   OTHER
 }
 
+enum MediaKind {
+  EVENT_COVER
+  EVENT_GALLERY
+  SPONSOR
+  BOUT_MEDIA
+  SPARRING_MEDIA
+}
+
+enum MediaAttachedType {
+  EVENT
+  BOUT
+  SPARRING_POST
+}
+
 // blueprint §9 — event-driven only, no social notifications.
 enum NotificationType {
   NOMINATED
@@ -114,6 +128,7 @@ model User {
   createdEvents    Event[]        @relation("EventCreatedBy")
   follows          Follow[]
   notifications    Notification[]
+  uploadedMedia    Media[]
 }
 
 model Club {
@@ -346,4 +361,23 @@ model SparringRequest {
   requestingClub Club         @relation(fields: [requestingClubId], references: [id], onDelete: Cascade)
 
   @@unique([postId, requestingClubId])
+}
+
+// Phase 3 — one generic model for every media type (cover/gallery/sponsor/bout
+// photo/sparring photo) via `kind` + a polymorphic (attachedType, attachedId)
+// pair, rather than a model per attachment target. No real FK to the parent —
+// Prisma can't express a clean polymorphic relation, and a deleted parent's
+// Media rows become harmless orphans since every read is scoped by
+// (attachedType, attachedId) against a live parent.
+model Media {
+  id               String            @id @default(cuid())
+  url              String
+  kind             MediaKind
+  attachedType     MediaAttachedType
+  attachedId       String
+  uploadedByUserId String
+  uploadedBy       User              @relation(fields: [uploadedByUserId], references: [id])
+  createdAt        DateTime          @default(now())
+
+  @@index([attachedType, attachedId])
 }

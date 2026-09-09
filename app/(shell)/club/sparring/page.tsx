@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { closeSparringPost, requestSparring, respondToSparringRequest } from "@/lib/actions/sparring";
+import { MediaUploader } from "@/components/host/MediaUploader";
 import { formatEventDate } from "@/lib/format";
 
 const STATUS_LABEL: Record<string, string> = { PENDING: "Pending", ACCEPTED: "Accepted", DECLINED: "Declined" };
@@ -27,6 +28,16 @@ export default async function ClubSparringPage() {
     }),
   ]);
 
+  const allPostIds = [...ownPosts.map((p) => p.id), ...openPosts.map((p) => p.id)];
+  const media =
+    allPostIds.length > 0
+      ? await prisma.media.findMany({
+          where: { attachedType: "SPARRING_POST", attachedId: { in: allPostIds } },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+  const photoFor = (postId: string) => media.find((m) => m.attachedId === postId) ?? null;
+
   return (
     <div className="space-y-8 pt-2">
       <div className="flex items-center justify-between">
@@ -46,8 +57,14 @@ export default async function ClubSparringPage() {
               <p className="text-sm text-mute">No posts yet.</p>
             ) : (
               <div className="space-y-3">
-                {ownPosts.map((post) => (
+                {ownPosts.map((post) => {
+                  const photo = photoFor(post.id);
+                  return (
                   <div key={post.id} className="rounded-card bg-panel border border-white/10 p-4 space-y-3">
+                    {photo && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photo.url} alt="" className="w-full aspect-video object-cover rounded-card" />
+                    )}
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">{post.gym}</p>
@@ -59,6 +76,9 @@ export default async function ClubSparringPage() {
                         {post.status === "OPEN" ? "Open" : "Closed"}
                       </span>
                     </div>
+                    {!photo && (
+                      <MediaUploader kind="SPARRING_MEDIA" attachedType="SPARRING_POST" attachedId={post.id} label="Add photo" />
+                    )}
                     {post.requests.length > 0 && (
                       <div className="space-y-2 pt-2 border-t border-white/10">
                         {post.requests.map((req) => (
@@ -108,7 +128,8 @@ export default async function ClubSparringPage() {
                       </form>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -121,8 +142,13 @@ export default async function ClubSparringPage() {
               <div className="space-y-3">
                 {openPosts.map((post) => {
                   const myRequest = post.requests[0] ?? null;
+                  const photo = photoFor(post.id);
                   return (
                     <div key={post.id} className="rounded-card bg-panel border border-white/10 p-4 space-y-2">
+                      {photo && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={photo.url} alt="" className="w-full aspect-video object-cover rounded-card" />
+                      )}
                       <p className="text-sm font-medium">{post.club.name}</p>
                       <p className="text-xs text-mute">
                         {post.gym} · {formatEventDate(post.date)} · {post.weightWindow} · {post.spots} spot

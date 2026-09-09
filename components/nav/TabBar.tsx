@@ -25,8 +25,12 @@ type Tab = { label: string; href: string; icon: ComponentType<{ className?: stri
  * routes (Discover/Events/Scan/Clubs/Account) show the same bar to everyone,
  * signed in or not.
  */
+function isInSection(pathname: string, section: string): boolean {
+  return pathname === section || pathname.startsWith(`${section}/`);
+}
+
 function tabsFor(pathname: string): Tab[] {
-  if (pathname.startsWith("/club")) {
+  if (isInSection(pathname, "/club")) {
     return [
       { label: "Club", href: "/club", icon: BuildingIcon },
       { label: "Tournaments", href: "/club/tournaments", icon: CalendarIcon },
@@ -36,7 +40,7 @@ function tabsFor(pathname: string): Tab[] {
     ];
   }
 
-  if (pathname.startsWith("/host")) {
+  if (isInSection(pathname, "/host")) {
     return [
       { label: "Dashboard", href: "/host", icon: FlagIcon },
       { label: "Events", href: "/host/events", icon: CalendarIcon },
@@ -46,7 +50,7 @@ function tabsFor(pathname: string): Tab[] {
     ];
   }
 
-  if (pathname.startsWith("/you")) {
+  if (isInSection(pathname, "/you")) {
     return [
       { label: "Home", href: "/you", icon: PersonIcon },
       { label: "My Fights", href: "/you/fights", icon: GloveIcon },
