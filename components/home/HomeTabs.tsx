@@ -82,9 +82,12 @@ export function HomeTabs({
       {tab === "events" ? (
         <div className="space-y-6">
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">
-              {live.length > 0 ? "Live now" : "Upcoming near you"}
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">
+                {live.length > 0 ? "Live now" : "Upcoming near you"}
+              </h2>
+              <SeeAllLink href="/events?filter=live" />
+            </div>
             {eventPoints.length > 0 ? (
               <LiveMap points={eventPoints} />
             ) : (

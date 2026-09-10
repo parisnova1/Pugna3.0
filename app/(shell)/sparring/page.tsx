@@ -14,16 +14,32 @@ const SPORTS = ["Boxing", "Kickboxing", "MMA"];
 const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced", "Pro"];
 const RADII = [10, 25, 50, 100];
 const MODE_LABEL = { INVITE: "Invite only", OPEN_TO_CLUBS: "Open to clubs", OPEN: "Open sparring" } as const;
+const MODE_FILTERS: { key: "OPEN" | "OPEN_TO_CLUBS"; label: string }[] = [
+  { key: "OPEN", label: "Open sparring" },
+  { key: "OPEN_TO_CLUBS", label: "Open to clubs" },
+];
+
+function buildModeHref(
+  current: { sport?: string; area?: string; radius?: string; sex?: string; experience?: string },
+  mode: string | null,
+): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(current)) if (value) params.set(key, value);
+  if (mode) params.set("mode", mode);
+  const qs = params.toString();
+  return `/sparring${qs ? `?${qs}` : ""}`;
+}
 
 export default async function SparringDiscoverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sport?: string; area?: string; radius?: string; sex?: string; experience?: string }>;
+  searchParams: Promise<{ sport?: string; area?: string; radius?: string; sex?: string; experience?: string; mode?: string }>;
 }) {
-  const { sport, area, radius, sex, experience } = await searchParams;
+  const { sport, area, radius, sex, experience, mode } = await searchParams;
   const actor = await getActor();
   const clubIds = actor?.clubIds ?? [];
   const radiusKm = radius ? Number(radius) : null;
+  const activeMode = mode === "OPEN" || mode === "OPEN_TO_CLUBS" ? mode : null;
 
   const sessions = await prisma.sparringSession.findMany({
     where: {
@@ -35,6 +51,7 @@ export default async function SparringDiscoverPage({
       ...(area && !radiusKm ? { city: { contains: area, mode: "insensitive" } } : {}),
       ...(sex ? { sex } : {}),
       ...(experience ? { experienceLevel: experience } : {}),
+      ...(activeMode ? { accessMode: activeMode } : {}),
       OR: [
         { accessMode: { not: "INVITE" } },
         { clubId: { in: clubIds } },
@@ -122,6 +139,30 @@ export default async function SparringDiscoverPage({
           Filter
         </button>
       </form>
+
+      <div className="flex gap-2 overflow-x-auto text-sm">
+        <Link
+          href={buildModeHref({ sport, area, radius, sex, experience }, null)}
+          className={[
+            "shrink-0 rounded-pill px-4 py-2 font-medium border",
+            activeMode === null ? "bg-signal text-onsignal border-signal" : "border-white/15 text-mute",
+          ].join(" ")}
+        >
+          All
+        </Link>
+        {MODE_FILTERS.map((f) => (
+          <Link
+            key={f.key}
+            href={buildModeHref({ sport, area, radius, sex, experience }, f.key)}
+            className={[
+              "shrink-0 rounded-pill px-4 py-2 font-medium border whitespace-nowrap",
+              activeMode === f.key ? "bg-signal text-onsignal border-signal" : "border-white/15 text-mute",
+            ].join(" ")}
+          >
+            {f.label}
+          </Link>
+        ))}
+      </div>
 
       {area && radiusKm && (
         <p className="text-xs text-mute">

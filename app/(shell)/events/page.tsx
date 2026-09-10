@@ -3,11 +3,13 @@ import type { EventStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { EventPreviewCard } from "@/components/event/EventPreviewCard";
 
-type Filter = "today" | "week" | "upcoming" | "finished";
+type Filter = "live" | "today" | "week" | "upcoming" | "finished";
 
 const LIVE_ISH: EventStatus[] = ["PUBLISHED", "LIVE", "INTERMISSION"];
+const LIVE_ONLY: EventStatus[] = ["LIVE", "INTERMISSION"];
 
 const FILTERS: { key: Filter; label: string }[] = [
+  { key: "live", label: "Live" },
   { key: "today", label: "Today" },
   { key: "week", label: "This week" },
   { key: "upcoming", label: "Upcoming" },
@@ -27,13 +29,15 @@ export default async function EventsPage({
   const endOfWeek = new Date(startOfDay.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const where: Prisma.EventWhereInput =
-    filter === "today"
-      ? { date: { gte: startOfDay, lt: endOfDay }, status: { in: LIVE_ISH } }
-      : filter === "week"
-        ? { date: { gte: startOfDay, lt: endOfWeek }, status: { in: LIVE_ISH } }
-        : filter === "finished"
-          ? { status: "FINISHED" }
-          : { status: { in: LIVE_ISH } };
+    filter === "live"
+      ? { status: { in: LIVE_ONLY } }
+      : filter === "today"
+        ? { date: { gte: startOfDay, lt: endOfDay }, status: { in: LIVE_ISH } }
+        : filter === "week"
+          ? { date: { gte: startOfDay, lt: endOfWeek }, status: { in: LIVE_ISH } }
+          : filter === "finished"
+            ? { status: "FINISHED" }
+            : { status: { in: LIVE_ISH } };
 
   const events = await prisma.event.findMany({
     where,

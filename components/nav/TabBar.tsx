@@ -27,10 +27,14 @@ export function TabBar() {
 
   return (
     <>
+      {/* Centered, not right-aligned — a right-aligned FAB sat directly above the
+          rightmost "Profile" tab, close enough on some viewports that a tap meant
+          for Profile could land on Scan instead. Centering keeps it equally clear
+          of every tab. */}
       <Link
         href="/scan"
         aria-label="Scan"
-        className="fixed z-50 bottom-24 right-4 flex items-center justify-center w-14 h-14 rounded-full bg-signal text-onsignal shadow-lg shadow-black/40"
+        className="fixed z-50 bottom-24 left-1/2 -translate-x-1/2 flex items-center justify-center w-14 h-14 rounded-full bg-signal text-onsignal shadow-lg shadow-black/40"
       >
         <ScanIcon className="shrink-0" />
       </Link>
