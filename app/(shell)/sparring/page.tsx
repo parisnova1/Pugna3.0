@@ -8,6 +8,7 @@ import { SportTag } from "@/components/ui/SportTag";
 import { Badge } from "@/components/ui/Badge";
 import { SparringNav } from "@/components/sparring/SparringNav";
 import { SparringResultsMap } from "@/components/sparring/SparringResultsMap";
+import { SparringFilterPanel } from "@/components/sparring/SparringFilterPanel";
 import type { MapPoint } from "@/components/home/LiveMap";
 
 const SPORTS = ["Boxing", "Kickboxing", "MMA"];
@@ -91,6 +92,8 @@ export default async function SparringDiscoverPage({
     .filter((s) => s.latitude != null && s.longitude != null)
     .map((s) => ({ id: s.id, lat: s.latitude!, lng: s.longitude!, label: s.club.name, href: `/sparring/${s.id}` }));
 
+  const activeFilterCount = [sport, area, sex, experience, radius].filter(Boolean).length;
+
   return (
     <div className="space-y-6 pt-2">
       <div className="flex items-center justify-between">
@@ -98,47 +101,6 @@ export default async function SparringDiscoverPage({
       </div>
 
       <SparringNav active="discover" registered={Boolean(actor)} />
-
-      <form className="grid grid-cols-2 gap-2 text-sm" action="/sparring">
-        <select name="sport" defaultValue={sport ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">
-          <option value="">Any sport</option>
-          {SPORTS.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <input
-          name="area"
-          defaultValue={area ?? ""}
-          placeholder="Search an area"
-          className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink placeholder:text-mute"
-        />
-        <select name="sex" defaultValue={sex ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">
-          <option value="">Any sex</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-        </select>
-        <select name="experience" defaultValue={experience ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">
-          <option value="">Any experience</option>
-          {EXPERIENCE_LEVELS.map((e) => (
-            <option key={e} value={e}>
-              {e}
-            </option>
-          ))}
-        </select>
-        <select name="radius" defaultValue={radius ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">
-          <option value="">Any distance</option>
-          {RADII.map((r) => (
-            <option key={r} value={r}>
-              Within {r} km
-            </option>
-          ))}
-        </select>
-        <button type="submit" className="col-span-2 rounded-pill bg-signal text-onsignal font-semibold py-2.5">
-          Filter
-        </button>
-      </form>
 
       <div className="flex gap-2 overflow-x-auto text-sm">
         <Link
@@ -163,6 +125,50 @@ export default async function SparringDiscoverPage({
           </Link>
         ))}
       </div>
+
+      <SparringFilterPanel activeCount={activeFilterCount}>
+        <form className="grid grid-cols-2 gap-2 text-sm" action="/sparring">
+          {mode && <input type="hidden" name="mode" value={mode} />}
+          <select name="sport" defaultValue={sport ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">
+            <option value="">Any sport</option>
+            {SPORTS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <input
+            name="area"
+            defaultValue={area ?? ""}
+            placeholder="Search an area"
+            className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink placeholder:text-mute"
+          />
+          <select name="sex" defaultValue={sex ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">
+            <option value="">Any sex</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+          <select name="experience" defaultValue={experience ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">
+            <option value="">Any experience</option>
+            {EXPERIENCE_LEVELS.map((e) => (
+              <option key={e} value={e}>
+                {e}
+              </option>
+            ))}
+          </select>
+          <select name="radius" defaultValue={radius ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">
+            <option value="">Any distance</option>
+            {RADII.map((r) => (
+              <option key={r} value={r}>
+                Within {r} km
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="col-span-2 rounded-pill bg-signal text-onsignal font-semibold py-2.5">
+            Apply filters
+          </button>
+        </form>
+      </SparringFilterPanel>
 
       {area && radiusKm && (
         <p className="text-xs text-mute">
