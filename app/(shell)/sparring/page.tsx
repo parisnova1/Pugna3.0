@@ -2,29 +2,37 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { formatEventDate } from "@/lib/format";
+import { geocodeAddress } from "@/lib/geocode";
+import { haversineDistanceKm } from "@/lib/geo";
 import { SportTag } from "@/components/ui/SportTag";
 import { Badge } from "@/components/ui/Badge";
 import { SparringNav } from "@/components/sparring/SparringNav";
+import { SparringResultsMap } from "@/components/sparring/SparringResultsMap";
+import type { MapPoint } from "@/components/home/LiveMap";
 
 const SPORTS = ["Boxing", "Kickboxing", "MMA"];
 const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced", "Pro"];
+const RADII = [10, 25, 50, 100];
 const MODE_LABEL = { INVITE: "Invite only", OPEN_TO_CLUBS: "Open to clubs", OPEN: "Open sparring" } as const;
 
 export default async function SparringDiscoverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sport?: string; city?: string; sex?: string; experience?: string }>;
+  searchParams: Promise<{ sport?: string; area?: string; radius?: string; sex?: string; experience?: string }>;
 }) {
-  const { sport, city, sex, experience } = await searchParams;
+  const { sport, area, radius, sex, experience } = await searchParams;
   const actor = await getActor();
   const clubIds = actor?.clubIds ?? [];
+  const radiusKm = radius ? Number(radius) : null;
 
   const sessions = await prisma.sparringSession.findMany({
     where: {
       status: "OPEN",
       date: { gte: new Date() },
       ...(sport ? { sport } : {}),
-      ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
+      // A plain substring match on city only when there's no real radius search —
+      // once a radius is chosen, filtering happens below by actual distance instead.
+      ...(area && !radiusKm ? { city: { contains: area, mode: "insensitive" } } : {}),
       ...(sex ? { sex } : {}),
       ...(experience ? { experienceLevel: experience } : {}),
       OR: [
@@ -40,6 +48,31 @@ export default async function SparringDiscoverPage({
       _count: { select: { participants: true } },
     },
   });
+
+  // Real geo-radius search: geocode the typed area once, then filter/sort by
+  // actual great-circle distance instead of a name substring. Sessions with
+  // no coordinates can't be placed, so they drop out of a radius search —
+  // falls back to the substring match above if the area doesn't geocode.
+  let center: { lat: number; lng: number } | null = null;
+  let sessionsInArea = sessions;
+  if (area && radiusKm) {
+    center = await geocodeAddress(area);
+    if (center) {
+      const withDistance = sessions
+        .filter((s) => s.latitude != null && s.longitude != null)
+        .map((s) => ({ session: s, distanceKm: haversineDistanceKm(center!, { lat: s.latitude!, lng: s.longitude! }) }))
+        .filter((s) => s.distanceKm <= radiusKm)
+        .sort((a, b) => a.distanceKm - b.distanceKm);
+      sessionsInArea = withDistance.map((s) => s.session);
+    } else {
+      const needle = area.toLowerCase();
+      sessionsInArea = sessions.filter((s) => s.city?.toLowerCase().includes(needle));
+    }
+  }
+
+  const mapPoints: MapPoint[] = sessionsInArea
+    .filter((s) => s.latitude != null && s.longitude != null)
+    .map((s) => ({ id: s.id, lat: s.latitude!, lng: s.longitude!, label: s.club.name, href: `/sparring/${s.id}` }));
 
   return (
     <div className="space-y-6 pt-2">
@@ -59,9 +92,9 @@ export default async function SparringDiscoverPage({
           ))}
         </select>
         <input
-          name="city"
-          defaultValue={city ?? ""}
-          placeholder="Location"
+          name="area"
+          defaultValue={area ?? ""}
+          placeholder="Search an area"
           className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink placeholder:text-mute"
         />
         <select name="sex" defaultValue={sex ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">
@@ -77,16 +110,34 @@ export default async function SparringDiscoverPage({
             </option>
           ))}
         </select>
+        <select name="radius" defaultValue={radius ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">
+          <option value="">Any distance</option>
+          {RADII.map((r) => (
+            <option key={r} value={r}>
+              Within {r} km
+            </option>
+          ))}
+        </select>
         <button type="submit" className="col-span-2 rounded-pill bg-signal text-onsignal font-semibold py-2.5">
           Filter
         </button>
       </form>
 
+      {area && radiusKm && (
+        <p className="text-xs text-mute">
+          {center
+            ? `Showing sessions within ${radiusKm} km of "${area}", nearest first.`
+            : `Couldn't locate "${area}" — showing sessions with a matching city instead.`}
+        </p>
+      )}
+
+      {mapPoints.length > 0 && <SparringResultsMap points={mapPoints} />}
+
       <div className="space-y-3">
-        {sessions.length === 0 ? (
+        {sessionsInArea.length === 0 ? (
           <p className="text-sm text-mute text-center py-10">No open sparring sessions match your filters.</p>
         ) : (
-          sessions.map((session) => (
+          sessionsInArea.map((session) => (
             <Link
               key={session.id}
               href={`/sparring/${session.id}`}

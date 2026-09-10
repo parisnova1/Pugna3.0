@@ -44,16 +44,23 @@ export default async function HomePage() {
   ]);
 
   const eventIds = [...live, ...upcoming, ...following].map((e) => e.id);
-  const covers =
+  const [covers, checkIns] =
     eventIds.length > 0
-      ? await prisma.media.findMany({
-          where: { attachedType: "EVENT", attachedId: { in: eventIds }, kind: "EVENT_COVER" },
-          orderBy: { createdAt: "desc" },
-        })
-      : [];
+      ? await Promise.all([
+          prisma.media.findMany({
+            where: { attachedType: "EVENT", attachedId: { in: eventIds }, kind: "EVENT_COVER" },
+            orderBy: { createdAt: "desc" },
+          }),
+          prisma.checkIn.findMany({
+            where: { attachedType: "EVENT", attachedId: { in: eventIds }, status: "CHECKED_IN" },
+            select: { attachedId: true },
+          }),
+        ])
+      : [[], []];
   const coverFor = (eventId: string) => covers.find((m) => m.attachedId === eventId)?.url ?? null;
+  const checkedInCountFor = (eventId: string) => checkIns.filter((c) => c.attachedId === eventId).length;
   const withCover = <T extends { id: string }>(events: T[]) =>
-    events.map((e) => ({ ...e, coverUrl: coverFor(e.id) }));
+    events.map((e) => ({ ...e, coverUrl: coverFor(e.id), checkedInCount: checkedInCountFor(e.id) }));
   const liveWithCover = withCover(live);
   const upcomingWithCover = withCover(upcoming);
   const followingWithCover = withCover(following);
@@ -93,7 +100,7 @@ export default async function HomePage() {
           <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Following</h2>
           <div className="space-y-3">
             {followingWithCover.map((event) => (
-              <EventPreviewCard key={event.id} event={event} coverUrl={event.coverUrl} />
+              <EventPreviewCard key={event.id} event={event} coverUrl={event.coverUrl} checkedInCount={event.checkedInCount} />
             ))}
           </div>
         </section>

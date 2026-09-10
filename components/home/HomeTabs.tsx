@@ -11,7 +11,13 @@ import type { MapPoint } from "@/components/home/LiveMap";
 
 const LiveMap = dynamic(() => import("@/components/home/LiveMap").then((m) => m.LiveMap), { ssr: false });
 
-type EventRow = EventPreview & { id: string; latitude: number | null; longitude: number | null; coverUrl: string | null };
+type EventRow = EventPreview & {
+  id: string;
+  latitude: number | null;
+  longitude: number | null;
+  coverUrl: string | null;
+  checkedInCount: number;
+};
 type SparringRow = {
   id: string;
   gym: string;
@@ -96,7 +102,7 @@ export function HomeTabs({
             ) : (
               <div className="space-y-3">
                 {upcoming.map((event) => (
-                  <EventPreviewCard key={event.id} event={event} coverUrl={event.coverUrl} />
+                  <EventPreviewCard key={event.id} event={event} coverUrl={event.coverUrl} checkedInCount={event.checkedInCount} />
                 ))}
               </div>
             )}

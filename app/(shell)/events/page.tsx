@@ -41,6 +41,16 @@ export default async function EventsPage({
     take: 30,
   });
 
+  const eventIds = events.map((e) => e.id);
+  const checkIns =
+    eventIds.length > 0
+      ? await prisma.checkIn.findMany({
+          where: { attachedType: "EVENT", attachedId: { in: eventIds }, status: "CHECKED_IN" },
+          select: { attachedId: true },
+        })
+      : [];
+  const checkedInCountFor = (eventId: string) => checkIns.filter((c) => c.attachedId === eventId).length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pt-2">
@@ -80,7 +90,7 @@ export default async function EventsPage({
       ) : (
         <div className="space-y-3">
           {events.map((event) => (
-            <EventPreviewCard key={event.id} event={event} />
+            <EventPreviewCard key={event.id} event={event} checkedInCount={checkedInCountFor(event.id)} />
           ))}
         </div>
       )}

@@ -21,7 +21,15 @@ const STATUS_LABEL: Partial<Record<EventStatus, string>> = {
   CANCELLED: "CANCELLED",
 };
 
-export function EventPreviewCard({ event, coverUrl }: { event: EventPreview; coverUrl?: string | null }) {
+export function EventPreviewCard({
+  event,
+  coverUrl,
+  checkedInCount,
+}: {
+  event: EventPreview;
+  coverUrl?: string | null;
+  checkedInCount?: number;
+}) {
   if (!event.slug) return null;
   const isLive = event.status === "LIVE" || event.status === "INTERMISSION";
 
@@ -30,6 +38,14 @@ export function EventPreviewCard({ event, coverUrl }: { event: EventPreview; cov
       {STATUS_LABEL[event.status] ?? event.status}
     </Badge>
   );
+
+  const checkInBadge =
+    checkedInCount && checkedInCount > 0 ? (
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-signal">
+        <span className="w-1.5 h-1.5 rounded-full bg-signal" />
+        {checkedInCount} checked in
+      </span>
+    ) : null;
 
   if (coverUrl) {
     return (
@@ -47,9 +63,12 @@ export function EventPreviewCard({ event, coverUrl }: { event: EventPreview; cov
           </div>
           <div>
             <h3 className="font-semibold text-white">{event.name}</h3>
-            {(event.venue || event.city) && (
-              <p className="text-sm text-white/70 mt-0.5">{[event.venue, event.city].filter(Boolean).join(" · ")}</p>
-            )}
+            <div className="flex items-center justify-between mt-0.5">
+              {(event.venue || event.city) && (
+                <p className="text-sm text-white/70">{[event.venue, event.city].filter(Boolean).join(" · ")}</p>
+              )}
+              {checkInBadge}
+            </div>
           </div>
         </div>
       </Link>
@@ -66,9 +85,12 @@ export function EventPreviewCard({ event, coverUrl }: { event: EventPreview; cov
         <span className="text-xs text-mute tabular">{formatEventDateTime(event.date, event.startTime)}</span>
       </div>
       <h3 className="mt-2 font-semibold text-ink">{event.name}</h3>
-      {(event.venue || event.city) && (
-        <p className="text-sm text-mute mt-0.5">{[event.venue, event.city].filter(Boolean).join(" · ")}</p>
-      )}
+      <div className="flex items-center justify-between mt-0.5">
+        {(event.venue || event.city) && (
+          <p className="text-sm text-mute">{[event.venue, event.city].filter(Boolean).join(" · ")}</p>
+        )}
+        {checkInBadge}
+      </div>
     </Link>
   );
 }
