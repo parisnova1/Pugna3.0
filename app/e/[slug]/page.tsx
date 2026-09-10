@@ -11,6 +11,7 @@ import { FollowButton } from "@/components/event/FollowButton";
 import { ShareSheet } from "@/components/event/ShareSheet";
 import { LiveEventCard, type BoutView } from "@/components/event/LiveEventCard";
 import { BracketDiagram, isValidBracket, roundLabelForSize, type BracketRound } from "@/components/event/BracketDiagram";
+import { Badge } from "@/components/ui/Badge";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -210,14 +211,9 @@ export default async function EventCardPage({
             >
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-sm">{ring.name ?? `Ring ${ring.number}`}</p>
-                <span
-                  className={[
-                    "text-[11px] font-semibold tracking-wide rounded-pill px-2 py-0.5",
-                    ringProjection.nowLabel === "LIVE" ? "bg-signal text-onsignal" : "text-mute border border-white/10",
-                  ].join(" ")}
-                >
+                <Badge live={ringProjection.nowLabel === "LIVE"} tone={ringProjection.nowLabel === "LIVE" ? "signal" : "neutral"}>
                   {pillText}
-                </span>
+                </Badge>
               </div>
               {now ? (
                 <p className="text-sm mt-2">

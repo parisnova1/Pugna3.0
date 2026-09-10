@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { BoutStatus, EventStatus } from "@prisma/client";
 import { formatUpdatedAt } from "@/lib/format";
+import { Badge } from "@/components/ui/Badge";
 
 export type BoutView = {
   id: string;
@@ -164,15 +165,9 @@ export function LiveEventCard({
       <div>
         {pill && (
           <div className="flex items-center gap-2 mb-2">
-            <span
-              className={[
-                "inline-flex items-center gap-1 text-[11px] font-semibold tracking-wide rounded-pill px-2 py-0.5",
-                pill.live ? "bg-signal text-onsignal" : "text-mute border border-white/10",
-              ].join(" ")}
-            >
-              {pill.live && <span className="live-pulse w-1.5 h-1.5 rounded-full bg-onsignal" />}
+            <Badge live={pill.live} tone={pill.live ? "signal" : "neutral"}>
               {pill.text}
-            </span>
+            </Badge>
             {followerCount > 0 && <span className="text-[11px] text-mute tabular">{watchingLabel(followerCount)}</span>}
           </div>
         )}

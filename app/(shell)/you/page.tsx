@@ -34,18 +34,27 @@ export default async function YouHomePage() {
     );
   }
 
-  const nextBout = await prisma.bout.findFirst({
-    where: {
-      OR: [{ fighterAId: fighter.id }, { fighterBId: fighter.id }],
-      status: { in: ["CONFIRMED", "READY", "DELAYED", "IN_PROGRESS"] },
-    },
-    include: { event: true, fighterA: true, fighterB: true },
-    orderBy: { scheduledTime: "asc" },
-  });
+  const [nextBout, finishedBouts, pendingNoms] = await Promise.all([
+    prisma.bout.findFirst({
+      where: {
+        OR: [{ fighterAId: fighter.id }, { fighterBId: fighter.id }],
+        status: { in: ["CONFIRMED", "READY", "DELAYED", "IN_PROGRESS"] },
+      },
+      include: { event: true, fighterA: true, fighterB: true },
+      orderBy: { scheduledTime: "asc" },
+    }),
+    prisma.bout.findMany({
+      where: { OR: [{ fighterAId: fighter.id }, { fighterBId: fighter.id }], status: "FINAL" },
+      include: { result: true },
+    }),
+    prisma.nomination.count({
+      where: { fighterId: fighter.id, status: { in: ["CREATED", "PENDING"] } },
+    }),
+  ]);
 
-  const pendingNoms = await prisma.nomination.count({
-    where: { fighterId: fighter.id, status: { in: ["CREATED", "PENDING"] } },
-  });
+  const wins = finishedBouts.filter((b) => b.result?.winnerId === fighter.id).length;
+  const losses = finishedBouts.filter((b) => b.result?.winnerId && b.result.winnerId !== fighter.id).length;
+  const draws = finishedBouts.filter((b) => b.result && !b.result.winnerId).length;
 
   return (
     <div className="space-y-6 pt-2">
@@ -53,6 +62,21 @@ export default async function YouHomePage() {
         <h1 className="text-2xl font-semibold">{fighter.displayName}</h1>
         <BellLink unreadCount={unreadCount} />
       </div>
+
+      <Link
+        href={`/fighters/${fighter.id}`}
+        className="flex items-center justify-between rounded-card bg-panel border border-white/10 px-4 py-3"
+      >
+        <div className="flex items-center gap-3">
+          <p className="text-xl font-bold tabular">
+            {wins}–{losses}–{draws}
+          </p>
+          {(fighter.stance || fighter.style) && (
+            <p className="text-xs text-mute">{[fighter.stance, fighter.style].filter(Boolean).join(" · ")}</p>
+          )}
+        </div>
+        <span className="text-mute">›</span>
+      </Link>
 
       <div className="rounded-card bg-panel border border-white/10 p-5">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Next bout</p>

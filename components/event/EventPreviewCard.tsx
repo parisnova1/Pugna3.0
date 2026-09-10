@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatEventDate } from "@/lib/format";
+import { Badge } from "@/components/ui/Badge";
 import type { EventStatus } from "@prisma/client";
 
 export type EventPreview = {
@@ -24,15 +25,9 @@ export function EventPreviewCard({ event, coverUrl }: { event: EventPreview; cov
   const isLive = event.status === "LIVE" || event.status === "INTERMISSION";
 
   const pill = (
-    <span
-      className={[
-        "text-[11px] font-semibold tracking-wide rounded-pill px-2 py-0.5",
-        isLive ? "bg-signal text-onsignal" : "text-mute border border-white/10",
-      ].join(" ")}
-    >
-      {isLive && <span className="live-pulse inline-block w-1.5 h-1.5 rounded-full bg-onsignal mr-1 align-middle" />}
+    <Badge live={isLive} tone={isLive ? "signal" : "neutral"}>
       {STATUS_LABEL[event.status] ?? event.status}
-    </span>
+    </Badge>
   );
 
   if (coverUrl) {

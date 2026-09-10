@@ -52,6 +52,11 @@ enum NominationStatus {
   REPLACEMENT
 }
 
+enum ClubTier {
+  FREE
+  PRO
+}
+
 enum ScratchReason {
   INJURY
   WITHDRAWAL
@@ -136,6 +141,7 @@ model Club {
   name      String
   city      String?
   venue     String?
+  tier      ClubTier @default(FREE)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -159,15 +165,20 @@ model ClubAdmin {
 }
 
 model FighterProfile {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName  String
-  clubId       String?
-  club         Club?    @relation(fields: [clubId], references: [id])
-  weightClass  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName      String
+  clubId           String?
+  club             Club?    @relation(fields: [clubId], references: [id])
+  weightClass      String?
+  stance           String?
+  style            String?
+  sex              String?
+  dateOfBirth      DateTime?
+  experienceLevel  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   nominations     Nomination[]
   boutsAsFighterA Bout[] @relation("BoutFighterA")

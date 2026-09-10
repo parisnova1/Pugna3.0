@@ -10,7 +10,7 @@ export default function NotFound() {
           Scan QR
         </Link>
         <Link href="/" className="rounded-pill border border-white/20 text-ink font-semibold px-5 py-3 text-sm">
-          Discover
+          Home
         </Link>
       </div>
     </div>

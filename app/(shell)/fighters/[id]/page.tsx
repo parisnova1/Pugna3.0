@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatEventDate } from "@/lib/format";
+import { WeightTag } from "@/components/ui/WeightTag";
 
 export default async function FighterProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,6 +22,7 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
     ...fighter.boutsAsFighterA.map((b) => ({
       id: b.id,
       event: b.event,
+      opponentId: b.fighterB?.id ?? null,
       opponent: b.fighterB?.displayName ?? "TBD",
       status: b.status,
       result: b.result,
@@ -29,6 +31,7 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
     ...fighter.boutsAsFighterB.map((b) => ({
       id: b.id,
       event: b.event,
+      opponentId: b.fighterA?.id ?? null,
       opponent: b.fighterA?.displayName ?? "TBD",
       status: b.status,
       result: b.result,
@@ -41,26 +44,51 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
   const finished = bouts.filter((b) => b.status === "FINAL");
   const wins = finished.filter((b) => b.winnerId === fighter.id).length;
   const losses = finished.filter((b) => b.winnerId && b.winnerId !== fighter.id).length;
+  const draws = finished.filter((b) => !b.winnerId).length;
+  const opponentsFaced = new Set(finished.map((b) => b.opponentId).filter(Boolean)).size;
 
   return (
     <div className="space-y-6 pt-2">
-      <div>
-        <h1 className="text-2xl font-semibold">{fighter.displayName}</h1>
-        <p className="text-mute text-sm mt-1">
-          {fighter.club ? (
-            <Link href={`/clubs/${fighter.club.id}`} className="underline">
-              {fighter.club.name}
-            </Link>
-          ) : (
-            "Independent"
-          )}
-          {fighter.weightClass ? ` · ${fighter.weightClass}` : ""}
-        </p>
-        {finished.length > 0 && (
-          <p className="text-xs text-mute mt-1">
-            {wins}-{losses} in {finished.length} bout{finished.length > 1 ? "s" : ""}
+      <div className="space-y-3">
+        <div>
+          <h1 className="text-2xl font-semibold">{fighter.displayName}</h1>
+          <p className="text-mute text-sm mt-1">
+            {fighter.club ? (
+              <Link href={`/clubs/${fighter.club.id}`} className="underline">
+                {fighter.club.name}
+              </Link>
+            ) : (
+              "Independent"
+            )}
+            {fighter.weightClass ? ` · ${fighter.weightClass}` : ""}
           </p>
+        </div>
+
+        <p className="text-3xl font-bold tabular">
+          {wins}–{losses}–{draws}
+        </p>
+
+        {(fighter.stance || fighter.style) && (
+          <div className="flex gap-2 flex-wrap">
+            {fighter.stance && <WeightTag>{fighter.stance}</WeightTag>}
+            {fighter.style && <WeightTag>{fighter.style}</WeightTag>}
+          </div>
         )}
+
+        <div className="grid grid-cols-3 gap-2 pt-2">
+          <div className="rounded-card bg-panel border border-white/10 p-3 text-center">
+            <p className="text-lg font-semibold tabular">{finished.length}</p>
+            <p className="text-[11px] text-mute mt-0.5">Fights</p>
+          </div>
+          <div className="rounded-card bg-panel border border-white/10 p-3 text-center">
+            <p className="text-lg font-semibold tabular">{opponentsFaced}</p>
+            <p className="text-[11px] text-mute mt-0.5">Opponents</p>
+          </div>
+          <div className="rounded-card bg-panel border border-white/10 p-3 text-center">
+            <p className="text-lg font-semibold tabular">—</p>
+            <p className="text-[11px] text-mute mt-0.5">Sparring</p>
+          </div>
+        </div>
       </div>
 
       <section className="space-y-2">

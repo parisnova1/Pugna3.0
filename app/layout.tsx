@@ -5,8 +5,8 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 
 export const metadata: Metadata = {
-  title: "Pugna",
-  description: "The live fight card for combat sports.",
+  title: "Pugna — Train. Match. Compete. Track.",
+  description: "The operating system for combat sports.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
