@@ -34,11 +34,11 @@ export default async function HomePage() {
           take: 5,
         })
       : Promise.resolve([]),
-    prisma.sparringPost.findMany({
+    prisma.sparringSession.findMany({
       where: { status: "OPEN", date: { gte: new Date() } },
       orderBy: { date: "asc" },
       take: 4,
-      include: { club: true },
+      include: { club: true, weightGroups: { orderBy: { order: "asc" }, take: 1 } },
     }),
   ]);
 
@@ -108,16 +108,16 @@ export default async function HomePage() {
           <p className="text-sm text-mute">No open sparring sessions right now.</p>
         ) : (
           <div className="space-y-3">
-            {openSparring.map((post) => (
+            {openSparring.map((session) => (
               <Link
-                key={post.id}
-                href="/sparring"
+                key={session.id}
+                href={`/sparring/${session.id}`}
                 className="block rounded-card bg-panel border border-white/10 p-4 hover:border-white/20 transition-colors"
               >
-                <p className="font-semibold text-sm">{post.club.name}</p>
+                <p className="font-semibold text-sm">{session.club.name}</p>
                 <p className="text-xs text-mute mt-1">
-                  {post.gym} · {formatEventDate(post.date)} · {post.weightWindow} · {post.spots} spot
-                  {post.spots > 1 ? "s" : ""}
+                  {session.gym} · {formatEventDate(session.date)}
+                  {session.weightGroups[0] ? ` · ${session.weightGroups[0].label}` : ""}
                 </p>
               </Link>
             ))}

@@ -6,7 +6,7 @@ import { canManageMedia } from "@/lib/actions/media";
 import type { MediaAttachedType, MediaKind } from "@prisma/client";
 
 const KINDS: MediaKind[] = ["EVENT_COVER", "EVENT_GALLERY", "SPONSOR", "BOUT_MEDIA", "SPARRING_MEDIA"];
-const ATTACHED_TYPES: MediaAttachedType[] = ["EVENT", "BOUT", "SPARRING_POST"];
+const ATTACHED_TYPES: MediaAttachedType[] = ["EVENT", "BOUT", "SPARRING_SESSION"];
 
 export async function POST(req: Request) {
   const formData = await req.formData();

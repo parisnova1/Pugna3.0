@@ -26,9 +26,9 @@ export async function canManageMedia(
     return gate.allowed ? { ok: true } : { ok: false, code: gate.code, reason: gate.reason };
   }
 
-  const post = await prisma.sparringPost.findUnique({ where: { id: attachedId }, select: { clubId: true } });
-  if (!post) return { ok: false, code: "NOT_FOUND", reason: "Sparring post not found." };
-  const gate = can(actor, "club.admin", { clubId: post.clubId });
+  const session = await prisma.sparringSession.findUnique({ where: { id: attachedId }, select: { clubId: true } });
+  if (!session) return { ok: false, code: "NOT_FOUND", reason: "Sparring session not found." };
+  const gate = can(actor, "club.admin", { clubId: session.clubId });
   return gate.allowed ? { ok: true } : { ok: false, code: gate.code, reason: gate.reason };
 }
 

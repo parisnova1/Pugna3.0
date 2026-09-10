@@ -91,9 +91,9 @@ export default async function ClubHomePage({
             <p className="font-semibold text-sm">Tournaments</p>
             <p className="text-xs text-mute mt-1">Hosting</p>
           </Link>
-          <Link href="/club/sparring" className="rounded-card bg-panel border border-white/10 p-4">
+          <Link href="/sparring/host" className="rounded-card bg-panel border border-white/10 p-4">
             <p className="font-semibold text-sm">Sparring</p>
-            <p className="text-xs text-mute mt-1">Club-to-club</p>
+            <p className="text-xs text-mute mt-1">Host &amp; manage</p>
           </Link>
         </div>
       </div>

@@ -76,7 +76,7 @@ enum MediaKind {
 enum MediaAttachedType {
   EVENT
   BOUT
-  SPARRING_POST
+  SPARRING_SESSION
 }
 
 // blueprint §9 — event-driven only, no social notifications.
@@ -95,17 +95,31 @@ enum NotificationType {
   SPARRING_REQUESTED
   SPARRING_ACCEPTED
   SPARRING_DECLINED
+  SPARRING_MATCHED
+  SPARRING_INVITED
 }
 
-enum SparringPostStatus {
+enum SparringSessionStatus {
   OPEN
   CLOSED
+  CANCELLED
+  COMPLETED
 }
 
-enum SparringRequestStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
+enum SparringParticipantStatus {
+  REQUESTED
+  INVITED
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  CHECKED_IN
+  COMPLETED
+  NO_SHOW
+}
+
+enum SparringMatchStatus {
+  SUGGESTED
+  CONFIRMED
 }
 
 // ---------------------------------------------------------------------------
@@ -150,8 +164,7 @@ model Club {
   requests     EventRequest[]
   nominations  Nomination[]
   organizedEvents Event[] @relation("EventOrganizingClub")
-  sparringPosts    SparringPost[]
-  sparringRequests SparringRequest[]
+  sparringSessions SparringSession[]
 }
 
 model ClubAdmin {
@@ -183,6 +196,7 @@ model FighterProfile {
   nominations     Nomination[]
   boutsAsFighterA Bout[] @relation("BoutFighterA")
   boutsAsFighterB Bout[] @relation("BoutFighterB")
+  sparringParticipations SparringParticipant[]
 }
 
 /** The standalone "Organizer" context — for organizing without a club. */
@@ -345,33 +359,71 @@ model Notification {
 // Club-to-club sparring board — isolated from competition data (blueprint §0
 // item 11 / design master: "NOT a fighter marketplace"). Never writes into
 // Bout/Event.
-model SparringPost {
-  id           String             @id @default(cuid())
-  clubId       String
-  gym          String
-  date         DateTime
-  weightWindow String
-  spots        Int                @default(1)
-  note         String?
-  status       SparringPostStatus @default(OPEN)
-  createdAt    DateTime           @default(now())
+// Individual-fighter sparring marketplace: a club hosts a SparringSession,
+// fighters discover and register (REQUESTED -> host CONFIRMED/REJECTED),
+// the host organizes registrants into SparringWeightGroups, and pairs
+// confirmed fighters into SparringMatches (suggested or host-confirmed).
+model SparringSession {
+  id              String                @id @default(cuid())
+  clubId          String
+  club            Club                  @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  sport           String                @default("Boxing")
+  gym             String
+  city            String?
+  date            DateTime
+  rulesText       String?
+  minAge          Int?
+  maxAge          Int?
+  sex             String?
+  experienceLevel String?
+  status          SparringSessionStatus @default(OPEN)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 
-  club     Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  requests SparringRequest[]
+  weightGroups SparringWeightGroup[]
+  participants SparringParticipant[]
+  matches      SparringMatch[]
 }
 
-model SparringRequest {
-  id                String                 @id @default(cuid())
-  postId            String
-  requestingClubId  String
-  status            SparringRequestStatus  @default(PENDING)
-  note              String?
-  createdAt         DateTime               @default(now())
+model SparringWeightGroup {
+  id        String @id @default(cuid())
+  sessionId String
+  session   SparringSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  label     String
+  order     Int    @default(0)
 
-  post           SparringPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  requestingClub Club         @relation(fields: [requestingClubId], references: [id], onDelete: Cascade)
+  participants SparringParticipant[]
+}
 
-  @@unique([postId, requestingClubId])
+model SparringParticipant {
+  id            String                     @id @default(cuid())
+  sessionId     String
+  session       SparringSession            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  fighterId     String
+  fighter       FighterProfile             @relation(fields: [fighterId], references: [id], onDelete: Cascade)
+  weightGroupId String?
+  weightGroup   SparringWeightGroup?       @relation(fields: [weightGroupId], references: [id])
+  status        SparringParticipantStatus  @default(REQUESTED)
+  note          String?
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+
+  matchesAsA SparringMatch[] @relation("MatchParticipantA")
+  matchesAsB SparringMatch[] @relation("MatchParticipantB")
+
+  @@unique([sessionId, fighterId])
+}
+
+model SparringMatch {
+  id             String              @id @default(cuid())
+  sessionId      String
+  session        SparringSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participantAId String
+  participantA   SparringParticipant @relation("MatchParticipantA", fields: [participantAId], references: [id], onDelete: Cascade)
+  participantBId String
+  participantB   SparringParticipant @relation("MatchParticipantB", fields: [participantBId], references: [id], onDelete: Cascade)
+  status         SparringMatchStatus @default(SUGGESTED)
+  createdAt      DateTime            @default(now())
 }
 
 // Phase 3 — one generic model for every media type (cover/gallery/sponsor/bout
