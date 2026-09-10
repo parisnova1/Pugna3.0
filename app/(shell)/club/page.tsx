@@ -26,7 +26,7 @@ export default async function ClubHomePage({
     ? await prisma.club.findUnique({
         where: { id: activeClubId },
         include: {
-          _count: { select: { roster: true } },
+          _count: { select: { roster: true, coaches: true } },
           requests: { where: { status: { in: ["PENDING", "PARTIAL"] } } },
           organizedEvents: { where: { status: { in: ["PUBLISHED", "LIVE", "INTERMISSION"] } }, orderBy: { date: "asc" }, take: 1 },
         },
@@ -37,6 +37,18 @@ export default async function ClubHomePage({
     const unreadCount = await prisma.notification.count({ where: { userId: actor.userId, read: false } });
     const nextTournament = myClub.organizedEvents[0] ?? null;
 
+    const [upcomingFightCount, upcomingSparringCount] = await Promise.all([
+      prisma.bout.count({
+        where: {
+          OR: [{ fighterA: { clubId: myClub.id } }, { fighterB: { clubId: myClub.id } }],
+          status: { in: ["CONFIRMED", "READY", "DELAYED"] },
+        },
+      }),
+      prisma.sparringParticipant.count({
+        where: { session: { clubId: myClub.id, date: { gte: new Date() } }, status: { in: ["CONFIRMED", "INVITED"] } },
+      }),
+    ]);
+
     return (
       <div className="space-y-6 pt-2">
         <div className="flex items-center justify-between">
@@ -45,6 +57,25 @@ export default async function ClubHomePage({
             <p className="text-mute text-sm mt-1">{myClub.city ?? "—"} · {myClub._count.roster} boxers</p>
           </div>
           <BellLink unreadCount={unreadCount} />
+        </div>
+
+        <div className="grid grid-cols-4 gap-2 text-center">
+          <div className="rounded-card bg-panel border border-white/10 p-3">
+            <p className="text-lg font-semibold tabular">{myClub._count.roster}</p>
+            <p className="text-[10px] text-mute mt-0.5">Fighters</p>
+          </div>
+          <div className="rounded-card bg-panel border border-white/10 p-3">
+            <p className="text-lg font-semibold tabular">{myClub._count.coaches}</p>
+            <p className="text-[10px] text-mute mt-0.5">Coaches</p>
+          </div>
+          <div className="rounded-card bg-panel border border-white/10 p-3">
+            <p className="text-lg font-semibold tabular">{upcomingSparringCount}</p>
+            <p className="text-[10px] text-mute mt-0.5">Sparring</p>
+          </div>
+          <div className="rounded-card bg-panel border border-white/10 p-3">
+            <p className="text-lg font-semibold tabular">{upcomingFightCount}</p>
+            <p className="text-[10px] text-mute mt-0.5">Fights</p>
+          </div>
         </div>
 
         {nextTournament && (
@@ -67,21 +98,44 @@ export default async function ClubHomePage({
           </div>
         )}
 
-        <form
-          action={async () => {
-            "use server";
-            await createEventFromClub(myClub.id);
-          }}
-        >
-          <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
-            + Create tournament
-          </button>
-        </form>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Quick actions</p>
+          <div className="grid grid-cols-2 gap-2">
+            <form
+              action={async () => {
+                "use server";
+                await createEventFromClub(myClub.id);
+              }}
+            >
+              <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 text-sm">
+                Create Event
+              </button>
+            </form>
+            <Link
+              href="/sparring/host/new"
+              className="flex items-center justify-center rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm"
+            >
+              Open Sparring
+            </Link>
+            <Link
+              href="/club/roster"
+              className="flex items-center justify-center rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm"
+            >
+              Add Fighter
+            </Link>
+            <Link
+              href="/sparring/host"
+              className="flex items-center justify-center rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm"
+            >
+              Match Sparring
+            </Link>
+          </div>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Link href="/club/roster" className="rounded-card bg-panel border border-white/10 p-4">
             <p className="font-semibold text-sm">Roster</p>
-            <p className="text-xs text-mute mt-1">Manage boxers</p>
+            <p className="text-xs text-mute mt-1">Fighters &amp; coaches</p>
           </Link>
           <Link href="/club/requests" className="rounded-card bg-panel border border-white/10 p-4">
             <p className="font-semibold text-sm">Requests</p>
@@ -94,6 +148,10 @@ export default async function ClubHomePage({
           <Link href="/sparring/host" className="rounded-card bg-panel border border-white/10 p-4">
             <p className="font-semibold text-sm">Sparring</p>
             <p className="text-xs text-mute mt-1">Host &amp; manage</p>
+          </Link>
+          <Link href="/club/analytics" className="rounded-card bg-panel border border-white/10 p-4 col-span-2">
+            <p className="font-semibold text-sm">Analytics</p>
+            <p className="text-xs text-mute mt-1">Attendance, activity, results</p>
           </Link>
         </div>
       </div>

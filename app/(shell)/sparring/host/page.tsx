@@ -50,28 +50,49 @@ export default async function SparringHostPage() {
       {sessions.length === 0 ? (
         <p className="text-sm text-mute text-center py-10">You haven&apos;t hosted any sparring sessions yet.</p>
       ) : (
-        <div className="space-y-2">
-          {sessions.map((session) => (
-            <Link
-              key={session.id}
-              href={`/sparring/${session.id}`}
-              className="flex items-center justify-between rounded-card bg-panel border border-white/10 px-4 py-3"
-            >
-              <div>
-                <p className="text-sm font-medium">
-                  {session.gym}
-                  {session.city ? ` · ${session.city}` : ""}
-                </p>
-                <p className="text-xs text-mute mt-0.5">
-                  {formatEventDate(session.date)} · {session._count.participants} fighter
-                  {session._count.participants === 1 ? "" : "s"}
-                </p>
-              </div>
-              <Badge tone={session.status === "OPEN" ? "signal" : "neutral"}>{session.status}</Badge>
-            </Link>
-          ))}
-        </div>
+        <>
+          <SessionGroup title="Open" sessions={sessions.filter((s) => s.status === "OPEN")} />
+          <SessionGroup title="Closed" sessions={sessions.filter((s) => s.status === "CLOSED")} />
+          <SessionGroup title="Completed" sessions={sessions.filter((s) => s.status === "COMPLETED")} />
+          <SessionGroup title="Cancelled" sessions={sessions.filter((s) => s.status === "CANCELLED")} />
+        </>
       )}
     </div>
+  );
+}
+
+function SessionGroup({
+  title,
+  sessions,
+}: {
+  title: string;
+  sessions: { id: string; gym: string; city: string | null; date: Date; status: string; _count: { participants: number } }[];
+}) {
+  if (sessions.length === 0) return null;
+  return (
+    <section className="space-y-2">
+      <p className="text-xs font-semibold text-mute uppercase tracking-wide">
+        {title} ({sessions.length})
+      </p>
+      {sessions.map((session) => (
+        <Link
+          key={session.id}
+          href={`/sparring/${session.id}`}
+          className="flex items-center justify-between rounded-card bg-panel border border-white/10 px-4 py-3"
+        >
+          <div>
+            <p className="text-sm font-medium">
+              {session.gym}
+              {session.city ? ` · ${session.city}` : ""}
+            </p>
+            <p className="text-xs text-mute mt-0.5">
+              {formatEventDate(session.date)} · {session._count.participants} fighter
+              {session._count.participants === 1 ? "" : "s"}
+            </p>
+          </div>
+          <Badge tone={session.status === "OPEN" ? "signal" : "neutral"}>{session.status}</Badge>
+        </Link>
+      ))}
+    </section>
   );
 }

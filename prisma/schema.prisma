@@ -173,10 +173,20 @@ model Club {
 
   admins       ClubAdmin[]
   roster       FighterProfile[]
+  coaches      Coach[]
   requests     EventRequest[]
   nominations  Nomination[]
   organizedEvents Event[] @relation("EventOrganizingClub")
   sparringSessions SparringSession[]
+}
+
+model Coach {
+  id          String   @id @default(cuid())
+  clubId      String
+  club        Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  displayName String
+  bio         String?
+  createdAt   DateTime @default(now())
 }
 
 model ClubAdmin {

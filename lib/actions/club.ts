@@ -56,3 +56,30 @@ export async function addRosterFighter(formData: FormData): Promise<ActionResult
   revalidatePath("/club/roster");
   return { ok: true };
 }
+
+export async function addCoach(formData: FormData): Promise<ActionResult> {
+  const actor = await getActor();
+  const clubId = String(formData.get("clubId") ?? "");
+  const gate = can(actor, "club.admin", { clubId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const displayName = String(formData.get("name") ?? "").trim();
+  const bio = String(formData.get("bio") ?? "").trim() || null;
+  if (!displayName) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Coach name is required." };
+
+  await prisma.coach.create({ data: { clubId, displayName, bio } });
+
+  revalidatePath("/club/roster");
+  return { ok: true };
+}
+
+export async function removeCoach(coachId: string, clubId: string): Promise<ActionResult> {
+  const actor = await getActor();
+  const gate = can(actor, "club.admin", { clubId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  await prisma.coach.delete({ where: { id: coachId } });
+
+  revalidatePath("/club/roster");
+  return { ok: true };
+}
