@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/lib/actions/types";
 import { notify, notifyMany } from "@/lib/actions/notify";
+import { geocodeVenue } from "@/lib/geocode";
 
 async function getOwnFighter(userId: string) {
   return prisma.fighterProfile.findUnique({ where: { userId } });
@@ -47,12 +48,16 @@ export async function createSparringSession(formData: FormData): Promise<ActionR
   const accessMode: "INVITE" | "OPEN_TO_CLUBS" | "OPEN" =
     accessModeRaw === "INVITE" || accessModeRaw === "OPEN" ? accessModeRaw : "OPEN_TO_CLUBS";
 
+  const geo = await geocodeVenue(gym, city);
+
   const session = await prisma.sparringSession.create({
     data: {
       clubId,
       sport,
       gym,
       city,
+      latitude: geo?.lat,
+      longitude: geo?.lng,
       date: new Date(dateStr),
       rulesText,
       minAge,

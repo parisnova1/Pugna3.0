@@ -47,3 +47,9 @@ a.bg-signal {
     animation: none;
   }
 }
+
+/* Standard OpenStreetMap tiles, dark-inverted to match the app theme — no
+   API key / account needed, unlike CartoDB's now-gated free dark basemap. */
+.pugna-map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.6);
+}

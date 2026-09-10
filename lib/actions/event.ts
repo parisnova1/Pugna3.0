@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/lib/actions/types";
 import { notifyMany } from "@/lib/actions/notify";
+import { geocodeVenue } from "@/lib/geocode";
 
 export async function createEvent(): Promise<{ ok: true; eventId: string } | { ok: false; code: string; reason: string }> {
   const actor = await getActor();
@@ -266,6 +267,8 @@ export async function publishEvent(eventId: string): Promise<ActionResult> {
 
   const slug = event.slug ?? slugify(event.name, event.date);
 
+  const geo = event.latitude == null ? await geocodeVenue(event.venue, event.city) : null;
+
   try {
     if (event.status === "DRAFT") transitionEvent("DRAFT", "READY");
     const nextStatus = transitionEvent(event.status === "DRAFT" ? "READY" : event.status, "PUBLISHED");
@@ -277,7 +280,10 @@ export async function publishEvent(eventId: string): Promise<ActionResult> {
       ...event.bouts
         .filter((b) => b.status === "CONFIRMED")
         .map((b) => prisma.bout.update({ where: { id: b.id }, data: { status: "READY" } })),
-      prisma.event.update({ where: { id: eventId }, data: { status: nextStatus, slug, code } }),
+      prisma.event.update({
+        where: { id: eventId },
+        data: { status: nextStatus, slug, code, ...(geo ? { latitude: geo.lat, longitude: geo.lng } : {}) },
+      }),
     ]);
   } catch (error) {
     if (error instanceof IllegalTransitionError) {

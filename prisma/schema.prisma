@@ -269,6 +269,8 @@ model Event {
   name             String
   venue            String?
   city             String?
+  latitude         Float?
+  longitude        Float?
   date             DateTime
   startTime        DateTime?
   sport            String      @default("Boxing")
@@ -426,6 +428,8 @@ model SparringSession {
   sport           String                @default("Boxing")
   gym             String
   city            String?
+  latitude        Float?
+  longitude       Float?
   date            DateTime
   rulesText       String?
   minAge          Int?

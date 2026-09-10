@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
-import { formatEventDate, formatCountdown } from "@/lib/format";
+import { formatCountdown } from "@/lib/format";
 import { EventPreviewCard } from "@/components/event/EventPreviewCard";
 import { SeeAllLink } from "@/components/event/SeeAllLink";
-import { EventCodeBar } from "@/components/event/EventCodeBar";
+import { HomeTabs } from "@/components/home/HomeTabs";
 
 export default async function HomePage() {
   const actor = await getActor();
@@ -52,6 +52,11 @@ export default async function HomePage() {
         })
       : [];
   const coverFor = (eventId: string) => covers.find((m) => m.attachedId === eventId)?.url ?? null;
+  const withCover = <T extends { id: string }>(events: T[]) =>
+    events.map((e) => ({ ...e, coverUrl: coverFor(e.id) }));
+  const liveWithCover = withCover(live);
+  const upcomingWithCover = withCover(upcoming);
+  const followingWithCover = withCover(following);
 
   const yourPugna = actor
     ? await (async () => {
@@ -79,80 +84,20 @@ export default async function HomePage() {
         <h1 className="text-4xl font-bold leading-none tracking-tight">PUGNA</h1>
         <p className="text-lg font-semibold text-ink">Train. Match. Compete. Track.</p>
         <p className="text-mute text-sm">The operating system for combat sports.</p>
-        <EventCodeBar />
-        <div className="flex gap-2 pt-1">
-          <Link href="/events" className="rounded-pill border border-white/20 text-ink font-semibold px-5 py-3 text-sm">
-            Explore Events
-          </Link>
-          <Link href="/sparring" className="rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
-            Find Sparring
-          </Link>
-        </div>
       </section>
 
-      {live.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Live now</h2>
-          <div className="space-y-3">
-            {live.map((event) => (
-              <EventPreviewCard key={event.id} event={event} coverUrl={coverFor(event.id)} />
-            ))}
-          </div>
-        </section>
-      )}
+      <HomeTabs live={liveWithCover} upcoming={upcomingWithCover} openSparring={openSparring} />
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Open sparring near you</h2>
-          <SeeAllLink href="/sparring" />
-        </div>
-        {openSparring.length === 0 ? (
-          <p className="text-sm text-mute">No open sparring sessions right now.</p>
-        ) : (
-          <div className="space-y-3">
-            {openSparring.map((session) => (
-              <Link
-                key={session.id}
-                href={`/sparring/${session.id}`}
-                className="block rounded-card bg-panel border border-white/10 p-4 hover:border-white/20 transition-colors"
-              >
-                <p className="font-semibold text-sm">{session.club.name}</p>
-                <p className="text-xs text-mute mt-1">
-                  {session.gym} · {formatEventDate(session.date)}
-                  {session.weightGroups[0] ? ` · ${session.weightGroups[0].label}` : ""}
-                </p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {following.length > 0 && (
+      {followingWithCover.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Following</h2>
           <div className="space-y-3">
-            {following.map((event) => (
-              <EventPreviewCard key={event.id} event={event} coverUrl={coverFor(event.id)} />
+            {followingWithCover.map((event) => (
+              <EventPreviewCard key={event.id} event={event} coverUrl={event.coverUrl} />
             ))}
           </div>
         </section>
       )}
-
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Upcoming events</h2>
-          <SeeAllLink href="/events" />
-        </div>
-        {upcoming.length === 0 ? (
-          <p className="text-sm text-mute">No events nearby yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {upcoming.map((event) => (
-              <EventPreviewCard key={event.id} event={event} coverUrl={coverFor(event.id)} />
-            ))}
-          </div>
-        )}
-      </section>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
