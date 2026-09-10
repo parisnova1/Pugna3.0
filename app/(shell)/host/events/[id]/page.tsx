@@ -45,6 +45,15 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
         </Link>
       )}
 
+      {(event.status === "PUBLISHED" || event.status === "LIVE" || event.status === "INTERMISSION") && (
+        <Link
+          href={`/host/events/${event.id}/checkin`}
+          className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-3 text-sm"
+        >
+          Check-in
+        </Link>
+      )}
+
       {!event.slug && event.ringCount === 1 && event.dayCount === 1 && (
         <Link
           href={`/host/events/${event.id}/preview`}

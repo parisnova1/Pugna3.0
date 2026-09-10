@@ -13,6 +13,8 @@ import {
   moveWeightGroup,
   setSessionStatus,
 } from "@/lib/actions/sparring";
+import { setCheckInStatus } from "@/lib/actions/checkin";
+import { QrCodeSheet } from "@/components/event/QrCodeSheet";
 import type { SparringParticipantStatus } from "@prisma/client";
 
 const STATUS_LABEL: Record<SparringParticipantStatus, string> = {
@@ -55,6 +57,9 @@ export default async function SparringSessionPage({ params }: { params: Promise<
         where: { clubId: session.clubId, id: { notIn: session.participants.map((p) => p.fighterId) } },
       })
     : [];
+
+  const checkIns = await prisma.checkIn.findMany({ where: { attachedType: "SPARRING_SESSION", attachedId: session.id } });
+  const checkInFor = (fighterId: string) => checkIns.find((c) => c.fighterId === fighterId) ?? null;
 
   return (
     <div className="space-y-6 pt-2">
@@ -189,6 +194,39 @@ export default async function SparringSessionPage({ params }: { params: Promise<
                     </form>
                   </div>
                 )}
+                {isHost && (p.status === "CONFIRMED" || p.status === "CHECKED_IN") && (
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
+                    <span className="text-xs text-mute">
+                      {checkInFor(p.fighterId)?.status === "CHECKED_IN"
+                        ? "🟢 Checked in"
+                        : checkInFor(p.fighterId)?.status === "NO_SHOW"
+                          ? "No-show"
+                          : "Not checked in"}
+                    </span>
+                    <div className="flex gap-2">
+                      <form
+                        action={async () => {
+                          "use server";
+                          await setCheckInStatus("SPARRING_SESSION", session.id, p.fighterId, "CHECKED_IN");
+                        }}
+                      >
+                        <button type="submit" className="rounded-pill border border-white/20 px-3 py-1 text-[11px] font-medium">
+                          Check in
+                        </button>
+                      </form>
+                      <form
+                        action={async () => {
+                          "use server";
+                          await setCheckInStatus("SPARRING_SESSION", session.id, p.fighterId, "NO_SHOW");
+                        }}
+                      >
+                        <button type="submit" className="rounded-pill border border-white/20 px-3 py-1 text-[11px] font-medium">
+                          No-show
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                )}
                 {isHost && p.status === "CONFIRMED" && session.weightGroups.length > 0 && (
                   <form
                     action={async (formData: FormData) => {
@@ -230,6 +268,7 @@ export default async function SparringSessionPage({ params }: { params: Promise<
           >
             Suggested matches
           </Link>
+          <QrCodeSheet path={`/checkin/sparring/${session.id}`} label="Check-in QR" buttonLabel="Show check-in QR" />
 
           {rosterFighters.length > 0 && (
             <form

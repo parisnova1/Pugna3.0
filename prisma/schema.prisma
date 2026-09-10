@@ -97,6 +97,18 @@ enum NotificationType {
   SPARRING_DECLINED
   SPARRING_MATCHED
   SPARRING_INVITED
+  CHECKIN_OPEN
+}
+
+enum CheckInAttachedType {
+  EVENT
+  SPARRING_SESSION
+}
+
+enum CheckInStatus {
+  CHECKED_IN
+  NO_SHOW
+  LATE
 }
 
 enum SparringSessionStatus {
@@ -197,6 +209,7 @@ model FighterProfile {
   boutsAsFighterA Bout[] @relation("BoutFighterA")
   boutsAsFighterB Bout[] @relation("BoutFighterB")
   sparringParticipations SparringParticipant[]
+  checkIns        CheckIn[]
 }
 
 /** The standalone "Organizer" context — for organizing without a club. */
@@ -442,5 +455,20 @@ model Media {
   uploadedBy       User              @relation(fields: [uploadedByUserId], references: [id])
   createdAt        DateTime          @default(now())
 
+  @@index([attachedType, attachedId])
+}
+
+// Same polymorphic pattern as Media — one model for event and sparring
+// check-in rather than two near-identical tables.
+model CheckIn {
+  id           String              @id @default(cuid())
+  attachedType CheckInAttachedType
+  attachedId   String
+  fighterId    String
+  fighter      FighterProfile      @relation(fields: [fighterId], references: [id], onDelete: Cascade)
+  status       CheckInStatus       @default(CHECKED_IN)
+  checkedInAt  DateTime            @default(now())
+
+  @@unique([attachedType, attachedId, fighterId])
   @@index([attachedType, attachedId])
 }

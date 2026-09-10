@@ -4,16 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import jsQR from "jsqr";
 
-function extractCode(text: string): string | null {
+// Pugna QR codes always encode one of these path shapes — event, fighter,
+// club, event/sparring check-in — regardless of which origin generated them
+// (dev vs production), so match on path, not origin.
+const KNOWN_PATH = /^\/(go\/[^/]+|checkin\/event\/[^/]+|checkin\/sparring\/[^/]+|fighters\/[^/]+|clubs\/[^/]+|e\/[^/]+)/;
+
+/** Resolves a scanned QR payload to the in-app path it should open. */
+function resolveScannedPath(text: string): string | null {
   try {
     const url = new URL(text);
-    const match = url.pathname.match(/\/go\/([^/]+)/);
-    if (match) return match[1] ?? null;
+    if (KNOWN_PATH.test(url.pathname)) return url.pathname + url.search;
   } catch {
-    // not a URL — treat raw text as the code itself
+    // not a URL — fall through to treating raw text as an event code
   }
   const trimmed = text.trim();
-  return trimmed.length > 0 && trimmed.length < 64 ? trimmed : null;
+  return trimmed.length > 0 && trimmed.length < 64 ? `/go/${encodeURIComponent(trimmed)}` : null;
 }
 
 export default function ScanPage() {
@@ -54,9 +59,9 @@ export default function ScanPage() {
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const result = jsQR(imageData.data, imageData.width, imageData.height);
           if (result?.data) {
-            const code = extractCode(result.data);
-            if (code) {
-              router.push(`/go/${code}`);
+            const path = resolveScannedPath(result.data);
+            if (path) {
+              router.push(path);
               return;
             }
           }
@@ -85,7 +90,8 @@ export default function ScanPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (manualCode.trim()) router.push(`/go/${encodeURIComponent(manualCode.trim())}`);
+            const path = resolveScannedPath(manualCode.trim());
+            if (path) router.push(path);
           }}
           className="space-y-3"
         >
