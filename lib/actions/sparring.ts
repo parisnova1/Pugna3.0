@@ -12,7 +12,7 @@ async function getOwnFighter(userId: string) {
   return prisma.fighterProfile.findUnique({ where: { userId } });
 }
 
-async function clubAdminUserIds(clubId: string): Promise<string[]> {
+export async function clubAdminUserIds(clubId: string): Promise<string[]> {
   const admins = await prisma.clubAdmin.findMany({ where: { clubId }, select: { userId: true } });
   return admins.map((a) => a.userId);
 }
@@ -43,6 +43,10 @@ export async function createSparringSession(formData: FormData): Promise<ActionR
     .map((s) => s.trim())
     .filter(Boolean);
 
+  const accessModeRaw = String(formData.get("accessMode") ?? "OPEN_TO_CLUBS");
+  const accessMode: "INVITE" | "OPEN_TO_CLUBS" | "OPEN" =
+    accessModeRaw === "INVITE" || accessModeRaw === "OPEN" ? accessModeRaw : "OPEN_TO_CLUBS";
+
   const session = await prisma.sparringSession.create({
     data: {
       clubId,
@@ -55,6 +59,7 @@ export async function createSparringSession(formData: FormData): Promise<ActionR
       maxAge,
       sex,
       experienceLevel,
+      accessMode,
       weightGroups: {
         create: weightGroupLabels.map((label, i) => ({ label, order: i })),
       },
@@ -76,6 +81,9 @@ export async function registerForSparring(sessionId: string, formData: FormData)
   const session = await prisma.sparringSession.findUnique({ where: { id: sessionId }, include: { club: true } });
   if (!session) return { ok: false, code: "NOT_FOUND", reason: "Session not found." };
   if (session.status !== "OPEN") return { ok: false, code: "CONFLICT", reason: "This session is no longer open." };
+  if (session.accessMode !== "OPEN") {
+    return { ok: false, code: "FORBIDDEN", reason: "This session isn't open for direct requests — a club must nominate you." };
+  }
 
   const existing = await prisma.sparringParticipant.findUnique({
     where: { sessionId_fighterId: { sessionId, fighterId: fighter.id } },

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getActor } from "@/lib/actor";
 import { formatEventDate } from "@/lib/format";
 import { SportTag } from "@/components/ui/SportTag";
 import { Badge } from "@/components/ui/Badge";
 
 const SPORTS = ["Boxing", "Kickboxing", "MMA"];
 const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced", "Pro"];
+const MODE_LABEL = { INVITE: "Invite only", OPEN_TO_CLUBS: "Open to clubs", OPEN: "Open sparring" } as const;
 
 export default async function SparringDiscoverPage({
   searchParams,
@@ -13,6 +15,8 @@ export default async function SparringDiscoverPage({
   searchParams: Promise<{ sport?: string; city?: string; sex?: string; experience?: string }>;
 }) {
   const { sport, city, sex, experience } = await searchParams;
+  const actor = await getActor();
+  const clubIds = actor?.clubIds ?? [];
 
   const sessions = await prisma.sparringSession.findMany({
     where: {
@@ -22,6 +26,11 @@ export default async function SparringDiscoverPage({
       ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
       ...(sex ? { sex } : {}),
       ...(experience ? { experienceLevel: experience } : {}),
+      OR: [
+        { accessMode: { not: "INVITE" } },
+        { clubId: { in: clubIds } },
+        { clubInvites: { some: { invitedClubId: { in: clubIds } } } },
+      ],
     },
     orderBy: { date: "asc" },
     include: {
@@ -94,7 +103,7 @@ export default async function SparringDiscoverPage({
               className="block rounded-card bg-panel border border-white/10 p-4 hover:border-white/20 transition-colors"
             >
               <div className="flex items-center justify-between">
-                <Badge>Open Sparring</Badge>
+                <Badge>{MODE_LABEL[session.accessMode]}</Badge>
                 <span className="text-xs text-mute tabular">{formatEventDate(session.date)}</span>
               </div>
               <p className="font-semibold mt-2">{session.club.name}</p>

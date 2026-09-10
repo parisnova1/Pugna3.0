@@ -99,6 +99,11 @@ enum NotificationType {
   SPARRING_INVITED
   CHECKIN_OPEN
   SPARRING_OPPONENT_CANCELLED
+  SPARRING_CLUB_INVITED
+  SPARRING_CLUB_REQUESTED
+  SPARRING_CLUB_RESPONDED
+  SPARRING_NOMINATED
+  SPARRING_NOMINATION_RESPONDED
 }
 
 enum CheckInAttachedType {
@@ -135,32 +140,51 @@ enum SparringMatchStatus {
   CONFIRMED
 }
 
+enum SparringAccessMode {
+  INVITE
+  OPEN_TO_CLUBS
+  OPEN
+}
+
+enum SparringClubStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum SparringNominationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  WITHDRAWN
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  passwordHash   String
-  name           String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Contexts (existence-based, never exclusive — see components/nav/TabBar.tsx):
-  fighterProfile   FighterProfile?   // "Boxer" context
+  fighterProfile   FighterProfile? // "Boxer" context
   organizerProfile OrganizerProfile? // "Organizer" context (independent, no club needed)
 
   // Club admin memberships (many-to-many via join table) — the "Club" context(s)
-  clubAdminships   ClubAdmin[]
+  clubAdminships ClubAdmin[]
 
   // Events this user may host-manage (creator + club admins at event creation)
-  hostEvents       EventHostMember[]
+  hostEvents EventHostMember[]
 
-  createdEvents    Event[]        @relation("EventCreatedBy")
-  follows          Follow[]
-  notifications    Notification[]
-  uploadedMedia    Media[]
+  createdEvents Event[]        @relation("EventCreatedBy")
+  follows       Follow[]
+  notifications Notification[]
+  uploadedMedia Media[]
 }
 
 model Club {
@@ -172,13 +196,16 @@ model Club {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  admins       ClubAdmin[]
-  roster       FighterProfile[]
-  coaches      Coach[]
-  requests     EventRequest[]
-  nominations  Nomination[]
-  organizedEvents Event[] @relation("EventOrganizingClub")
-  sparringSessions SparringSession[]
+  admins                  ClubAdmin[]
+  roster                  FighterProfile[]
+  coaches                 Coach[]
+  requests                EventRequest[]
+  nominations             Nomination[]
+  organizedEvents         Event[]               @relation("EventOrganizingClub")
+  sparringSessions        SparringSession[]
+  sparringInvitesReceived SparringClubInvite[]
+  sparringRequestsSent    SparringClubRequest[]
+  sparringNominationsSent SparringNomination[]
 }
 
 model Coach {
@@ -191,39 +218,42 @@ model Coach {
 }
 
 model ClubAdmin {
-  id       String @id @default(cuid())
-  clubId   String
-  userId   String
-  club     Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  clubId String
+  userId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([clubId, userId])
 }
 
 model FighterProfile {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName      String
-  clubId           String?
-  club             Club?    @relation(fields: [clubId], references: [id])
-  weightClass      String?
-  stance           String?
-  style            String?
-  sex              String?
-  dateOfBirth      DateTime?
-  experienceLevel  String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName     String
+  clubId          String?
+  club            Club?     @relation(fields: [clubId], references: [id])
+  weightClass     String?
+  stance          String?
+  style           String?
+  sex             String?
+  dateOfBirth     DateTime?
+  experienceLevel String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  nominations     Nomination[]
-  boutsAsFighterA Bout[] @relation("BoutFighterA")
-  boutsAsFighterB Bout[] @relation("BoutFighterB")
+  nominations            Nomination[]
+  boutsAsFighterA        Bout[]                @relation("BoutFighterA")
+  boutsAsFighterB        Bout[]                @relation("BoutFighterB")
   sparringParticipations SparringParticipant[]
-  checkIns        CheckIn[]
+  sparringNominations    SparringNomination[]
+  checkIns               CheckIn[]
 }
 
-/** The standalone "Organizer" context — for organizing without a club. */
+/**
+ * The standalone "Organizer" context — for organizing without a club.
+ */
 model OrganizerProfile {
   id          String   @id @default(cuid())
   userId      String   @unique
@@ -233,37 +263,39 @@ model OrganizerProfile {
 }
 
 model Event {
-  id                 String      @id @default(cuid())
-  slug               String?     @unique
-  code               String?     @unique
-  name               String
-  venue              String?
-  city               String?
-  date               DateTime
-  startTime          DateTime?
-  sport              String      @default("Boxing")
-  description        String?
-  streamUrl          String?
-  status             EventStatus @default(DRAFT)
-  organizingClubId   String?
-  organizingClub     Club?       @relation("EventOrganizingClub", fields: [organizingClubId], references: [id])
-  createdByUserId    String
-  createdBy          User        @relation("EventCreatedBy", fields: [createdByUserId], references: [id])
-  dayCount           Int         @default(1)
-  ringCount          Int         @default(1)
-  cancelReason       String?
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  id               String      @id @default(cuid())
+  slug             String?     @unique
+  code             String?     @unique
+  name             String
+  venue            String?
+  city             String?
+  date             DateTime
+  startTime        DateTime?
+  sport            String      @default("Boxing")
+  description      String?
+  streamUrl        String?
+  status           EventStatus @default(DRAFT)
+  organizingClubId String?
+  organizingClub   Club?       @relation("EventOrganizingClub", fields: [organizingClubId], references: [id])
+  createdByUserId  String
+  createdBy        User        @relation("EventCreatedBy", fields: [createdByUserId], references: [id])
+  dayCount         Int         @default(1)
+  ringCount        Int         @default(1)
+  cancelReason     String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
-  hostMembers  EventHostMember[]
-  requests     EventRequest[]
-  nominations  Nomination[]
-  bouts        Bout[]
-  rings        Ring[]
-  follows      Follow[]
+  hostMembers EventHostMember[]
+  requests    EventRequest[]
+  nominations Nomination[]
+  bouts       Bout[]
+  rings       Ring[]
+  follows     Follow[]
 }
 
-/** A physical ring/station within an event — nameable, independently live/on-break. */
+/**
+ * A physical ring/station within an event — nameable, independently live/on-break.
+ */
 model Ring {
   id        String   @id @default(cuid())
   eventId   String
@@ -295,7 +327,7 @@ model EventRequest {
   clubId       String
   event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   club         Club          @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  requirements Json          // [{ weightClass, need }]
+  requirements Json // [{ weightClass, need }]
   deadline     DateTime?
   status       RequestStatus @default(PENDING)
   createdAt    DateTime      @default(now())
@@ -305,14 +337,14 @@ model EventRequest {
 }
 
 model Nomination {
-  id           String           @id @default(cuid())
-  eventId      String
-  clubId       String
-  fighterId    String
-  weightClass  String
-  status       NominationStatus @default(CREATED)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id          String           @id @default(cuid())
+  eventId     String
+  clubId      String
+  fighterId   String
+  weightClass String
+  status      NominationStatus @default(CREATED)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   event   Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   club    Club           @relation(fields: [clubId], references: [id], onDelete: Cascade)
@@ -320,26 +352,26 @@ model Nomination {
 }
 
 model Bout {
-  id             String        @id @default(cuid())
-  eventId        String
-  number         Int
-  weightClass    String
-  ringId         String
-  day            Int           @default(1)
-  fighterAId     String?
-  fighterBId     String?
-  status         BoutStatus    @default(DRAFT)
-  scheduledTime  DateTime?
-  delayMinutes   Int?
-  scratchReason  ScratchReason?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id            String         @id @default(cuid())
+  eventId       String
+  number        Int
+  weightClass   String
+  ringId        String
+  day           Int            @default(1)
+  fighterAId    String?
+  fighterBId    String?
+  status        BoutStatus     @default(DRAFT)
+  scheduledTime DateTime?
+  delayMinutes  Int?
+  scratchReason ScratchReason?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  event     Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  ring      Ring            @relation(fields: [ringId], references: [id])
-  fighterA  FighterProfile? @relation("BoutFighterA", fields: [fighterAId], references: [id])
-  fighterB  FighterProfile? @relation("BoutFighterB", fields: [fighterBId], references: [id])
-  result    Result?
+  event    Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ring     Ring            @relation(fields: [ringId], references: [id])
+  fighterA FighterProfile? @relation("BoutFighterA", fields: [fighterAId], references: [id])
+  fighterB FighterProfile? @relation("BoutFighterB", fields: [fighterBId], references: [id])
+  result   Result?
 
   @@unique([eventId, number])
 }
@@ -401,36 +433,87 @@ model SparringSession {
   sex             String?
   experienceLevel String?
   status          SparringSessionStatus @default(OPEN)
+  accessMode      SparringAccessMode    @default(OPEN_TO_CLUBS)
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
   weightGroups SparringWeightGroup[]
   participants SparringParticipant[]
   matches      SparringMatch[]
+  clubInvites  SparringClubInvite[]
+  clubRequests SparringClubRequest[]
+  nominations  SparringNomination[]
 }
 
 model SparringWeightGroup {
-  id        String @id @default(cuid())
+  id        String          @id @default(cuid())
   sessionId String
   session   SparringSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   label     String
-  order     Int    @default(0)
+  order     Int             @default(0)
 
   participants SparringParticipant[]
+  nominations  SparringNomination[]
+}
+
+// A host club invites a specific guest club onto an INVITE-mode session.
+model SparringClubInvite {
+  id            String             @id @default(cuid())
+  sessionId     String
+  session       SparringSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  invitedClubId String
+  invitedClub   Club               @relation(fields: [invitedClubId], references: [id], onDelete: Cascade)
+  status        SparringClubStatus @default(PENDING)
+  createdAt     DateTime           @default(now())
+
+  @@unique([sessionId, invitedClubId])
+}
+
+// A guest club asks to join an OPEN_TO_CLUBS-mode session.
+model SparringClubRequest {
+  id               String             @id @default(cuid())
+  sessionId        String
+  session          SparringSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  requestingClubId String
+  requestingClub   Club               @relation(fields: [requestingClubId], references: [id], onDelete: Cascade)
+  status           SparringClubStatus @default(PENDING)
+  createdAt        DateTime           @default(now())
+
+  @@unique([sessionId, requestingClubId])
+}
+
+// An accepted club nominates one of its own roster fighters for a seat on
+// the session. Host-accepting a nomination is what creates the real
+// SparringParticipant — see lib/actions/sparringClub.ts.
+model SparringNomination {
+  id                String                   @id @default(cuid())
+  sessionId         String
+  session           SparringSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  nominatingClubId  String
+  nominatingClub    Club                     @relation(fields: [nominatingClubId], references: [id], onDelete: Cascade)
+  fighterId         String
+  fighter           FighterProfile           @relation(fields: [fighterId], references: [id], onDelete: Cascade)
+  weightGroupId     String?
+  weightGroup       SparringWeightGroup?     @relation(fields: [weightGroupId], references: [id])
+  status            SparringNominationStatus @default(PENDING)
+  nominatedByUserId String
+  createdAt         DateTime                 @default(now())
+
+  @@unique([sessionId, fighterId])
 }
 
 model SparringParticipant {
-  id            String                     @id @default(cuid())
+  id            String                    @id @default(cuid())
   sessionId     String
-  session       SparringSession            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session       SparringSession           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   fighterId     String
-  fighter       FighterProfile             @relation(fields: [fighterId], references: [id], onDelete: Cascade)
+  fighter       FighterProfile            @relation(fields: [fighterId], references: [id], onDelete: Cascade)
   weightGroupId String?
-  weightGroup   SparringWeightGroup?       @relation(fields: [weightGroupId], references: [id])
-  status        SparringParticipantStatus  @default(REQUESTED)
+  weightGroup   SparringWeightGroup?      @relation(fields: [weightGroupId], references: [id])
+  status        SparringParticipantStatus @default(REQUESTED)
   note          String?
-  createdAt     DateTime                   @default(now())
-  updatedAt     DateTime                   @updatedAt
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
 
   matchesAsA SparringMatch[] @relation("MatchParticipantA")
   matchesAsB SparringMatch[] @relation("MatchParticipantB")

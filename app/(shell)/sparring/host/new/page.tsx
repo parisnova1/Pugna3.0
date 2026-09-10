@@ -33,6 +33,11 @@ export default async function NewSparringSessionPage() {
         ) : (
           <input type="hidden" name="clubId" value={clubs[0]!.id} />
         )}
+        <select name="accessMode" defaultValue="OPEN_TO_CLUBS" className={inputClass}>
+          <option value="OPEN_TO_CLUBS">Open to clubs — any club can request in, then nominate</option>
+          <option value="INVITE">Invite — only clubs you pick</option>
+          <option value="OPEN">Open sparring — any fighter can request a slot directly</option>
+        </select>
         <select name="sport" defaultValue="Boxing" className={inputClass}>
           {SPORTS.map((s) => (
             <option key={s} value={s}>

@@ -48,13 +48,16 @@ export type Action =
   | "club.claim"
   | "club.admin"
   | "club.nominate"
-  | "nomination.respond";
+  | "nomination.respond"
+  | "sparring.view";
 
 export type Resource = {
   eventId?: string;
   eventPublished?: boolean;
   clubId?: string;
   clubClaimed?: boolean;
+  sparringAccessMode?: "INVITE" | "OPEN_TO_CLUBS" | "OPEN";
+  sparringPrivileged?: boolean;
 };
 
 export function can(actor: Actor, action: Action, resource: Resource = {}): CanResult {
@@ -115,6 +118,17 @@ export function can(actor: Actor, action: Action, resource: Resource = {}): CanR
     case "nomination.respond": {
       if (!actor) return deny("AUTH_REQUIRED", "Sign in required.");
       return allow();
+    }
+
+    case "sparring.view": {
+      // Open / Open-to-clubs sessions are publicly visible. Invite sessions
+      // are only visible to the host club, an invited club, or a fighter who
+      // is nominated/confirmed on it — resource.sparringPrivileged is
+      // precomputed by the caller from those DB rows.
+      if (resource.sparringAccessMode !== "INVITE") return allow();
+      if (!actor) return deny("FORBIDDEN", "This session is invite-only.");
+      if (resource.sparringPrivileged) return allow();
+      return deny("FORBIDDEN", "This session is invite-only.");
     }
 
     default:
