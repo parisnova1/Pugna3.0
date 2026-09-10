@@ -4,6 +4,7 @@ import { getActor } from "@/lib/actor";
 import { formatEventDate } from "@/lib/format";
 import { SportTag } from "@/components/ui/SportTag";
 import { Badge } from "@/components/ui/Badge";
+import { SparringNav } from "@/components/sparring/SparringNav";
 
 const SPORTS = ["Boxing", "Kickboxing", "MMA"];
 const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced", "Pro"];
@@ -46,18 +47,7 @@ export default async function SparringDiscoverPage({
         <h1 className="text-2xl font-semibold">Sparring</h1>
       </div>
 
-      <nav className="flex gap-2 overflow-x-auto text-sm">
-        <span className="rounded-pill border border-signal bg-signal/10 px-4 py-2 font-medium whitespace-nowrap">Discover</span>
-        <Link href="/sparring/mine" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          My Sparring
-        </Link>
-        <Link href="/sparring/host" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          Host
-        </Link>
-        <Link href="/sparring/requests" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          Requests
-        </Link>
-      </nav>
+      <SparringNav active="discover" registered={Boolean(actor)} />
 
       <form className="grid grid-cols-2 gap-2 text-sm" action="/sparring">
         <select name="sport" defaultValue={sport ?? ""} className="rounded-card bg-panel border border-white/10 px-3 py-2 text-ink">

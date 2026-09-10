@@ -4,6 +4,7 @@ import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { formatEventDate } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
+import { SparringNav } from "@/components/sparring/SparringNav";
 
 export default async function SparringHostPage() {
   const actor = await getActor();
@@ -34,18 +35,7 @@ export default async function SparringHostPage() {
         </Link>
       </div>
 
-      <nav className="flex gap-2 overflow-x-auto text-sm">
-        <Link href="/sparring" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          Discover
-        </Link>
-        <Link href="/sparring/mine" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          My Sparring
-        </Link>
-        <span className="rounded-pill border border-signal bg-signal/10 px-4 py-2 font-medium whitespace-nowrap">Host</span>
-        <Link href="/sparring/requests" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          Requests
-        </Link>
-      </nav>
+      <SparringNav active="host" registered={Boolean(actor)} />
 
       {sessions.length === 0 ? (
         <p className="text-sm text-mute text-center py-10">You haven&apos;t hosted any sparring sessions yet.</p>

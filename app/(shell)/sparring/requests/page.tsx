@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { formatEventDate } from "@/lib/format";
 import { respondToParticipant } from "@/lib/actions/sparring";
 import { respondToClubInvite, respondToClubRequest, respondToNomination, withdrawNomination } from "@/lib/actions/sparringClub";
+import { SparringNav } from "@/components/sparring/SparringNav";
 
 export default async function SparringRequestsPage() {
   const actor = await getActor();
@@ -53,18 +54,7 @@ export default async function SparringRequestsPage() {
     <div className="space-y-6 pt-2">
       <h1 className="text-2xl font-semibold">Sparring Requests</h1>
 
-      <nav className="flex gap-2 overflow-x-auto text-sm">
-        <Link href="/sparring" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          Discover
-        </Link>
-        <Link href="/sparring/mine" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          My Sparring
-        </Link>
-        <Link href="/sparring/host" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          Host
-        </Link>
-        <span className="rounded-pill border border-signal bg-signal/10 px-4 py-2 font-medium whitespace-nowrap">Requests</span>
-      </nav>
+      <SparringNav active="requests" registered={Boolean(actor)} />
 
       {nothingPending && <p className="text-sm text-mute text-center py-10">Nothing pending.</p>}
 

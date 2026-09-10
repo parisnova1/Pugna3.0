@@ -4,6 +4,7 @@ import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { formatEventDate } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
+import { SparringNav } from "@/components/sparring/SparringNav";
 import type { SparringParticipantStatus } from "@prisma/client";
 
 const STATUS_LABEL: Record<SparringParticipantStatus, string> = {
@@ -35,18 +36,7 @@ export default async function MySparringPage() {
     <div className="space-y-6 pt-2">
       <h1 className="text-2xl font-semibold">My Sparring</h1>
 
-      <nav className="flex gap-2 overflow-x-auto text-sm">
-        <Link href="/sparring" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          Discover
-        </Link>
-        <span className="rounded-pill border border-signal bg-signal/10 px-4 py-2 font-medium whitespace-nowrap">My Sparring</span>
-        <Link href="/sparring/host" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          Host
-        </Link>
-        <Link href="/sparring/requests" className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap">
-          Requests
-        </Link>
-      </nav>
+      <SparringNav active="mine" registered={Boolean(actor)} />
 
       {!fighter ? (
         <p className="text-sm text-mute text-center py-10">Register as a fighter to join sparring sessions.</p>
