@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireHostEvent } from "@/lib/host-guard";
 import { cancelEvent } from "@/lib/actions/event";
 import { formatEventDate } from "@/lib/format";
+import { QrCodeSheet } from "@/components/event/QrCodeSheet";
 
 const STEPS = [
   { href: "build", label: "Skeleton", desc: "Name, date, venue" },
@@ -43,6 +44,15 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
         >
           View public event card
         </Link>
+      )}
+
+      {event.code && (
+        <QrCodeSheet
+          path={`/go/${event.code}`}
+          label="Event QR"
+          buttonLabel="Show event QR"
+          caption={`Scan to open ${event.name}, or share the code: ${event.code}`}
+        />
       )}
 
       {(event.status === "PUBLISHED" || event.status === "LIVE" || event.status === "INTERMISSION") && (

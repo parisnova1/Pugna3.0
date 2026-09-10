@@ -4,6 +4,7 @@ import { getActor } from "@/lib/actor";
 import { formatEventDate, formatCountdown } from "@/lib/format";
 import { EventPreviewCard } from "@/components/event/EventPreviewCard";
 import { SeeAllLink } from "@/components/event/SeeAllLink";
+import { EventCodeBar } from "@/components/event/EventCodeBar";
 
 export default async function HomePage() {
   const actor = await getActor();
@@ -78,12 +79,13 @@ export default async function HomePage() {
         <h1 className="text-4xl font-bold leading-none tracking-tight">PUGNA</h1>
         <p className="text-lg font-semibold text-ink">Train. Match. Compete. Track.</p>
         <p className="text-mute text-sm">The operating system for combat sports.</p>
+        <EventCodeBar />
         <div className="flex gap-2 pt-1">
-          <Link href="/sparring" className="rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
-            Find Sparring
-          </Link>
           <Link href="/events" className="rounded-pill border border-white/20 text-ink font-semibold px-5 py-3 text-sm">
             Explore Events
+          </Link>
+          <Link href="/sparring" className="rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
+            Find Sparring
           </Link>
         </div>
       </section>
