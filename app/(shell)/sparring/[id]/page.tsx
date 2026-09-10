@@ -126,6 +126,30 @@ export default async function SparringSessionPage({ params }: { params: Promise<
         </form>
       )}
 
+      {!actor && session.status === "OPEN" && (
+        <div className="rounded-card border border-white/10 p-4 text-center space-y-2">
+          <p className="text-sm text-mute">Sign in or create an account to join this session.</p>
+          <Link
+            href={`/account?returnTo=${encodeURIComponent(`/sparring/${session.id}`)}`}
+            className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-2.5 text-sm"
+          >
+            Sign in
+          </Link>
+        </div>
+      )}
+
+      {actor && !ownFighter && session.status === "OPEN" && (
+        <div className="rounded-card border border-white/10 p-4 text-center space-y-2">
+          <p className="text-sm text-mute">Register as a boxer to join this session.</p>
+          <Link
+            href={`/account?returnTo=${encodeURIComponent(`/sparring/${session.id}`)}`}
+            className="inline-block rounded-pill border border-white/20 text-ink font-semibold px-5 py-2.5 text-sm"
+          >
+            Register as boxer
+          </Link>
+        </div>
+      )}
+
       {ownParticipant && (
         <div className="rounded-card border border-white/10 p-4 flex items-center justify-between">
           <div>

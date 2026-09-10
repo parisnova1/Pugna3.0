@@ -14,6 +14,17 @@ function greeting(now: Date): string {
   return "Good evening";
 }
 
+function guestMessage(returnTo: string | undefined): string {
+  if (!returnTo) return "Sign in to follow, nominate, or organize.";
+  if (returnTo.startsWith("/sparring/host")) return "Create an account to host sparring sessions.";
+  if (returnTo.startsWith("/sparring")) return "Create an account to join sparring.";
+  if (returnTo.startsWith("/host")) return "Create an account to host tournaments.";
+  if (returnTo.startsWith("/club")) return "Create an account to manage a club.";
+  if (returnTo.startsWith("/you")) return "Create an account to see your fighter profile.";
+  if (returnTo.startsWith("/checkin")) return "Create an account to check in.";
+  return "Create an account to use this feature.";
+}
+
 export default async function AccountPage({
   searchParams,
 }: {
@@ -27,7 +38,7 @@ export default async function AccountPage({
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-semibold">Account</h1>
-          <p className="text-mute text-sm mt-1">Sign in to follow, nominate, or organize.</p>
+          <p className="text-mute text-sm mt-1">{guestMessage(returnTo)}</p>
         </div>
 
         <AuthForm action={signInAction} returnTo={returnTo ?? "/"} title="Sign in" submitLabel="Sign in" primary />
