@@ -1,6 +1,6 @@
 import { requireHostEvent } from "@/lib/host-guard";
 import { prisma } from "@/lib/prisma";
-import { setCheckInStatus } from "@/lib/actions/checkin";
+import { setCheckInStatus, notifyCheckInOpen } from "@/lib/actions/checkin";
 import { QrCodeSheet } from "@/components/event/QrCodeSheet";
 import { BackButton } from "@/components/event/ContextBar";
 
@@ -30,7 +30,19 @@ export default async function EventCheckInPage({ params }: { params: Promise<{ i
         </p>
       </div>
 
-      <QrCodeSheet path={`/checkin/event/${event.id}`} label="Check-in QR" buttonLabel="Show check-in QR" />
+      <div className="grid grid-cols-2 gap-2">
+        <QrCodeSheet path={`/checkin/event/${event.id}`} label="Check-in QR" buttonLabel="Show check-in QR" />
+        <form
+          action={async () => {
+            "use server";
+            await notifyCheckInOpen("EVENT", event.id);
+          }}
+        >
+          <button type="submit" className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm">
+            Notify fighters
+          </button>
+        </form>
+      </div>
 
       <div className="space-y-2">
         {fighters.length === 0 ? (

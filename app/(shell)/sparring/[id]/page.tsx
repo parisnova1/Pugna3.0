@@ -13,7 +13,7 @@ import {
   moveWeightGroup,
   setSessionStatus,
 } from "@/lib/actions/sparring";
-import { setCheckInStatus } from "@/lib/actions/checkin";
+import { setCheckInStatus, notifyCheckInOpen } from "@/lib/actions/checkin";
 import { QrCodeSheet } from "@/components/event/QrCodeSheet";
 import type { SparringParticipantStatus } from "@prisma/client";
 
@@ -268,7 +268,19 @@ export default async function SparringSessionPage({ params }: { params: Promise<
           >
             Suggested matches
           </Link>
-          <QrCodeSheet path={`/checkin/sparring/${session.id}`} label="Check-in QR" buttonLabel="Show check-in QR" />
+          <div className="grid grid-cols-2 gap-2">
+            <QrCodeSheet path={`/checkin/sparring/${session.id}`} label="Check-in QR" buttonLabel="Show check-in QR" />
+            <form
+              action={async () => {
+                "use server";
+                await notifyCheckInOpen("SPARRING_SESSION", session.id);
+              }}
+            >
+              <button type="submit" className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm">
+                Notify fighters
+              </button>
+            </form>
+          </div>
 
           {rosterFighters.length > 0 && (
             <form

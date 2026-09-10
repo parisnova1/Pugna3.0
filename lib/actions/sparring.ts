@@ -172,7 +172,22 @@ export async function cancelParticipant(participantId: string): Promise<ActionRe
   const isHost = can(actor, "club.admin", { clubId: participant.session.clubId }).allowed;
   if (!isSelf && !isHost) return { ok: false, code: "FORBIDDEN", reason: "You can't cancel this registration." };
 
+  const existingMatch = await prisma.sparringMatch.findFirst({
+    where: { OR: [{ participantAId: participantId }, { participantBId: participantId }] },
+    include: { participantA: { include: { fighter: true } }, participantB: { include: { fighter: true } } },
+  });
+
   await prisma.sparringParticipant.update({ where: { id: participantId }, data: { status: "CANCELLED" } });
+
+  if (existingMatch) {
+    const opponent = existingMatch.participantAId === participantId ? existingMatch.participantB : existingMatch.participantA;
+    await notify(
+      opponent.fighter.userId,
+      "SPARRING_OPPONENT_CANCELLED",
+      `${participant.fighter.displayName} cancelled — you'll need a new opponent at ${participant.session.gym}.`,
+      `/sparring/${participant.sessionId}/match`,
+    );
+  }
 
   revalidatePath(`/sparring/${participant.sessionId}`);
   revalidatePath("/sparring/mine");

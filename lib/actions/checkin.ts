@@ -6,6 +6,7 @@ import { can } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/types";
 import type { CheckInAttachedType, CheckInStatus } from "@prisma/client";
+import { notifyMany } from "@/lib/actions/notify";
 
 async function getOwnFighter(userId: string) {
   return prisma.fighterProfile.findUnique({ where: { userId } });
@@ -89,5 +90,38 @@ export async function setCheckInStatus(
 
   if (attachedType === "EVENT") revalidatePath(`/host/events/${attachedId}/checkin`);
   else revalidatePath(`/sparring/${attachedId}`);
+  return { ok: true };
+}
+
+export async function notifyCheckInOpen(attachedType: CheckInAttachedType, attachedId: string): Promise<ActionResult> {
+  const denied = await gateCheckInHost(attachedType, attachedId);
+  if (denied) return denied;
+
+  let fighterUserIds: string[] = [];
+  let link: string;
+  let place: string;
+
+  if (attachedType === "EVENT") {
+    const bouts = await prisma.bout.findMany({
+      where: { eventId: attachedId },
+      include: { fighterA: { include: { user: true } }, fighterB: { include: { user: true } } },
+    });
+    const event = await prisma.event.findUnique({ where: { id: attachedId } });
+    fighterUserIds = [...new Set(bouts.flatMap((b) => [b.fighterA?.user.id, b.fighterB?.user.id]).filter((id): id is string => Boolean(id)))];
+    link = `/checkin/event/${attachedId}`;
+    place = event?.name ?? "the event";
+  } else {
+    const participants = await prisma.sparringParticipant.findMany({
+      where: { sessionId: attachedId, status: "CONFIRMED" },
+      include: { fighter: { include: { user: true } } },
+    });
+    const session = await prisma.sparringSession.findUnique({ where: { id: attachedId } });
+    fighterUserIds = participants.map((p) => p.fighter.user.id);
+    link = `/checkin/sparring/${attachedId}`;
+    place = session?.gym ?? "the session";
+  }
+
+  await notifyMany(fighterUserIds, "CHECKIN_OPEN", `Check-in is now open for ${place}.`, link);
+
   return { ok: true };
 }
