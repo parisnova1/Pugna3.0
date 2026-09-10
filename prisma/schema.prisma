@@ -65,6 +65,11 @@ enum ScratchReason {
   OTHER
 }
 
+enum RoundPhase {
+  ROUND
+  REST
+}
+
 enum MediaKind {
   EVENT_COVER
   EVENT_GALLERY
@@ -263,29 +268,30 @@ model OrganizerProfile {
 }
 
 model Event {
-  id               String      @id @default(cuid())
-  slug             String?     @unique
-  code             String?     @unique
-  name             String
-  venue            String?
-  city             String?
-  latitude         Float?
-  longitude        Float?
-  date             DateTime
-  startTime        DateTime?
-  sport            String      @default("Boxing")
-  description      String?
-  streamUrl        String?
-  status           EventStatus @default(DRAFT)
-  organizingClubId String?
-  organizingClub   Club?       @relation("EventOrganizingClub", fields: [organizingClubId], references: [id])
-  createdByUserId  String
-  createdBy        User        @relation("EventCreatedBy", fields: [createdByUserId], references: [id])
-  dayCount         Int         @default(1)
-  ringCount        Int         @default(1)
-  cancelReason     String?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id                String      @id @default(cuid())
+  slug              String?     @unique
+  code              String?     @unique
+  name              String
+  venue             String?
+  city              String?
+  latitude          Float?
+  longitude         Float?
+  date              DateTime
+  startTime         DateTime?
+  sport             String      @default("Boxing")
+  description       String?
+  streamUrl         String?
+  status            EventStatus @default(DRAFT)
+  organizingClubId  String?
+  organizingClub    Club?       @relation("EventOrganizingClub", fields: [organizingClubId], references: [id])
+  createdByUserId   String
+  createdBy         User        @relation("EventCreatedBy", fields: [createdByUserId], references: [id])
+  dayCount          Int         @default(1)
+  ringCount         Int         @default(1)
+  cancelReason      String?
+  intermissionUntil DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
   hostMembers EventHostMember[]
   requests    EventRequest[]
@@ -299,12 +305,13 @@ model Event {
  * A physical ring/station within an event — nameable, independently live/on-break.
  */
 model Ring {
-  id        String   @id @default(cuid())
-  eventId   String
-  number    Int
-  name      String?
-  onBreak   Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id         String    @id @default(cuid())
+  eventId    String
+  number     Int
+  name       String?
+  onBreak    Boolean   @default(false)
+  breakUntil DateTime?
+  createdAt  DateTime  @default(now())
 
   event Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   bouts Bout[]
@@ -354,20 +361,26 @@ model Nomination {
 }
 
 model Bout {
-  id            String         @id @default(cuid())
-  eventId       String
-  number        Int
-  weightClass   String
-  ringId        String
-  day           Int            @default(1)
-  fighterAId    String?
-  fighterBId    String?
-  status        BoutStatus     @default(DRAFT)
-  scheduledTime DateTime?
-  delayMinutes  Int?
-  scratchReason ScratchReason?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id               String         @id @default(cuid())
+  eventId          String
+  number           Int
+  weightClass      String
+  ringId           String
+  day              Int            @default(1)
+  fighterAId       String?
+  fighterBId       String?
+  status           BoutStatus     @default(DRAFT)
+  scheduledTime    DateTime?
+  delayMinutes     Int?
+  scratchReason    ScratchReason?
+  totalRounds      Int?
+  roundDurationSec Int            @default(120)
+  restDurationSec  Int            @default(60)
+  currentRound     Int            @default(0)
+  roundPhase       RoundPhase?
+  phaseEndsAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   event    Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
   ring     Ring            @relation(fields: [ringId], references: [id])

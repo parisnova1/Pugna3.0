@@ -100,6 +100,10 @@ export default async function EventCardPage({
       delayMinutes: b.delayMinutes,
       fighterAName: b.fighterA?.displayName ?? null,
       fighterBName: b.fighterB?.displayName ?? null,
+      totalRounds: b.totalRounds,
+      currentRound: b.currentRound,
+      roundPhase: b.roundPhase,
+      phaseEndsAt: b.phaseEndsAt,
     }));
 
     return (
@@ -118,6 +122,7 @@ export default async function EventCardPage({
           initialNowId={projection.now?.id ?? null}
           initialNextId={projection.next?.id ?? null}
           initialFollowerCount={event._count.follows}
+          initialIntermissionUntil={event.intermissionUntil}
           coverUrl={coverUrl}
           galleryUrls={galleryUrls}
           sponsorUrls={sponsorUrls}

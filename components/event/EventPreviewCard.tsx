@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatEventDate } from "@/lib/format";
+import { formatEventDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import type { EventStatus } from "@prisma/client";
 
@@ -9,6 +9,7 @@ export type EventPreview = {
   city: string | null;
   venue: string | null;
   date: Date;
+  startTime: Date | null;
   status: EventStatus;
 };
 
@@ -42,7 +43,7 @@ export function EventPreviewCard({ event, coverUrl }: { event: EventPreview; cov
         <div className="absolute inset-0 p-4 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             {pill}
-            <span className="text-xs text-white/80 tabular">{formatEventDate(event.date)}</span>
+            <span className="text-xs text-white/80 tabular">{formatEventDateTime(event.date, event.startTime)}</span>
           </div>
           <div>
             <h3 className="font-semibold text-white">{event.name}</h3>
@@ -62,7 +63,7 @@ export function EventPreviewCard({ event, coverUrl }: { event: EventPreview; cov
     >
       <div className="flex items-center justify-between">
         {pill}
-        <span className="text-xs text-mute tabular">{formatEventDate(event.date)}</span>
+        <span className="text-xs text-mute tabular">{formatEventDateTime(event.date, event.startTime)}</span>
       </div>
       <h3 className="mt-2 font-semibold text-ink">{event.name}</h3>
       {(event.venue || event.city) && (

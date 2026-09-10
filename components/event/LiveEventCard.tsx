@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { BoutStatus, EventStatus } from "@prisma/client";
-import { formatUpdatedAt } from "@/lib/format";
+import type { BoutStatus, EventStatus, RoundPhase } from "@prisma/client";
+import { formatUpdatedAt, formatTime } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
+import { RoundTimer } from "@/components/live/RoundTimer";
 
 export type BoutView = {
   id: string;
@@ -14,12 +15,27 @@ export type BoutView = {
   delayMinutes: number | null;
   fighterAName: string | null;
   fighterBName: string | null;
+  totalRounds?: number | null;
+  currentRound?: number;
+  roundPhase?: RoundPhase | null;
+  phaseEndsAt?: Date | null;
 };
 
 type ProjectionResponse = {
   status: EventStatus;
   nowLabel: "LIVE" | "DELAYED" | "UP_NEXT" | "INTERMISSION" | "BREAK" | null;
-  now: { id: string; number: number; status: BoutStatus; delayMinutes: number | null } | null;
+  intermissionUntil: string | null;
+  breakUntil: string | null;
+  now: {
+    id: string;
+    number: number;
+    status: BoutStatus;
+    delayMinutes: number | null;
+    totalRounds: number | null;
+    currentRound: number;
+    roundPhase: RoundPhase | null;
+    phaseEndsAt: string | null;
+  } | null;
   next: { id: string; number: number; status: BoutStatus } | null;
   bouts: { id: string; number: number; status: BoutStatus }[];
   followerCount: number;
@@ -80,6 +96,8 @@ export function LiveEventCard({
   initialNowId,
   initialNextId,
   initialFollowerCount,
+  initialIntermissionUntil,
+  initialBreakUntil,
   ringId,
   ringName,
   coverUrl,
@@ -98,6 +116,8 @@ export function LiveEventCard({
   initialNowId: string | null;
   initialNextId: string | null;
   initialFollowerCount: number;
+  initialIntermissionUntil?: Date | null;
+  initialBreakUntil?: Date | null;
   ringId?: string;
   ringName?: string;
   coverUrl?: string | null;
@@ -110,6 +130,17 @@ export function LiveEventCard({
   const [nowId, setNowId] = useState(initialNowId);
   const [nextId, setNextId] = useState(initialNextId);
   const [followerCount, setFollowerCount] = useState(initialFollowerCount);
+  const [intermissionUntil, setIntermissionUntil] = useState<Date | null>(initialIntermissionUntil ?? null);
+  const [breakUntil, setBreakUntil] = useState<Date | null>(initialBreakUntil ?? null);
+  const [nowRound, setNowRound] = useState<{
+    totalRounds: number | null;
+    currentRound: number;
+    roundPhase: RoundPhase | null;
+    phaseEndsAt: Date | null;
+  } | null>(() => {
+    const b = initialBouts.find((b) => b.id === initialNowId);
+    return b ? { totalRounds: b.totalRounds ?? null, currentRound: b.currentRound ?? 0, roundPhase: b.roundPhase ?? null, phaseEndsAt: b.phaseEndsAt ?? null } : null;
+  });
   const [updatedAt, setUpdatedAt] = useState<Date>(new Date());
   const [connectionLost, setConnectionLost] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -126,6 +157,18 @@ export function LiveEventCard({
         setNowId(data.now?.id ?? null);
         setNextId(data.next?.id ?? null);
         setFollowerCount(data.followerCount);
+        setIntermissionUntil(data.intermissionUntil ? new Date(data.intermissionUntil) : null);
+        setBreakUntil(data.breakUntil ? new Date(data.breakUntil) : null);
+        setNowRound(
+          data.now
+            ? {
+                totalRounds: data.now.totalRounds,
+                currentRound: data.now.currentRound,
+                roundPhase: data.now.roundPhase,
+                phaseEndsAt: data.now.phaseEndsAt ? new Date(data.now.phaseEndsAt) : null,
+              }
+            : null,
+        );
         setBouts((prev) =>
           prev.map((b) => {
             const match = data.bouts.find((d) => d.id === b.id);
@@ -213,16 +256,18 @@ export function LiveEventCard({
         <div className="rounded-card bg-panel border border-white/10 p-5">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Now</p>
           <p className="mt-2 text-lg font-semibold">Intermission</p>
-          <p className="text-sm text-mute mt-1">Resuming shortly.</p>
+          <p className="text-sm text-mute mt-1">{intermissionUntil ? `Resuming at ${formatTime(intermissionUntil)}.` : "Resuming shortly."}</p>
         </div>
       ) : nowLabel === "BREAK" ? (
         <div className="rounded-card bg-panel border border-white/10 p-5">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Now</p>
           <p className="mt-2 text-lg font-semibold">On break</p>
-          <p className="text-sm text-mute mt-1">This ring is paused. Resuming shortly.</p>
+          <p className="text-sm text-mute mt-1">
+            This ring is paused. {breakUntil ? `Resuming at ${formatTime(breakUntil)}.` : "Resuming shortly."}
+          </p>
         </div>
       ) : now ? (
-        <BoutHero bout={now} slug={slug} label={nowLabel} />
+        <BoutHero bout={now} slug={slug} label={nowLabel} round={nowRound} />
       ) : (
         <div className="rounded-card bg-panel border border-white/10 p-5">
           <p className="text-sm text-mute">
@@ -320,25 +365,49 @@ function BoutHero({
   bout,
   slug,
   label,
+  round,
 }: {
   bout: BoutView;
   slug: string;
   label: ProjectionResponse["nowLabel"];
+  round?: { totalRounds: number | null; currentRound: number; roundPhase: RoundPhase | null; phaseEndsAt: Date | null } | null;
 }) {
   const isLive = label === "LIVE";
+  const inRound = round?.roundPhase === "ROUND";
+  const inRest = round?.roundPhase === "REST";
   return (
-    <BoutLink slug={slug} boutId={bout.id} className="block rounded-card bg-panel border border-white/10 p-5">
-      <div className="flex items-center gap-2">
-        {isLive && <span className="live-pulse w-2 h-2 rounded-full bg-signal" />}
-        <p className="text-xs font-semibold uppercase tracking-wide text-signal">
-          {label === "LIVE" ? "Live now" : label === "DELAYED" ? statusLabel(bout) : "Up next"}
-        </p>
+    <BoutLink
+      slug={slug}
+      boutId={bout.id}
+      className={[
+        "block rounded-card border p-5",
+        inRound ? "bg-signal/10 border-signal/40" : inRest ? "bg-panel border-white/20" : "bg-panel border-white/10",
+      ].join(" ")}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {isLive && <span className="live-pulse w-2 h-2 rounded-full bg-signal" />}
+          <p className="text-xs font-semibold uppercase tracking-wide text-signal">
+            {label === "LIVE" ? "Live now" : label === "DELAYED" ? statusLabel(bout) : "Up next"}
+          </p>
+        </div>
+        {round?.roundPhase && round.phaseEndsAt && (
+          <span
+            className={[
+              "text-sm font-semibold tabular px-2 py-0.5 rounded-pill",
+              inRound ? "bg-signal text-onsignal" : "bg-white/10 text-ink",
+            ].join(" ")}
+          >
+            <RoundTimer phaseEndsAt={round.phaseEndsAt} />
+          </span>
+        )}
       </div>
       <p className="mt-3 text-xl font-semibold">
         {bout.fighterAName ?? "TBD"} <span className="text-mute font-normal">vs</span> {bout.fighterBName ?? "TBD"}
       </p>
       <p className="text-sm text-mute mt-1">
         Bout {bout.number} · {bout.weightClass}
+        {round?.totalRounds && round.roundPhase ? ` · Round ${round.currentRound} of ${round.totalRounds}${inRest ? " · Rest" : ""}` : ""}
       </p>
     </BoutLink>
   );

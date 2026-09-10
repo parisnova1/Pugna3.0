@@ -48,6 +48,10 @@ export default async function RingLiveViewPage({
     delayMinutes: b.delayMinutes,
     fighterAName: b.fighterA?.displayName ?? null,
     fighterBName: b.fighterB?.displayName ?? null,
+    totalRounds: b.totalRounds,
+    currentRound: b.currentRound,
+    roundPhase: b.roundPhase,
+    phaseEndsAt: b.phaseEndsAt,
   }));
 
   const dateLabel = `${formatEventDate(event.date)}${event.startTime ? ` · ${formatTime(event.startTime)}` : ""}`;
@@ -101,6 +105,8 @@ export default async function RingLiveViewPage({
         initialNowId={projection.now?.id ?? null}
         initialNextId={projection.next?.id ?? null}
         initialFollowerCount={event._count.follows}
+        initialIntermissionUntil={event.intermissionUntil}
+        initialBreakUntil={ring.breakUntil}
       />
     </div>
   );

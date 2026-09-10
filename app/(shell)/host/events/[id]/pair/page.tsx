@@ -79,6 +79,11 @@ export default async function PairStepPage({ params }: { params: Promise<{ id: s
               ))}
             </select>
           </div>
+          <div className="grid grid-cols-3 gap-3">
+            <input name="totalRounds" type="number" min={0} placeholder="Rounds (3)" className={inputClass} />
+            <input name="roundDurationSec" type="number" min={1} placeholder="Round sec (120)" className={inputClass} />
+            <input name="restDurationSec" type="number" min={1} placeholder="Rest sec (60)" className={inputClass} />
+          </div>
         </ActionForm>
       )}
     </div>

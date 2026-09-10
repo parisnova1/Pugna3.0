@@ -27,6 +27,10 @@ export default async function PreviewEventPage({ params }: { params: Promise<{ i
     delayMinutes: b.delayMinutes,
     fighterAName: b.fighterA?.displayName ?? null,
     fighterBName: b.fighterB?.displayName ?? null,
+    totalRounds: b.totalRounds,
+    currentRound: b.currentRound,
+    roundPhase: b.roundPhase,
+    phaseEndsAt: b.phaseEndsAt,
   }));
 
   const dateLabel = `${formatEventDate(event.date)}${event.startTime ? ` · ${formatTime(event.startTime)}` : ""}`;
@@ -53,6 +57,7 @@ export default async function PreviewEventPage({ params }: { params: Promise<{ i
         initialNowId={projection.now?.id ?? null}
         initialNextId={projection.next?.id ?? null}
         initialFollowerCount={0}
+        initialIntermissionUntil={event.intermissionUntil}
         coverUrl={coverUrl}
         galleryUrls={galleryUrls}
         sponsorUrls={sponsorUrls}

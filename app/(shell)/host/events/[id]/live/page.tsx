@@ -17,6 +17,12 @@ export default async function LiveConsolePage({ params }: { params: Promise<{ id
     fighterAName: b.fighterA?.displayName ?? null,
     fighterBName: b.fighterB?.displayName ?? null,
     ringId: b.ringId,
+    totalRounds: b.totalRounds,
+    roundDurationSec: b.roundDurationSec,
+    restDurationSec: b.restDurationSec,
+    currentRound: b.currentRound,
+    roundPhase: b.roundPhase,
+    phaseEndsAt: b.phaseEndsAt,
   }));
 
   const rings: ConsoleRing[] = event.rings.map((r) => ({
@@ -24,11 +30,18 @@ export default async function LiveConsolePage({ params }: { params: Promise<{ id
     number: r.number,
     name: r.name,
     onBreak: r.onBreak,
+    breakUntil: r.breakUntil,
   }));
 
   return (
     <div className="pt-2">
-      <LiveConsole eventId={event.id} eventStatus={event.status} rings={rings} bouts={bouts} />
+      <LiveConsole
+        eventId={event.id}
+        eventStatus={event.status}
+        intermissionUntil={event.intermissionUntil}
+        rings={rings}
+        bouts={bouts}
+      />
     </div>
   );
 }

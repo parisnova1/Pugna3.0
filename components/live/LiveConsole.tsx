@@ -2,8 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { BoutStatus, EventStatus, ScratchReason } from "@prisma/client";
+import type { BoutStatus, EventStatus, RoundPhase, ScratchReason } from "@prisma/client";
 import { computeRingProjections } from "@/lib/projection";
+import { formatTime } from "@/lib/format";
+import { RoundTimer } from "@/components/live/RoundTimer";
 import {
   startBout,
   finishBout,
@@ -13,6 +15,8 @@ import {
   startIntermission,
   endIntermission,
   setRingBreak,
+  startRound,
+  startRest,
   finishEvent,
 } from "@/lib/actions/live";
 
@@ -28,6 +32,12 @@ export type ConsoleBout = {
   fighterAName: string | null;
   fighterBName: string | null;
   ringId: string;
+  totalRounds: number | null;
+  roundDurationSec: number;
+  restDurationSec: number;
+  currentRound: number;
+  roundPhase: RoundPhase | null;
+  phaseEndsAt: Date | null;
 };
 
 export type ConsoleRing = {
@@ -35,6 +45,7 @@ export type ConsoleRing = {
   number: number;
   name: string | null;
   onBreak: boolean;
+  breakUntil: Date | null;
 };
 
 type Sheet =
@@ -42,6 +53,8 @@ type Sheet =
   | { type: "scratch"; boutId: string }
   | { type: "noshow"; boutId: string }
   | { type: "result"; boutId: string }
+  | { type: "intermission" }
+  | { type: "break"; ringId: string }
   | null;
 
 const TERMINAL: BoutStatus[] = ["FINAL", "SCRATCHED", "NO_SHOW"];
@@ -71,11 +84,13 @@ function ringDotClass(label: string | null) {
 export function LiveConsole({
   eventId,
   eventStatus,
+  intermissionUntil,
   rings,
   bouts,
 }: {
   eventId: string;
   eventStatus: EventStatus;
+  intermissionUntil: Date | null;
   rings: ConsoleRing[];
   bouts: ConsoleBout[];
 }) {
@@ -150,7 +165,10 @@ export function LiveConsole({
       {eventStatus === "INTERMISSION" ? (
         <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Intermission</p>
-          <p className="text-sm text-mute">Public card shows an estimate. Starting a bout is blocked event-wide.</p>
+          <p className="text-sm text-mute">
+            {intermissionUntil ? `Resuming at ${formatTime(intermissionUntil)}.` : "Resuming shortly."} Starting a bout is
+            blocked event-wide.
+          </p>
           <button
             disabled={pending}
             onClick={() => run(() => endIntermission(eventId))}
@@ -162,7 +180,10 @@ export function LiveConsole({
       ) : activeRing?.onBreak ? (
         <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">{ringLabel(activeRing)} · On break</p>
-          <p className="text-sm text-mute">Starting a bout on this ring is blocked. Other rings are unaffected.</p>
+          <p className="text-sm text-mute">
+            {activeRing.breakUntil ? `Resuming at ${formatTime(activeRing.breakUntil)}.` : "Resuming shortly."} Starting a
+            bout on this ring is blocked. Other rings are unaffected.
+          </p>
           <button
             disabled={pending}
             onClick={() => run(() => setRingBreak(activeRing.id, eventId, false))}
@@ -172,14 +193,57 @@ export function LiveConsole({
           </button>
         </div>
       ) : now ? (
-        <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
-          <p className="text-xs font-semibold text-mute uppercase tracking-wide">
-            {activeRing ? `${ringLabel(activeRing)} · ` : ""}Now · Bout {now.number} · {now.weightClass}
-          </p>
+        <div
+          className={[
+            "rounded-card border p-5 space-y-3",
+            now.roundPhase === "ROUND"
+              ? "bg-signal/10 border-signal/40"
+              : now.roundPhase === "REST"
+                ? "bg-panel border-white/20"
+                : "bg-panel border-white/10",
+          ].join(" ")}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-mute uppercase tracking-wide">
+              {activeRing ? `${ringLabel(activeRing)} · ` : ""}Now · Bout {now.number} · {now.weightClass}
+            </p>
+            {now.roundPhase && now.phaseEndsAt && (
+              <span
+                className={[
+                  "text-sm font-semibold tabular px-2 py-0.5 rounded-pill",
+                  now.roundPhase === "ROUND" ? "bg-signal text-onsignal" : "bg-white/10 text-ink",
+                ].join(" ")}
+              >
+                <RoundTimer phaseEndsAt={now.phaseEndsAt} />
+              </span>
+            )}
+          </div>
           <p className="text-lg font-semibold">
             {now.fighterAName ?? "TBD"} <span className="text-mute font-normal">vs</span> {now.fighterBName ?? "TBD"}
           </p>
-          {now.status === "IN_PROGRESS" ? (
+          {now.totalRounds && now.roundPhase && (
+            <p className="text-xs font-semibold uppercase tracking-wide text-mute">
+              Round {now.currentRound} of {now.totalRounds}
+              {now.roundPhase === "REST" ? " · Rest" : ""}
+            </p>
+          )}
+          {now.status === "IN_PROGRESS" && now.roundPhase === "ROUND" ? (
+            <button
+              disabled={pending}
+              onClick={() => run(() => startRest(now.id, eventId))}
+              className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+            >
+              End round
+            </button>
+          ) : now.status === "IN_PROGRESS" && now.roundPhase === "REST" && now.totalRounds && now.currentRound < now.totalRounds ? (
+            <button
+              disabled={pending}
+              onClick={() => run(() => startRound(now.id, eventId))}
+              className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+            >
+              Start round {now.currentRound + 1}
+            </button>
+          ) : now.status === "IN_PROGRESS" ? (
             <button
               disabled={pending}
               onClick={() => setSheet({ type: "result", boutId: now.id })}
@@ -212,14 +276,14 @@ export function LiveConsole({
         <div className="flex gap-2">
           <button
             disabled={pending}
-            onClick={() => run(() => setRingBreak(activeRing.id, eventId, true))}
+            onClick={() => setSheet({ type: "break", ringId: activeRing.id })}
             className="flex-1 rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm"
           >
             Break {ringLabel(activeRing)}
           </button>
           <button
             disabled={pending}
-            onClick={() => run(() => startIntermission(eventId))}
+            onClick={() => setSheet({ type: "intermission" })}
             className="flex-1 rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm"
           >
             Start intermission (all rings)
@@ -339,6 +403,26 @@ export function LiveConsole({
           />
         </Sheet>
       )}
+
+      {sheet?.type === "intermission" && (
+        <Sheet onClose={() => setSheet(null)} title="Start intermission">
+          <ResumeTimeForm
+            pending={pending}
+            submitLabel="Start intermission"
+            onSubmit={(fd) => run(() => startIntermission(eventId, fd))}
+          />
+        </Sheet>
+      )}
+
+      {sheet?.type === "break" && (
+        <Sheet onClose={() => setSheet(null)} title={`Break ${findRingLabel(rings, sheet.ringId)}`}>
+          <ResumeTimeForm
+            pending={pending}
+            submitLabel="Start break"
+            onSubmit={(fd) => run(() => setRingBreak(sheet.ringId, eventId, true, fd))}
+          />
+        </Sheet>
+      )}
     </div>
   );
 }
@@ -363,6 +447,32 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
         </button>
       </div>
     </div>
+  );
+}
+
+function ResumeTimeForm({
+  pending,
+  submitLabel,
+  onSubmit,
+}: {
+  pending: boolean;
+  submitLabel: string;
+  onSubmit: (fd: FormData) => void;
+}) {
+  return (
+    <form action={(fd) => onSubmit(fd)} className="space-y-3">
+      <div>
+        <label className="text-xs text-mute">Resume time (optional)</label>
+        <input
+          name="resumeAt"
+          type="time"
+          className="w-full mt-1 rounded-card bg-void border border-white/10 px-4 py-3 text-sm"
+        />
+      </div>
+      <button type="submit" disabled={pending} className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60">
+        {submitLabel}
+      </button>
+    </form>
   );
 }
 

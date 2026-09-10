@@ -6,6 +6,11 @@ export function formatTime(date: Date): string {
   return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
 }
 
+/** "Sep 20, 2026 · 7:00 PM" — falls back to just the date when there's no start time. */
+export function formatEventDateTime(date: Date, startTime: Date | null): string {
+  return startTime ? `${formatEventDate(date)} · ${formatTime(startTime)}` : formatEventDate(date);
+}
+
 export function formatUpdatedAt(date: Date): string {
   return new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
 }

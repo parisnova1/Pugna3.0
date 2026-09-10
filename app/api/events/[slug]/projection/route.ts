@@ -17,8 +17,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   return NextResponse.json({
     status: data.event.status,
     nowLabel: data.projection.nowLabel,
+    intermissionUntil: data.event.intermissionUntil,
+    breakUntil: data.ring?.breakUntil ?? null,
     now: data.projection.now
-      ? { id: data.projection.now.id, number: data.projection.now.number, status: data.projection.now.status, delayMinutes: data.projection.now.delayMinutes }
+      ? {
+          id: data.projection.now.id,
+          number: data.projection.now.number,
+          status: data.projection.now.status,
+          delayMinutes: data.projection.now.delayMinutes,
+          totalRounds: data.projection.now.totalRounds,
+          currentRound: data.projection.now.currentRound,
+          roundPhase: data.projection.now.roundPhase,
+          phaseEndsAt: data.projection.now.phaseEndsAt,
+        }
       : null,
     next: data.projection.next
       ? { id: data.projection.next.id, number: data.projection.next.number, status: data.projection.next.status }

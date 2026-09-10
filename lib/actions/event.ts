@@ -193,6 +193,14 @@ export async function createBout(formData: FormData): Promise<ActionResult> {
   const day = Math.max(1, Number(formData.get("day") ?? 1));
   let ringId = String(formData.get("ringId") ?? "") || null;
 
+  // Round-clock config — same 3x2min/1min-rest convention already used in the
+  // app's own sparring rules copy. Blank inputs fall back to those defaults;
+  // totalRounds stays null (no round clock) only if explicitly cleared to 0.
+  const totalRoundsRaw = formData.get("totalRounds");
+  const totalRounds = totalRoundsRaw != null && String(totalRoundsRaw).trim() !== "" ? Math.max(0, Number(totalRoundsRaw)) || null : 3;
+  const roundDurationSec = Number(formData.get("roundDurationSec") ?? 120) || 120;
+  const restDurationSec = Number(formData.get("restDurationSec") ?? 60) || 60;
+
   if (!weightClass) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Weight class is required." };
 
   if (!ringId) {
@@ -205,7 +213,7 @@ export async function createBout(formData: FormData): Promise<ActionResult> {
   const status = fighterAId && fighterBId ? "CONFIRMED" : "TBD";
 
   await prisma.bout.create({
-    data: { eventId, number: count + 1, weightClass, ringId, day, fighterAId, fighterBId, status },
+    data: { eventId, number: count + 1, weightClass, ringId, day, fighterAId, fighterBId, status, totalRounds, roundDurationSec, restDurationSec },
   });
 
   revalidatePath(`/host/events/${eventId}`);

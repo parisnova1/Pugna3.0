@@ -16,6 +16,19 @@ function boutFighterUserIds(bout: { fighterA: { userId: string } | null; fighter
   return [bout.fighterA?.userId, bout.fighterB?.userId].filter((id): id is string => Boolean(id));
 }
 
+/** Parses an "HH:MM" `<input type="time">` value into today's Date — rolls to
+ * tomorrow if that time has already passed today (e.g. scheduling a break
+ * just after midnight). Returns null for a blank/missing value. */
+function timeStringToDate(timeStr: string | null, now: Date = new Date()): Date | null {
+  if (!timeStr) return null;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(timeStr);
+  if (!match) return null;
+  const [, hStr, mStr] = match;
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(hStr), Number(mStr), 0, 0);
+  if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
+  return target;
+}
+
 async function gateLive(eventId: string): Promise<ActionResult | null> {
   const actor = await getActor();
   const gate = can(actor, "live.act", { eventId });
@@ -39,8 +52,15 @@ export async function startBout(boutId: string, eventId: string): Promise<Action
 
     const nextEventStatus = event.status === "PUBLISHED" ? transitionEvent("PUBLISHED", "LIVE") : event.status;
 
+    // A bout with a round clock configured starts Round 1 in the same tap —
+    // no redundant second "Start round" press for the common case.
+    const roundData =
+      bout.totalRounds && bout.totalRounds > 0
+        ? { currentRound: 1, roundPhase: "ROUND" as const, phaseEndsAt: new Date(Date.now() + bout.roundDurationSec * 1000) }
+        : {};
+
     await prisma.$transaction([
-      prisma.bout.update({ where: { id: boutId }, data: { status: nextStatus } }),
+      prisma.bout.update({ where: { id: boutId }, data: { status: nextStatus, ...roundData } }),
       prisma.event.update({ where: { id: eventId }, data: { status: nextEventStatus } }),
     ]);
   } catch (error) {
@@ -64,6 +84,50 @@ export async function startBout(boutId: string, eventId: string): Promise<Action
     `${fighterAName} vs ${fighterBName} is live now at ${event.name}.`,
     `/e/${event.slug ?? ""}/bout/${boutId}`,
   );
+
+  revalidateLive(eventId);
+  return { ok: true };
+}
+
+/** Ends the round in progress and starts the rest period — purely a display
+ * transition (round/rest is advisory, never auto-advances on its own; the
+ * host taps this, same as every other Live Console action). */
+export async function startRest(boutId: string, eventId: string): Promise<ActionResult> {
+  const denied = await gateLive(eventId);
+  if (denied) return denied;
+
+  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
+  if (bout.roundPhase !== "ROUND") return { ok: false, code: "CONFLICT", reason: "No round in progress." };
+
+  await prisma.bout.update({
+    where: { id: boutId },
+    data: { roundPhase: "REST", phaseEndsAt: new Date(Date.now() + bout.restDurationSec * 1000) },
+  });
+
+  revalidateLive(eventId);
+  return { ok: true };
+}
+
+/** Starts the next round after a rest period. */
+export async function startRound(boutId: string, eventId: string): Promise<ActionResult> {
+  const denied = await gateLive(eventId);
+  if (denied) return denied;
+
+  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
+  if (!bout.totalRounds || bout.currentRound >= bout.totalRounds) {
+    return { ok: false, code: "CONFLICT", reason: "No rounds left." };
+  }
+
+  await prisma.bout.update({
+    where: { id: boutId },
+    data: {
+      currentRound: bout.currentRound + 1,
+      roundPhase: "ROUND",
+      phaseEndsAt: new Date(Date.now() + bout.roundDurationSec * 1000),
+    },
+  });
 
   revalidateLive(eventId);
   return { ok: true };
@@ -178,16 +242,18 @@ export async function noShowBout(boutId: string, eventId: string): Promise<Actio
   return { ok: true };
 }
 
-export async function startIntermission(eventId: string): Promise<ActionResult> {
+export async function startIntermission(eventId: string, formData?: FormData): Promise<ActionResult> {
   const denied = await gateLive(eventId);
   if (denied) return denied;
 
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
 
+  const resumeAt = timeStringToDate(formData ? String(formData.get("resumeAt") ?? "") || null : null);
+
   try {
     const nextStatus = transitionEvent(event.status, "INTERMISSION");
-    await prisma.event.update({ where: { id: eventId }, data: { status: nextStatus } });
+    await prisma.event.update({ where: { id: eventId }, data: { status: nextStatus, intermissionUntil: resumeAt } });
   } catch (error) {
     if (error instanceof IllegalTransitionError) return { ok: false, code: "CONFLICT", reason: error.message };
     throw error;
@@ -206,7 +272,7 @@ export async function endIntermission(eventId: string): Promise<ActionResult> {
 
   try {
     const nextStatus = transitionEvent(event.status, "LIVE");
-    await prisma.event.update({ where: { id: eventId }, data: { status: nextStatus } });
+    await prisma.event.update({ where: { id: eventId }, data: { status: nextStatus, intermissionUntil: null } });
   } catch (error) {
     if (error instanceof IllegalTransitionError) return { ok: false, code: "CONFLICT", reason: error.message };
     throw error;
@@ -216,14 +282,16 @@ export async function endIntermission(eventId: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-export async function setRingBreak(ringId: string, eventId: string, onBreak: boolean): Promise<ActionResult> {
+export async function setRingBreak(ringId: string, eventId: string, onBreak: boolean, formData?: FormData): Promise<ActionResult> {
   const denied = await gateLive(eventId);
   if (denied) return denied;
 
   const ring = await prisma.ring.findUnique({ where: { id: ringId } });
   if (!ring || ring.eventId !== eventId) return { ok: false, code: "NOT_FOUND", reason: "Ring not found." };
 
-  await prisma.ring.update({ where: { id: ringId }, data: { onBreak } });
+  const breakUntil = onBreak ? timeStringToDate(formData ? String(formData.get("resumeAt") ?? "") || null : null) : null;
+
+  await prisma.ring.update({ where: { id: ringId }, data: { onBreak, breakUntil } });
 
   revalidateLive(eventId);
   return { ok: true };

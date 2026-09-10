@@ -13,15 +13,29 @@ const pinIcon = L.divIcon({
   iconAnchor: [8, 8],
 });
 
-/** Dark, on-brand live map of event/sparring pins — Leaflet + free CartoDB dark tiles, no API key. */
+/** Dark, on-brand live map of event/sparring pins — Leaflet + free OpenStreetMap tiles, no API key. */
 export function LiveMap({ points }: { points: MapPoint[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const pointsRef = useRef(points);
+  pointsRef.current = points;
+
+  function fitAll() {
+    const map = mapRef.current;
+    const current = pointsRef.current;
+    if (!map) return;
+    if (current.length > 0) {
+      map.fitBounds(L.latLngBounds(current.map((p) => [p.lat, p.lng])), { padding: [24, 24], maxZoom: 12 });
+    } else {
+      map.setView([39.8283, -98.5795], 3);
+    }
+  }
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const map = L.map(containerRef.current, { zoomControl: false, attributionControl: true });
+    // zoomControl on so viewers can zoom out past the auto-fit level themselves.
+    const map = L.map(containerRef.current, { zoomControl: true, attributionControl: true });
     mapRef.current = map;
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -48,16 +62,22 @@ export function LiveMap({ points }: { points: MapPoint[] }) {
         }),
     );
 
-    if (points.length > 0) {
-      map.fitBounds(L.latLngBounds(points.map((p) => [p.lat, p.lng])), { padding: [24, 24], maxZoom: 12 });
-    } else {
-      map.setView([39.8283, -98.5795], 3);
-    }
+    fitAll();
 
     return () => {
       markers.forEach((m) => m.remove());
     };
   }, [points]);
 
-  return <div ref={containerRef} className="pugna-map w-full h-56 rounded-card overflow-hidden border border-white/10" />;
+  return (
+    <div className="relative">
+      <div ref={containerRef} className="pugna-map w-full h-56 rounded-card overflow-hidden border border-white/10" />
+      <button
+        onClick={fitAll}
+        className="absolute bottom-2 left-2 z-[1000] rounded-pill bg-void/80 border border-white/20 text-ink text-xs font-medium px-3 py-1.5"
+      >
+        Fit all
+      </button>
+    </div>
+  );
 }
