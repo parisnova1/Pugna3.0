@@ -8,6 +8,7 @@ import { getCrowdSnapshot, getMyReactions } from "@/lib/crowd-query";
 import { MediaUploader } from "@/components/host/MediaUploader";
 import { BackButton } from "@/components/event/ContextBar";
 import { NotifyButton } from "@/components/event/NotifyButton";
+import { SaveBoutButton } from "@/components/live/SaveBoutButton";
 import { BoutLiveClient } from "@/components/live/BoutLiveClient";
 import type { BoutStatus } from "@prisma/client";
 
@@ -60,9 +61,16 @@ export default async function BoutDetailPage({
   ]);
 
   const isUpcoming = UPCOMING_STATUSES.includes(bout.status);
-  const following = actor
-    ? Boolean(await prisma.follow.findUnique({ where: { userId_eventId: { userId: actor.userId, eventId: bout.event.id } } }))
-    : false;
+  const [followRow, savedRow] = await Promise.all([
+    actor
+      ? prisma.follow.findUnique({ where: { userId_eventId: { userId: actor.userId, eventId: bout.event.id } } })
+      : Promise.resolve(null),
+    actor
+      ? prisma.savedBout.findUnique({ where: { userId_boutId: { userId: actor.userId, boutId: bout.id } } })
+      : Promise.resolve(null),
+  ]);
+  const following = Boolean(followRow);
+  const saved = Boolean(savedRow);
 
   const writeGate = can(actor, "crowd.write", {
     checkedIn: Boolean(checkIn),
@@ -74,15 +82,18 @@ export default async function BoutDetailPage({
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10 space-y-6">
       <div className="flex items-center justify-between">
         <BackButton />
-        {isUpcoming && (
-          <NotifyButton
-            eventId={bout.event.id}
-            slug={slug}
-            returnTo={`/e/${slug}/bout/${bout.id}`}
-            isGuest={!actor}
-            following={following}
-          />
-        )}
+        <div className="flex items-center gap-2">
+          <SaveBoutButton boutId={bout.id} returnTo={`/e/${slug}/bout/${bout.id}`} isGuest={!actor} saved={saved} />
+          {isUpcoming && (
+            <NotifyButton
+              eventId={bout.event.id}
+              slug={slug}
+              returnTo={`/e/${slug}/bout/${bout.id}`}
+              isGuest={!actor}
+              following={following}
+            />
+          )}
+        </div>
       </div>
 
       <BoutLiveClient

@@ -5,6 +5,7 @@ import { signOut } from "@/lib/auth";
 import { becomeBoxer, becomeOrganizer } from "@/lib/actions/profile";
 import { AuthScreen } from "@/components/account/AuthScreen";
 import { formatEventDate, formatCountdown } from "@/lib/format";
+import { Badge } from "@/components/ui/Badge";
 
 function greeting(now: Date): string {
   const hour = now.getHours();
@@ -13,8 +14,8 @@ function greeting(now: Date): string {
   return "Good evening";
 }
 
-function guestMessage(returnTo: string | undefined): string {
-  if (!returnTo) return "Sign in to follow, nominate, or organize.";
+function guestMessage(returnTo: string | undefined): string | undefined {
+  if (!returnTo) return undefined;
   if (returnTo.startsWith("/sparring/host")) return "Create an account to host sparring sessions.";
   if (returnTo.startsWith("/sparring")) return "Create an account to join sparring.";
   if (returnTo.startsWith("/host")) return "Create an account to host tournaments.";
@@ -22,7 +23,7 @@ function guestMessage(returnTo: string | undefined): string {
   if (returnTo.startsWith("/club")) return "Create an account to manage a club.";
   if (returnTo.startsWith("/you")) return "Create an account to see your fighter profile.";
   if (returnTo.startsWith("/checkin")) return "Create an account to check in.";
-  return "Create an account to use this feature.";
+  return undefined;
 }
 
 export default async function AccountPage({
@@ -37,14 +38,39 @@ export default async function AccountPage({
     return <AuthScreen returnTo={returnTo ?? "/"} subtext={guestMessage(returnTo)} />;
   }
 
-  const [user, clubs, fighter, recentNotifications, unreadCount] = await Promise.all([
+  const [
+    user,
+    clubs,
+    fighter,
+    recentNotifications,
+    unreadCount,
+    savedFightsCount,
+    fighterFollowCount,
+    clubFollowCount,
+    eventFollowCount,
+    liveFollowedEvent,
+    upcomingFollowedEvent,
+  ] = await Promise.all([
     prisma.user.findUnique({ where: { id: actor.userId } }),
     actor.clubIds.length > 0 ? prisma.club.findMany({ where: { id: { in: actor.clubIds } } }) : Promise.resolve([]),
     prisma.fighterProfile.findUnique({ where: { userId: actor.userId }, include: { club: true } }),
     prisma.notification.findMany({ where: { userId: actor.userId }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.notification.count({ where: { userId: actor.userId, read: false } }),
+    prisma.savedBout.count({ where: { userId: actor.userId } }),
+    prisma.fighterFollow.count({ where: { userId: actor.userId } }),
+    prisma.clubFollow.count({ where: { userId: actor.userId } }),
+    prisma.follow.count({ where: { userId: actor.userId } }),
+    prisma.event.findFirst({
+      where: { follows: { some: { userId: actor.userId } }, status: { in: ["LIVE", "INTERMISSION"] } },
+      orderBy: { date: "asc" },
+    }),
+    prisma.event.findFirst({
+      where: { follows: { some: { userId: actor.userId } }, status: "PUBLISHED" },
+      orderBy: { date: "asc" },
+    }),
   ]);
 
+  const upNextEvent = liveFollowedEvent ?? upcomingFollowedEvent;
   const hasAnyContext = actor.isBoxer || clubs.length > 0 || actor.isOrganizer;
 
   let nextFight: Awaited<ReturnType<typeof prisma.bout.findFirst>> | null = null;
@@ -106,15 +132,61 @@ export default async function AccountPage({
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">
           {greeting(new Date())}, {(user?.name || user?.email || "").split(" ")[0]}.
         </h1>
+        <Link
+          href="/you/notifications"
+          className="shrink-0 rounded-pill border border-white/15 px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
+        >
+          🔔 {unreadCount > 0 ? `${unreadCount} new` : "Notifications"}
+        </Link>
       </div>
+
+      <section className="space-y-2">
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Saved</p>
+        <Link href="/you/saved" className="block rounded-card bg-panel border border-white/10 p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">♡ Saved fights</p>
+            <span className="text-lg font-semibold tabular">{savedFightsCount}</span>
+          </div>
+        </Link>
+      </section>
+
+      <section className="space-y-2">
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Following</p>
+        <div className="grid grid-cols-3 gap-2">
+          <ActivityStat value={fighterFollowCount} label="Fighters" />
+          <ActivityStat value={clubFollowCount} label="Clubs" />
+          <ActivityStat value={eventFollowCount} label="Events" />
+        </div>
+      </section>
+
+      {upNextEvent && (
+        <section className="space-y-2">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Up next</p>
+          <Link
+            href={upNextEvent.slug ? `/e/${upNextEvent.slug}` : "#"}
+            className="block rounded-card bg-panel border border-signal/30 p-4"
+          >
+            <p className="font-semibold">{upNextEvent.name}</p>
+            <div className="mt-2">
+              {upNextEvent.status === "LIVE" || upNextEvent.status === "INTERMISSION" ? (
+                <Badge live tone="signal">
+                  Live
+                </Badge>
+              ) : (
+                <p className="text-sm text-mute">{formatEventDate(upNextEvent.date)}</p>
+              )}
+            </div>
+          </Link>
+        </section>
+      )}
 
       {fighter && (nextFight || nextSparring) && (
         <section className="rounded-card bg-panel border border-signal/30 p-4">
-          <p className="text-xs font-semibold text-signal uppercase tracking-wide mb-2">Next</p>
+          <p className="text-xs font-semibold text-signal uppercase tracking-wide mb-2">Your next fight</p>
           {nextIsSparring && nextSparringSession ? (
             <>
               <p className="font-semibold">🥊 Sparring</p>
@@ -132,6 +204,30 @@ export default async function AccountPage({
           ) : null}
         </section>
       )}
+
+      <section className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Recent activity</p>
+          <Link href="/you/notifications" className="text-xs text-signal">
+            View all
+          </Link>
+        </div>
+        {recentNotifications.length === 0 ? (
+          <p className="text-sm text-mute">Nothing yet.</p>
+        ) : (
+          <div className="space-y-1">
+            {recentNotifications.map((n) => (
+              <Link
+                key={n.id}
+                href={n.link ?? "/you/notifications"}
+                className={`block rounded-card border px-4 py-2.5 text-sm ${n.read ? "border-white/10 text-mute" : "border-white/15 bg-panel"}`}
+              >
+                {n.message}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       {fighter && (
         <section className="space-y-2">
@@ -162,30 +258,6 @@ export default async function AccountPage({
           </p>
         </section>
       )}
-
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Notifications</p>
-          <Link href="/you/notifications" className="text-xs text-signal">
-            {unreadCount > 0 ? `${unreadCount} unread` : "View all"}
-          </Link>
-        </div>
-        {recentNotifications.length === 0 ? (
-          <p className="text-sm text-mute">Nothing yet.</p>
-        ) : (
-          <div className="space-y-1">
-            {recentNotifications.map((n) => (
-              <Link
-                key={n.id}
-                href={n.link ?? "/you/notifications"}
-                className={`block rounded-card border px-4 py-2.5 text-sm ${n.read ? "border-white/10 text-mute" : "border-white/15 bg-panel"}`}
-              >
-                {n.message}
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
 
       <section className="space-y-3 pt-2 border-t border-white/10">
         <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Your contexts</h2>
@@ -260,7 +332,7 @@ export default async function AccountPage({
       </section>
 
       <div className="space-y-2 pt-2 border-t border-white/10">
-        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Settings</p>
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Account</p>
         <p className="text-sm text-mute py-1">{user?.email}</p>
         <form
           action={async () => {

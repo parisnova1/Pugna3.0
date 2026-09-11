@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getActor } from "@/lib/actor";
 import { formatEventDate } from "@/lib/format";
 import { WeightTag } from "@/components/ui/WeightTag";
+import { FighterFollowButton } from "@/components/fighters/FighterFollowButton";
 
 export default async function FighterProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,6 +19,11 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
   });
 
   if (!fighter) notFound();
+
+  const actor = await getActor();
+  const following = actor
+    ? Boolean(await prisma.fighterFollow.findUnique({ where: { userId_fighterId: { userId: actor.userId, fighterId: fighter.id } } }))
+    : false;
 
   const bouts = [
     ...fighter.boutsAsFighterA.map((b) => ({
@@ -50,18 +57,21 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
   return (
     <div className="space-y-6 pt-2">
       <div className="space-y-3">
-        <div>
-          <h1 className="text-2xl font-semibold">{fighter.displayName}</h1>
-          <p className="text-mute text-sm mt-1">
-            {fighter.club ? (
-              <Link href={`/clubs/${fighter.club.id}`} className="underline">
-                {fighter.club.name}
-              </Link>
-            ) : (
-              "Independent"
-            )}
-            {fighter.weightClass ? ` · ${fighter.weightClass}` : ""}
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">{fighter.displayName}</h1>
+            <p className="text-mute text-sm mt-1">
+              {fighter.club ? (
+                <Link href={`/clubs/${fighter.club.id}`} className="underline">
+                  {fighter.club.name}
+                </Link>
+              ) : (
+                "Independent"
+              )}
+              {fighter.weightClass ? ` · ${fighter.weightClass}` : ""}
+            </p>
+          </div>
+          <FighterFollowButton fighterId={fighter.id} isGuest={!actor} following={following} />
         </div>
 
         <p className="text-3xl font-bold tabular">

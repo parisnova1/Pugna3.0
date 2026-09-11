@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AuthForm } from "@/components/account/AuthForm";
 import { signInAction, registerAction } from "@/lib/actions/auth";
 
-export function AuthScreen({ returnTo, subtext }: { returnTo: string; subtext: string }) {
+export function AuthScreen({ returnTo, subtext }: { returnTo: string; subtext?: string }) {
   const [mode, setMode] = useState<"signin" | "register">("signin");
   const isSignIn = mode === "signin";
 
@@ -18,7 +18,11 @@ export function AuthScreen({ returnTo, subtext }: { returnTo: string; subtext: s
 
       <div className="space-y-1">
         <h2 className="text-2xl font-semibold">{isSignIn ? "Sign in" : "Create account"}</h2>
-        <p className="text-mute text-sm">{isSignIn ? subtext : "Join PUGNA — takes less than a minute."}</p>
+        <p className="text-mute text-sm">
+          {isSignIn
+            ? (subtext ?? "Follow fighters, save fights, follow clubs and get notified when something happens.")
+            : "Join PUGNA — takes less than a minute."}
+        </p>
       </div>
 
       {isSignIn ? (
@@ -37,9 +41,16 @@ export function AuthScreen({ returnTo, subtext }: { returnTo: string; subtext: s
         </button>
       </p>
 
-      <p className="text-xs text-mute text-center pt-2 border-t border-white/10">
-        Browsing, scanning, and viewing events never requires an account.
-      </p>
+      <div className="text-xs text-mute pt-2 border-t border-white/10 space-y-2">
+        <p className="text-center font-medium">You can still use PUGNA without an account</p>
+        <ul className="space-y-1 max-w-[220px] mx-auto">
+          <li>· Browse events</li>
+          <li>· Watch available live fights</li>
+          <li>· Scan event QR codes</li>
+          <li>· Explore clubs</li>
+          <li>· Explore fighters</li>
+        </ul>
+      </div>
     </div>
   );
 }

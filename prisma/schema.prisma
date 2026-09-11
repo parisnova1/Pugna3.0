@@ -209,6 +209,8 @@ model User {
   createdEvents Event[]        @relation("EventCreatedBy")
   follows       Follow[]
   clubFollows   ClubFollow[]
+  fighterFollows FighterFollow[]
+  savedBouts    SavedBout[]
   notifications Notification[]
   uploadedMedia Media[]
 
@@ -258,6 +260,32 @@ model ClubFollow {
   @@unique([userId, clubId])
 }
 
+// Parallel to ClubFollow — not a generalization of Follow/ClubFollow. Lets a
+// viewer follow an individual fighter, separate from following a whole club
+// or event.
+model FighterFollow {
+  id        String         @id @default(cuid())
+  userId    String
+  fighterId String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fighter   FighterProfile @relation(fields: [fighterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fighterId])
+}
+
+// A lighter-weight, per-bout "I care about this one" than following a whole
+// event — the "Saved Fights" list on the account dashboard.
+model SavedBout {
+  id        String   @id @default(cuid())
+  userId    String
+  boutId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bout      Bout     @relation(fields: [boutId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, boutId])
+}
+
 model Coach {
   id          String   @id @default(cuid())
   clubId      String
@@ -299,6 +327,7 @@ model FighterProfile {
   sparringParticipations SparringParticipant[]
   sparringNominations    SparringNomination[]
   checkIns               CheckIn[]
+  followers              FighterFollow[]
 }
 
 /**
@@ -438,6 +467,7 @@ model Bout {
 
   crowdReactions CrowdReaction[]
   crowdShouts    CrowdShout[]
+  savedBy        SavedBout[]
 
   @@unique([eventId, number])
 }
