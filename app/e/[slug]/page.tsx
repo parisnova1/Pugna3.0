@@ -4,7 +4,7 @@ import { getEventCardData } from "@/lib/event-query";
 import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { computeRingProjections } from "@/lib/projection";
+import { computeRingProjections, isEventLive } from "@/lib/projection";
 import { formatEventDate, formatTime, formatDateRange, currentDayNumber } from "@/lib/format";
 import { BackButton } from "@/components/event/ContextBar";
 import { FollowButton } from "@/components/event/FollowButton";
@@ -82,21 +82,19 @@ export default async function EventCardPage({
   const galleryUrls = media.filter((m) => m.kind === "EVENT_GALLERY").map((m) => m.url);
   const sponsorUrls = media.filter((m) => m.kind === "SPONSOR").map((m) => m.url);
 
-  const header = (
-    <div className="flex items-center justify-between mb-5">
-      <BackButton />
-      <div className="flex items-center gap-2">
-        <ShareSheet code={event.code} name={event.name} />
-        <FollowButton eventId={event.id} slug={slug} isGuest={!actor} following={following} />
-        <Link href="/account" aria-label="Account" className="rounded-full border border-white/15 p-2.5">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
-          </svg>
-        </Link>
-      </div>
-    </div>
-  );
+  const [checkedInCount, viewerCheckIn] = await Promise.all([
+    prisma.eventCheckIn.count({ where: { eventId: event.id } }),
+    actor
+      ? prisma.eventCheckIn.findUnique({ where: { eventId_userId: { eventId: event.id, userId: actor.userId } } })
+      : Promise.resolve(null),
+  ]);
+
+  const organizerName = event.organizingClub?.name ?? event.createdBy.organizerProfile?.displayName ?? null;
+  const organizerHref = event.organizingClub ? `/clubs/${event.organizingClub.id}` : null;
+  const directionsHref =
+    event.latitude != null && event.longitude != null
+      ? `https://www.google.com/maps/dir/?api=1&destination=${event.latitude},${event.longitude}`
+      : null;
 
   if (isSimple) {
     const bouts: BoutView[] = event.bouts.map((b) => ({
@@ -118,20 +116,6 @@ export default async function EventCardPage({
     const finalBouts = event.bouts.filter((b) => b.status === "FINAL");
     const liveBoutId = projection.nowLabel === "LIVE" ? (projection.now?.id ?? null) : null;
     const pill = eventStatusPillFor(event.status, projection.nowLabel);
-
-    const [checkedInCount, viewerCheckIn] = await Promise.all([
-      prisma.eventCheckIn.count({ where: { eventId: event.id } }),
-      actor
-        ? prisma.eventCheckIn.findUnique({ where: { eventId_userId: { eventId: event.id, userId: actor.userId } } })
-        : Promise.resolve(null),
-    ]);
-
-    const organizerName = event.organizingClub?.name ?? event.createdBy.organizerProfile?.displayName ?? null;
-    const organizerHref = event.organizingClub ? `/clubs/${event.organizingClub.id}` : null;
-    const directionsHref =
-      event.latitude != null && event.longitude != null
-        ? `https://www.google.com/maps/dir/?api=1&destination=${event.latitude},${event.longitude}`
-        : null;
 
     const tabs = [
       { id: "overview", label: "Overview" },
@@ -350,48 +334,109 @@ export default async function EventCardPage({
   }
   const showBracket = weight && isValidBracket(rounds);
 
+  const finalBouts = dayBouts.filter((b) => b.status === "FINAL");
+  const liveBoutId = liveNow?.id ?? null;
+  const pill = eventStatusPillFor(
+    event.status,
+    isEventLive(ringProjections) ? "LIVE" : event.status === "INTERMISSION" ? "INTERMISSION" : null,
+  );
+
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "live", label: "Live" },
+    { id: "card", label: "Card" },
+    ...(finalBouts.length > 0 ? [{ id: "results", label: "Results" }] : []),
+    { id: "info", label: "Info" },
+  ];
+
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10">
-      {header}
-      {coverUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card mb-5" />
-      )}
-      <div className="space-y-1 mb-6">
-        <h1 className="text-2xl font-semibold">{event.name}</h1>
-        <p className="text-mute text-sm flex items-center gap-1.5">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
-            <path d="M12 22s7-7.58 7-12.5A7 7 0 0 0 5 9.5C5 14.42 12 22 12 22z" />
-            <circle cx="12" cy="9.5" r="2.5" />
-          </svg>
-          {venueLabel}
-        </p>
-        <p className="text-mute text-sm">{formatDateRange(event.date, event.dayCount)}</p>
+      <div id="overview" className="scroll-mt-24">
+        <div className="flex items-center justify-between mb-4">
+          <BackButton fallbackHref="/events" />
+          <Link href="/" aria-label="Go to PUGNA home" className="font-bold tracking-tight text-sm shrink-0">
+            PUGNA<span className="text-signal">.</span>
+          </Link>
+        </div>
+
+        {coverUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card mb-4" />
+        )}
+
+        <div className="space-y-1.5 mb-4">
+          {pill && (
+            <div className="flex items-center gap-2">
+              <Badge live={pill.live} tone={pill.live ? "signal" : "neutral"}>
+                {pill.text}
+              </Badge>
+              {event._count.follows > 0 && (
+                <span className="text-[11px] text-mute tabular">
+                  {new Intl.NumberFormat("en-US").format(event._count.follows)} watching
+                </span>
+              )}
+            </div>
+          )}
+          <h1 className="text-2xl font-semibold">{event.name}</h1>
+          <p className="text-mute text-sm flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+              <path d="M12 22s7-7.58 7-12.5A7 7 0 0 0 5 9.5C5 14.42 12 22 12 22z" />
+              <circle cx="12" cy="9.5" r="2.5" />
+            </svg>
+            {venueLabel}
+          </p>
+          <p className="text-mute text-sm">{formatDateRange(event.date, event.dayCount)}</p>
+        </div>
+
+        <div className="flex items-center gap-2 mb-6">
+          <FollowButton eventId={event.id} slug={slug} isGuest={!actor} following={following} />
+          <ShareSheet code={event.code} name={event.name} />
+          <Link href="/account" aria-label="Account" className="rounded-full border border-white/15 p-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
+            </svg>
+          </Link>
+          {event.status === "CANCELLED" && event.cancelReason && (
+            <p className="text-sm text-signal">Cancelled: {event.cancelReason}</p>
+          )}
+        </div>
+
+        <EventTabs tabs={tabs} />
       </div>
 
-      <DaySelector
-        slug={slug}
-        dayCount={event.dayCount}
-        eventDate={event.date}
-        selectedDay={selectedDay}
-        boutCounts={boutCountsByDay}
-        buildQuery={(changes) => buildQuery({ day, weight }, changes)}
-      />
+      <div id="live" className="mt-6 space-y-4 scroll-mt-24">
+        <DaySelector
+          slug={slug}
+          dayCount={event.dayCount}
+          eventDate={event.date}
+          selectedDay={selectedDay}
+          boutCounts={boutCountsByDay}
+          buildQuery={(changes) => buildQuery({ day, weight }, changes)}
+        />
 
-      <div className="space-y-4">
-        {event.rings.map((ring) => (
-          <RingSection
-            key={ring.id}
-            slug={slug}
-            ring={ring}
-            projection={ringProjections.get(ring.id) ?? { now: null, next: null, nowLabel: null }}
-            stickyLabel={ring.id === liveRing?.id ? stickyLabel : null}
-            eventStreamUrl={event.streamUrl}
-          />
-        ))}
+        <div className="space-y-4">
+          {event.rings.map((ring) => (
+            <RingSection
+              key={ring.id}
+              slug={slug}
+              ring={ring}
+              projection={ringProjections.get(ring.id) ?? { now: null, next: null, nowLabel: null }}
+              stickyLabel={ring.id === liveRing?.id ? stickyLabel : null}
+              eventStreamUrl={event.streamUrl}
+            />
+          ))}
+        </div>
+
+        <LiveAudience
+          slug={slug}
+          checkedInCount={checkedInCount}
+          viewerCheckedIn={Boolean(viewerCheckIn)}
+          liveBoutId={liveBoutId}
+        />
       </div>
 
-      <div className="mt-8 space-y-3">
+      <div id="card" className="mt-8 space-y-3 scroll-mt-24">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Weight classes</p>
         <WeightClassChips
           slug={slug}
@@ -414,6 +459,83 @@ export default async function EventCardPage({
               eventStreamUrl={event.streamUrl}
             />
           </>
+        )}
+      </div>
+
+      {finalBouts.length > 0 && (
+        <div id="results" className="mt-8 space-y-3 scroll-mt-24">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Results</p>
+          <div className="space-y-2">
+            {finalBouts.map((bout) => {
+              const winnerName = bout.result?.winnerId
+                ? bout.result.winnerId === bout.fighterAId
+                  ? bout.fighterA?.displayName
+                  : bout.fighterB?.displayName
+                : null;
+              return (
+                <Link
+                  key={bout.id}
+                  href={`/e/${slug}/bout/${bout.id}`}
+                  className="block rounded-card bg-panel border border-signal/20 px-4 py-3 hover:border-signal/40 transition-colors"
+                >
+                  <p className="text-sm font-medium">
+                    {bout.fighterA?.displayName ?? "TBD"} <span className="text-mute font-normal">vs</span>{" "}
+                    {bout.fighterB?.displayName ?? "TBD"}
+                  </p>
+                  <p className="text-xs text-mute mt-0.5">
+                    Bout {bout.number} · {bout.weightClass}
+                    {winnerName ? ` · ${winnerName} won` : ""}
+                    {bout.result?.method ? ` · ${bout.result.method}` : ""}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div id="info" className="mt-8 space-y-4 scroll-mt-24">
+        <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Event Info</p>
+          {(event.venue || event.city) && (
+            <div>
+              <p className="text-xs text-mute">Venue</p>
+              <p className="text-sm font-medium">{venueLabel}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-mute">Date</p>
+            <p className="text-sm font-medium">{formatDateRange(event.date, event.dayCount)}</p>
+          </div>
+          {event.startTime && (
+            <div>
+              <p className="text-xs text-mute">Start</p>
+              <p className="text-sm font-medium">{formatTime(event.startTime)}</p>
+            </div>
+          )}
+          {directionsHref && (
+            <a
+              href={directionsHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block rounded-pill border border-white/20 text-ink text-sm font-medium px-4 py-2"
+            >
+              Directions
+            </a>
+          )}
+        </div>
+
+        {organizerName && (
+          <div className="rounded-card bg-panel border border-white/10 p-5 space-y-2">
+            <p className="text-xs font-semibold text-mute uppercase tracking-wide">Organized by</p>
+            {organizerHref ? (
+              <Link href={organizerHref} className="text-sm font-semibold text-signal">
+                {organizerName} →
+              </Link>
+            ) : (
+              <p className="text-sm font-semibold">{organizerName}</p>
+            )}
+          </div>
         )}
       </div>
     </div>
