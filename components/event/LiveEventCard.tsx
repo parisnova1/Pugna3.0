@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/Badge";
 import { RoundTimer } from "@/components/live/RoundTimer";
 import { FreshnessMeter } from "@/components/live/FreshnessMeter";
 import { WatchArea } from "@/components/live/WatchArea";
+import { NotifyButton } from "@/components/event/NotifyButton";
+import { boutStatusLabel, eventStatusPillFor } from "@/lib/bout-status";
 
 export type BoutView = {
   id: string;
@@ -52,20 +54,6 @@ const watchingLabel = (count: number) => `${new Intl.NumberFormat("en-US").forma
 const POLL_MS = 15000;
 const LIVE_STATUSES: EventStatus[] = ["PUBLISHED", "LIVE", "INTERMISSION"];
 
-function statusPillFor(
-  status: EventStatus,
-  nowLabel: ProjectionResponse["nowLabel"],
-): { text: string; live: boolean } | null {
-  if (status === "CANCELLED") return { text: "Cancelled", live: false };
-  if (status === "FINISHED" || status === "ARCHIVED") return { text: "Finished", live: false };
-  if (nowLabel === "LIVE") return { text: "Live", live: true };
-  if (nowLabel === "INTERMISSION") return { text: "Intermission", live: false };
-  if (nowLabel === "BREAK") return { text: "On break", live: false };
-  if (status === "PUBLISHED") return { text: "Upcoming", live: false };
-  if (status === "LIVE") return { text: "In progress", live: false };
-  return null;
-}
-
 function statusLabel(bout: BoutView): string {
   switch (bout.status) {
     case "FINAL":
@@ -108,6 +96,11 @@ export function LiveEventCard({
   coverUrl,
   galleryUrls,
   sponsorUrls,
+  hideHeader,
+  eventId,
+  isGuest,
+  following,
+  fullCardId,
 }: {
   slug: string;
   name: string;
@@ -128,6 +121,19 @@ export function LiveEventCard({
   coverUrl?: string | null;
   galleryUrls?: string[];
   sponsorUrls?: string[];
+  /** Skips the internal name/date/venue/status-pill header — used only by
+   * the event page, which now renders a richer version of that itself. Ring
+   * view and the host preview page don't pass this, so they're unchanged. */
+  hideHeader?: boolean;
+  /** Only provided by the event page, to render a Notify button on "Next" —
+   * reuses the same toggleFollow relationship the Follow button already
+   * shows, not a second notification system. */
+  eventId?: string;
+  isGuest?: boolean;
+  following?: boolean;
+  /** Applied to the "Full card" wrapper so the event page can scroll/link
+   * straight to it from its in-page tabs. */
+  fullCardId?: string;
 }) {
   const [status, setStatus] = useState(initialStatus);
   const [bouts, setBouts] = useState(initialBouts);
@@ -204,7 +210,7 @@ export function LiveEventCard({
   const now = bouts.find((b) => b.id === nowId) ?? null;
   const next = bouts.find((b) => b.id === nextId) ?? null;
   const isPolling = LIVE_STATUSES.includes(status);
-  const pill = statusPillFor(status, nowLabel);
+  const pill = eventStatusPillFor(status, nowLabel);
 
   return (
     <div className="space-y-6">
@@ -212,42 +218,44 @@ export function LiveEventCard({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card" />
       )}
-      <div>
-        {pill && (
-          <div className="flex items-center gap-2 mb-2">
-            <Badge live={pill.live} tone={pill.live ? "signal" : "neutral"}>
-              {pill.text}
-            </Badge>
-            {followerCount > 0 && <span className="text-[11px] text-mute tabular">{watchingLabel(followerCount)}</span>}
-          </div>
-        )}
-        {ringName ? (
-          <>
-            <Link href={`/e/${slug}`} className="text-xs text-mute underline">
-              {name}
-            </Link>
-            <h1 className="text-2xl font-semibold mt-0.5">{ringName}</h1>
-          </>
-        ) : (
-          <h1 className="text-2xl font-semibold">{name}</h1>
-        )}
-        <p className="text-mute text-sm mt-1">
-          {dateLabel} · {venueLabel}
-        </p>
-        {streamUrl && status !== "CANCELLED" && (
-          <a
-            href={streamUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-signal mt-2 font-medium"
-          >
-            Watch stream ↗
-          </a>
-        )}
-        {status === "CANCELLED" && cancelReason && (
-          <p className="text-sm text-signal mt-2">Cancelled: {cancelReason}</p>
-        )}
-      </div>
+      {!hideHeader && (
+        <div>
+          {pill && (
+            <div className="flex items-center gap-2 mb-2">
+              <Badge live={pill.live} tone={pill.live ? "signal" : "neutral"}>
+                {pill.text}
+              </Badge>
+              {followerCount > 0 && <span className="text-[11px] text-mute tabular">{watchingLabel(followerCount)}</span>}
+            </div>
+          )}
+          {ringName ? (
+            <>
+              <Link href={`/e/${slug}`} className="text-xs text-mute underline">
+                {name}
+              </Link>
+              <h1 className="text-2xl font-semibold mt-0.5">{ringName}</h1>
+            </>
+          ) : (
+            <h1 className="text-2xl font-semibold">{name}</h1>
+          )}
+          <p className="text-mute text-sm mt-1">
+            {dateLabel} · {venueLabel}
+          </p>
+          {streamUrl && status !== "CANCELLED" && (
+            <a
+              href={streamUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-signal mt-2 font-medium"
+            >
+              Watch stream ↗
+            </a>
+          )}
+          {status === "CANCELLED" && cancelReason && (
+            <p className="text-sm text-signal mt-2">Cancelled: {cancelReason}</p>
+          )}
+        </div>
+      )}
 
       {isPolling && <FreshnessMeter updatedAt={updatedAt} connectionLost={connectionLost} />}
 
@@ -277,7 +285,18 @@ export function LiveEventCard({
 
       {next && (
         <div>
-          <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Next</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-mute uppercase tracking-wide">Next</p>
+            {eventId && (
+              <NotifyButton
+                eventId={eventId}
+                slug={slug}
+                returnTo={`/e/${slug}/bout/${next.id}`}
+                isGuest={Boolean(isGuest)}
+                following={Boolean(following)}
+              />
+            )}
+          </div>
           <BoutLink slug={slug} boutId={next.id} className="block rounded-card bg-panel border border-white/10 p-4">
             <p className="font-medium">
               {next.fighterAName ?? "TBD"} <span className="text-mute">vs</span> {next.fighterBName ?? "TBD"}
@@ -289,7 +308,7 @@ export function LiveEventCard({
         </div>
       )}
 
-      <div>
+      <div id={fullCardId} className="scroll-mt-24">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Full card</p>
         <div className="space-y-2">
           {bouts.map((bout) => {
@@ -322,8 +341,12 @@ export function LiveEventCard({
                     Bout {bout.number} · {bout.weightClass}
                   </p>
                 </div>
-                <span className={`text-xs shrink-0 ml-2 ${isFinal && bout.winnerName ? "text-signal font-medium" : "text-mute"}`}>
-                  {isFinal && bout.winnerName ? `${bout.winnerName} won` : statusLabel(bout)}
+                <span
+                  className={`text-xs shrink-0 ml-2 font-medium ${
+                    isFinal && bout.winnerName ? "text-signal" : bout.id === nowId || bout.id === nextId ? "text-signal" : "text-mute"
+                  }`}
+                >
+                  {isFinal && bout.winnerName ? `${bout.winnerName} won` : boutStatusLabel(bout.status, bout.id === nextId, bout.delayMinutes)}
                 </span>
               </BoutLink>
             );
@@ -426,7 +449,7 @@ function BoutHero({
         </p>
       </BoutLink>
       <div className="mt-3">
-        <WatchArea url={bout.streamUrl ?? eventStreamUrl ?? null} status={bout.status} size="compact" />
+        <WatchArea url={bout.streamUrl ?? eventStreamUrl ?? null} status={bout.status} size="hero" />
       </div>
     </div>
   );

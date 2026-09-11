@@ -14,6 +14,8 @@ export async function getEventCardData(slug: string, ringId?: string) {
         orderBy: { number: "asc" },
       },
       rings: { orderBy: { number: "asc" } },
+      organizingClub: true,
+      createdBy: { include: { organizerProfile: true } },
       _count: { select: { follows: true } },
     },
   });

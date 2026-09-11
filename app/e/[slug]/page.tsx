@@ -10,11 +10,15 @@ import { BackButton } from "@/components/event/ContextBar";
 import { FollowButton } from "@/components/event/FollowButton";
 import { ShareSheet } from "@/components/event/ShareSheet";
 import { LiveEventCard, type BoutView } from "@/components/event/LiveEventCard";
+import { eventStatusPillFor } from "@/lib/bout-status";
 import { BracketDiagram, isValidBracket, roundLabelForSize, type BracketRound } from "@/components/event/BracketDiagram";
 import { DaySelector } from "@/components/event/overview/DaySelector";
 import { WeightClassChips } from "@/components/event/overview/WeightClassChips";
 import { RingSection } from "@/components/event/overview/RingSection";
 import { ScheduleList } from "@/components/event/overview/ScheduleList";
+import { EventTabs } from "@/components/event/EventTabs";
+import { LiveAudience } from "@/components/event/LiveAudience";
+import { Badge } from "@/components/ui/Badge";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -111,27 +115,194 @@ export default async function EventCardPage({
       streamUrl: b.streamUrl,
     }));
 
+    const finalBouts = event.bouts.filter((b) => b.status === "FINAL");
+    const liveBoutId = projection.nowLabel === "LIVE" ? (projection.now?.id ?? null) : null;
+    const pill = eventStatusPillFor(event.status, projection.nowLabel);
+
+    const [checkedInCount, viewerCheckIn] = await Promise.all([
+      prisma.eventCheckIn.count({ where: { eventId: event.id } }),
+      actor
+        ? prisma.eventCheckIn.findUnique({ where: { eventId_userId: { eventId: event.id, userId: actor.userId } } })
+        : Promise.resolve(null),
+    ]);
+
+    const organizerName = event.organizingClub?.name ?? event.createdBy.organizerProfile?.displayName ?? null;
+    const organizerHref = event.organizingClub ? `/clubs/${event.organizingClub.id}` : null;
+    const directionsHref =
+      event.latitude != null && event.longitude != null
+        ? `https://www.google.com/maps/dir/?api=1&destination=${event.latitude},${event.longitude}`
+        : null;
+
+    const tabs = [
+      { id: "overview", label: "Overview" },
+      { id: "live", label: "Live" },
+      { id: "card", label: "Card" },
+      ...(finalBouts.length > 0 ? [{ id: "results", label: "Results" }] : []),
+      { id: "info", label: "Info" },
+    ];
+
     return (
-      <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10">
-        {header}
-        <LiveEventCard
-          slug={slug}
-          name={event.name}
-          dateLabel={dateLabel}
-          venueLabel={venueLabel}
-          streamUrl={event.streamUrl}
-          cancelReason={event.cancelReason}
-          initialStatus={event.status}
-          initialBouts={bouts}
-          initialNowLabel={projection.nowLabel}
-          initialNowId={projection.now?.id ?? null}
-          initialNextId={projection.next?.id ?? null}
-          initialFollowerCount={event._count.follows}
-          initialIntermissionUntil={event.intermissionUntil}
-          coverUrl={coverUrl}
-          galleryUrls={galleryUrls}
-          sponsorUrls={sponsorUrls}
-        />
+      <div className="mx-auto w-full max-w-md lg:max-w-5xl px-4 pt-4 pb-10">
+        <div id="overview" className="scroll-mt-24">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton fallbackHref="/events" />
+            <Link href="/" aria-label="Go to PUGNA home" className="font-bold tracking-tight text-sm shrink-0">
+              PUGNA<span className="text-signal">.</span>
+            </Link>
+          </div>
+
+          {coverUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card mb-4" />
+          )}
+
+          <div className="space-y-1.5 mb-4">
+            {pill && (
+              <div className="flex items-center gap-2">
+                <Badge live={pill.live} tone={pill.live ? "signal" : "neutral"}>
+                  {pill.text}
+                </Badge>
+                {event._count.follows > 0 && (
+                  <span className="text-[11px] text-mute tabular">
+                    {new Intl.NumberFormat("en-US").format(event._count.follows)} watching
+                  </span>
+                )}
+              </div>
+            )}
+            <h1 className="text-2xl font-semibold">{event.name}</h1>
+            <p className="text-mute text-sm">{venueLabel}</p>
+            <p className="text-mute text-sm">{dateLabel}</p>
+          </div>
+
+          <div className="flex items-center gap-2 mb-6">
+            <FollowButton eventId={event.id} slug={slug} isGuest={!actor} following={following} />
+            <ShareSheet code={event.code} name={event.name} />
+            <Link href="/account" aria-label="Account" className="rounded-full border border-white/15 p-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
+              </svg>
+            </Link>
+            {event.status === "CANCELLED" && event.cancelReason && (
+              <p className="text-sm text-signal">Cancelled: {event.cancelReason}</p>
+            )}
+          </div>
+
+          <EventTabs tabs={tabs} />
+        </div>
+
+        <div className="mt-6 lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start">
+          <div id="live" className="lg:col-span-2 space-y-6 scroll-mt-24">
+            <LiveEventCard
+              slug={slug}
+              name={event.name}
+              dateLabel={dateLabel}
+              venueLabel={venueLabel}
+              streamUrl={event.streamUrl}
+              cancelReason={event.cancelReason}
+              initialStatus={event.status}
+              initialBouts={bouts}
+              initialNowLabel={projection.nowLabel}
+              initialNowId={projection.now?.id ?? null}
+              initialNextId={projection.next?.id ?? null}
+              initialFollowerCount={event._count.follows}
+              initialIntermissionUntil={event.intermissionUntil}
+              galleryUrls={galleryUrls}
+              sponsorUrls={sponsorUrls}
+              hideHeader
+              eventId={event.id}
+              isGuest={!actor}
+              following={following}
+              fullCardId="card"
+            />
+          </div>
+
+          <div className="mt-6 lg:mt-0 space-y-4">
+            <LiveAudience
+              slug={slug}
+              checkedInCount={checkedInCount}
+              viewerCheckedIn={Boolean(viewerCheckIn)}
+              liveBoutId={liveBoutId}
+            />
+
+            <div id="info" className="scroll-mt-24 space-y-4">
+              <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
+                <p className="text-xs font-semibold text-mute uppercase tracking-wide">Event Info</p>
+                {(event.venue || event.city) && (
+                  <div>
+                    <p className="text-xs text-mute">Venue</p>
+                    <p className="text-sm font-medium">{venueLabel}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-mute">Date</p>
+                  <p className="text-sm font-medium">{formatEventDate(event.date)}</p>
+                </div>
+                {event.startTime && (
+                  <div>
+                    <p className="text-xs text-mute">Start</p>
+                    <p className="text-sm font-medium">{formatTime(event.startTime)}</p>
+                  </div>
+                )}
+                {directionsHref && (
+                  <a
+                    href={directionsHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block rounded-pill border border-white/20 text-ink text-sm font-medium px-4 py-2"
+                  >
+                    Directions
+                  </a>
+                )}
+              </div>
+
+              {organizerName && (
+                <div className="rounded-card bg-panel border border-white/10 p-5 space-y-2">
+                  <p className="text-xs font-semibold text-mute uppercase tracking-wide">Organized by</p>
+                  {organizerHref ? (
+                    <Link href={organizerHref} className="text-sm font-semibold text-signal">
+                      {organizerName} →
+                    </Link>
+                  ) : (
+                    <p className="text-sm font-semibold">{organizerName}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {finalBouts.length > 0 && (
+          <div id="results" className="mt-8 space-y-3 scroll-mt-24">
+            <p className="text-xs font-semibold text-mute uppercase tracking-wide">Results</p>
+            <div className="space-y-2">
+              {finalBouts.map((bout) => {
+                const winnerName = bout.result?.winnerId
+                  ? bout.result.winnerId === bout.fighterAId
+                    ? bout.fighterA?.displayName
+                    : bout.fighterB?.displayName
+                  : null;
+                return (
+                  <Link
+                    key={bout.id}
+                    href={`/e/${slug}/bout/${bout.id}`}
+                    className="block rounded-card bg-panel border border-signal/20 px-4 py-3 hover:border-signal/40 transition-colors"
+                  >
+                    <p className="text-sm font-medium">
+                      {bout.fighterA?.displayName ?? "TBD"} <span className="text-mute font-normal">vs</span>{" "}
+                      {bout.fighterB?.displayName ?? "TBD"}
+                    </p>
+                    <p className="text-xs text-mute mt-0.5">
+                      Bout {bout.number} · {bout.weightClass}
+                      {winnerName ? ` · ${winnerName} won` : ""}
+                      {bout.result?.method ? ` · ${bout.result.method}` : ""}
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
