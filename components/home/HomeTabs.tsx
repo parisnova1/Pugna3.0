@@ -42,10 +42,12 @@ function toPoints(events: EventRow[], hrefFor: (e: EventRow) => string | null): 
 export function HomeTabs({
   live,
   upcoming,
+  following,
   openSparring,
 }: {
   live: EventRow[];
   upcoming: EventRow[];
+  following: EventRow[];
   openSparring: SparringRow[];
 }) {
   const [tab, setTab] = useState<"events" | "sparring">("events");
@@ -100,6 +102,17 @@ export function HomeTabs({
               </>
             )}
           </section>
+
+          {following.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Following</h2>
+              <div className="space-y-3">
+                {following.map((event) => (
+                  <EventPreviewCard key={event.id} event={event} coverUrl={event.coverUrl} checkedInCount={event.checkedInCount} />
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="space-y-3">
             <div className="flex items-center justify-between">

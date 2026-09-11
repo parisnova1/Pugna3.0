@@ -2,7 +2,6 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { formatCountdown } from "@/lib/format";
-import { EventPreviewCard } from "@/components/event/EventPreviewCard";
 import { SeeAllLink } from "@/components/event/SeeAllLink";
 import { HomeTabs } from "@/components/home/HomeTabs";
 
@@ -61,8 +60,11 @@ export default async function HomePage() {
   const checkedInCountFor = (eventId: string) => checkIns.filter((c) => c.attachedId === eventId).length;
   const withCover = <T extends { id: string }>(events: T[]) =>
     events.map((e) => ({ ...e, coverUrl: coverFor(e.id), checkedInCount: checkedInCountFor(e.id) }));
+  const followingIds = new Set(following.map((e) => e.id));
   const liveWithCover = withCover(live);
-  const upcomingWithCover = withCover(upcoming);
+  // Followed events get their own priority section (in HomeTabs, above
+  // Upcoming) — drop them here so they don't show twice.
+  const upcomingWithCover = withCover(upcoming.filter((e) => !followingIds.has(e.id)));
   const followingWithCover = withCover(following);
 
   const yourPugna = actor
@@ -102,18 +104,7 @@ export default async function HomePage() {
         </Link>
       </section>
 
-      <HomeTabs live={liveWithCover} upcoming={upcomingWithCover} openSparring={openSparring} />
-
-      {followingWithCover.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Following</h2>
-          <div className="space-y-3">
-            {followingWithCover.map((event) => (
-              <EventPreviewCard key={event.id} event={event} coverUrl={event.coverUrl} checkedInCount={event.checkedInCount} />
-            ))}
-          </div>
-        </section>
-      )}
+      <HomeTabs live={liveWithCover} upcoming={upcomingWithCover} following={followingWithCover} openSparring={openSparring} />
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
