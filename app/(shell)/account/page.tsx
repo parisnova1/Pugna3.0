@@ -18,6 +18,7 @@ function guestMessage(returnTo: string | undefined): string {
   if (returnTo.startsWith("/sparring/host")) return "Create an account to host sparring sessions.";
   if (returnTo.startsWith("/sparring")) return "Create an account to join sparring.";
   if (returnTo.startsWith("/host")) return "Create an account to host tournaments.";
+  if (returnTo.startsWith("/clubs")) return "Create an account to follow or join a club.";
   if (returnTo.startsWith("/club")) return "Create an account to manage a club.";
   if (returnTo.startsWith("/you")) return "Create an account to see your fighter profile.";
   if (returnTo.startsWith("/checkin")) return "Create an account to check in.";

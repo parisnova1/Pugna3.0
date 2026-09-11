@@ -48,6 +48,8 @@ export type Action =
   | "club.claim"
   | "club.admin"
   | "club.nominate"
+  | "club.follow"
+  | "club.join"
   | "nomination.respond"
   | "sparring.view"
   | "crowd.write";
@@ -62,6 +64,8 @@ export type Resource = {
   checkedIn?: boolean;
   boutInProgress?: boolean;
   muted?: boolean;
+  hasFighterProfile?: boolean;
+  alreadyInAClub?: boolean;
 };
 
 export function can(actor: Actor, action: Action, resource: Resource = {}): CanResult {
@@ -133,6 +137,18 @@ export function can(actor: Actor, action: Action, resource: Resource = {}): CanR
       if (!actor) return deny("FORBIDDEN", "This session is invite-only.");
       if (resource.sparringPrivileged) return allow();
       return deny("FORBIDDEN", "This session is invite-only.");
+    }
+
+    case "club.follow": {
+      if (!actor) return deny("AUTH_REQUIRED", "Sign in to follow this club.");
+      return allow();
+    }
+
+    case "club.join": {
+      if (!actor) return deny("AUTH_REQUIRED", "Sign in to join this club.");
+      if (!resource.hasFighterProfile) return deny("CONTEXT_REQUIRED", "Register as a boxer to join a club.");
+      if (resource.alreadyInAClub) return deny("CONFLICT", "You're already with a club.");
+      return allow();
     }
 
     case "crowd.write": {

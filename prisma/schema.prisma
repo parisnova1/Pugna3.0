@@ -76,12 +76,14 @@ enum MediaKind {
   SPONSOR
   BOUT_MEDIA
   SPARRING_MEDIA
+  CLUB_COVER
 }
 
 enum MediaAttachedType {
   EVENT
   BOUT
   SPARRING_SESSION
+  CLUB
 }
 
 // blueprint §9 — event-driven only, no social notifications.
@@ -206,6 +208,7 @@ model User {
 
   createdEvents Event[]        @relation("EventCreatedBy")
   follows       Follow[]
+  clubFollows   ClubFollow[]
   notifications Notification[]
   uploadedMedia Media[]
 
@@ -216,13 +219,18 @@ model User {
 }
 
 model Club {
-  id        String   @id @default(cuid())
-  name      String
-  city      String?
-  venue     String?
-  tier      ClubTier @default(FREE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  city        String?
+  venue       String?
+  sport       String   @default("Boxing")
+  description String?
+  isVerified  Boolean  @default(false)
+  latitude    Float?
+  longitude   Float?
+  tier        ClubTier @default(FREE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   admins                  ClubAdmin[]
   roster                  FighterProfile[]
@@ -234,6 +242,20 @@ model Club {
   sparringInvitesReceived SparringClubInvite[]
   sparringRequestsSent    SparringClubRequest[]
   sparringNominationsSent SparringNomination[]
+  followers               ClubFollow[]
+}
+
+// Casual "keep me posted" follow for a club — parallel to `Follow` (events),
+// not a generalization of it. "Join Club" (FighterProfile.clubId) is the
+// separate, real-membership concept; this is just notifications-intent.
+model ClubFollow {
+  id     String @id @default(cuid())
+  userId String
+  clubId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clubId])
 }
 
 model Coach {
