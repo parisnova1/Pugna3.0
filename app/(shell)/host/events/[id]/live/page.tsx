@@ -16,6 +16,7 @@ export default async function LiveConsolePage({ params }: { params: Promise<{ id
     fighterBId: b.fighterBId,
     fighterAName: b.fighterA?.displayName ?? null,
     fighterBName: b.fighterB?.displayName ?? null,
+    winnerId: b.result?.winnerId ?? null,
     ringId: b.ringId,
     totalRounds: b.totalRounds,
     roundDurationSec: b.roundDurationSec,

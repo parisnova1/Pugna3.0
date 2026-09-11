@@ -31,6 +31,7 @@ export type ConsoleBout = {
   fighterBId: string | null;
   fighterAName: string | null;
   fighterBName: string | null;
+  winnerId: string | null;
   ringId: string;
   totalRounds: number | null;
   roundDurationSec: number;
@@ -317,17 +318,33 @@ export function LiveConsole({
 
       <div className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Full card</p>
-        {bouts.map((b) => (
-          <div key={b.id} className="flex items-center justify-between rounded-card border border-white/10 px-4 py-2 text-sm">
-            <span>
-              {b.number}. {b.fighterAName ?? "TBD"} vs {b.fighterBName ?? "TBD"}
-              {rings.length > 1 ? (
-                <span className="text-mute"> · {findRingLabel(rings, b.ringId)}</span>
-              ) : null}
-            </span>
-            <span className="text-xs text-mute">{b.status}</span>
-          </div>
-        ))}
+        {bouts.map((b) => {
+          const isFinal = b.status === "FINAL";
+          const winnerName = b.winnerId === b.fighterAId ? b.fighterAName : b.winnerId === b.fighterBId ? b.fighterBName : null;
+          return (
+            <div
+              key={b.id}
+              className={`flex items-center justify-between rounded-card border px-4 py-2 text-sm ${
+                isFinal && winnerName ? "border-signal/20" : "border-white/10"
+              }`}
+            >
+              <span>
+                {b.number}.{" "}
+                <span className={winnerName && winnerName === b.fighterAName ? "text-signal font-semibold" : ""}>
+                  {b.fighterAName ?? "TBD"}
+                </span>{" "}
+                vs{" "}
+                <span className={winnerName && winnerName === b.fighterBName ? "text-signal font-semibold" : ""}>
+                  {b.fighterBName ?? "TBD"}
+                </span>
+                {rings.length > 1 ? <span className="text-mute"> · {findRingLabel(rings, b.ringId)}</span> : null}
+              </span>
+              <span className={`text-xs ${isFinal && winnerName ? "text-signal font-medium" : "text-mute"}`}>
+                {isFinal && winnerName ? `${winnerName} won` : b.status}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {allTerminal && (

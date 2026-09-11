@@ -108,7 +108,11 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
                   {b.event.name} · {formatEventDate(b.event.date)}
                 </p>
               </div>
-              <span className="text-xs text-mute shrink-0 ml-2">
+              <span
+                className={`text-xs shrink-0 ml-2 font-medium ${
+                  b.status === "FINAL" && b.winnerId === fighter.id ? "text-signal" : "text-mute"
+                }`}
+              >
                 {b.status === "FINAL"
                   ? b.winnerId === fighter.id
                     ? "Win"

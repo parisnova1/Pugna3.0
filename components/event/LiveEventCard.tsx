@@ -15,6 +15,7 @@ export type BoutView = {
   delayMinutes: number | null;
   fighterAName: string | null;
   fighterBName: string | null;
+  winnerName?: string | null;
   totalRounds?: number | null;
   currentRound?: number;
   roundPhase?: RoundPhase | null;
@@ -37,7 +38,7 @@ type ProjectionResponse = {
     phaseEndsAt: string | null;
   } | null;
   next: { id: string; number: number; status: BoutStatus } | null;
-  bouts: { id: string; number: number; status: BoutStatus }[];
+  bouts: { id: string; number: number; status: BoutStatus; winnerName: string | null }[];
   followerCount: number;
   updatedAt: string;
 };
@@ -174,7 +175,7 @@ export function LiveEventCard({
             const match = data.bouts.find((d) => d.id === b.id);
             if (!match) return b;
             const delay = data.now?.id === b.id ? data.now.delayMinutes : null;
-            return { ...b, status: match.status, delayMinutes: delay };
+            return { ...b, status: match.status, delayMinutes: delay, winnerName: match.winnerName };
           }),
         );
         setUpdatedAt(new Date(data.updatedAt));
@@ -293,27 +294,42 @@ export function LiveEventCard({
       <div>
         <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Full card</p>
         <div className="space-y-2">
-          {bouts.map((bout) => (
-            <BoutLink
-              key={bout.id}
-              slug={slug}
-              boutId={bout.id}
-              className={[
-                "flex items-center justify-between rounded-card border px-4 py-3",
-                bout.id === nowId ? "border-signal/40 bg-signal/5" : "border-white/10 bg-panel",
-              ].join(" ")}
-            >
-              <div>
-                <p className="text-sm font-medium">
-                  {bout.fighterAName ?? "TBD"} <span className="text-mute">vs</span> {bout.fighterBName ?? "TBD"}
-                </p>
-                <p className="text-xs text-mute mt-0.5">
-                  Bout {bout.number} · {bout.weightClass}
-                </p>
-              </div>
-              <span className="text-xs text-mute shrink-0 ml-2">{statusLabel(bout)}</span>
-            </BoutLink>
-          ))}
+          {bouts.map((bout) => {
+            const isFinal = bout.status === "FINAL";
+            return (
+              <BoutLink
+                key={bout.id}
+                slug={slug}
+                boutId={bout.id}
+                className={[
+                  "flex items-center justify-between rounded-card border px-4 py-3",
+                  bout.id === nowId
+                    ? "border-signal/40 bg-signal/5"
+                    : isFinal && bout.winnerName
+                      ? "border-signal/20 bg-panel"
+                      : "border-white/10 bg-panel",
+                ].join(" ")}
+              >
+                <div>
+                  <p className="text-sm font-medium">
+                    <span className={bout.winnerName && bout.winnerName === bout.fighterAName ? "text-signal font-semibold" : ""}>
+                      {bout.fighterAName ?? "TBD"}
+                    </span>{" "}
+                    <span className="text-mute">vs</span>{" "}
+                    <span className={bout.winnerName && bout.winnerName === bout.fighterBName ? "text-signal font-semibold" : ""}>
+                      {bout.fighterBName ?? "TBD"}
+                    </span>
+                  </p>
+                  <p className="text-xs text-mute mt-0.5">
+                    Bout {bout.number} · {bout.weightClass}
+                  </p>
+                </div>
+                <span className={`text-xs shrink-0 ml-2 ${isFinal && bout.winnerName ? "text-signal font-medium" : "text-mute"}`}>
+                  {isFinal && bout.winnerName ? `${bout.winnerName} won` : statusLabel(bout)}
+                </span>
+              </BoutLink>
+            );
+          })}
         </div>
       </div>
 

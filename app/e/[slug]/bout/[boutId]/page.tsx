@@ -6,6 +6,7 @@ import { deleteMedia } from "@/lib/actions/media";
 import { MediaUploader } from "@/components/host/MediaUploader";
 import { BackButton } from "@/components/event/ContextBar";
 import { NotifyButton } from "@/components/event/NotifyButton";
+import { Badge } from "@/components/ui/Badge";
 import type { BoutStatus } from "@prisma/client";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -76,15 +77,28 @@ export default async function BoutDetailPage({
       </div>
 
       <div className="rounded-card bg-panel border border-white/10 p-6 space-y-4">
-        <FighterRow name={bout.fighterA?.displayName} club={bout.fighterA?.club?.name} />
+        <FighterRow
+          name={bout.fighterA?.displayName}
+          club={bout.fighterA?.club?.name}
+          isWinner={Boolean(bout.result && bout.fighterAId && bout.result.winnerId === bout.fighterAId)}
+        />
         <div className="text-center text-mute text-sm">vs</div>
-        <FighterRow name={bout.fighterB?.displayName} club={bout.fighterB?.club?.name} />
+        <FighterRow
+          name={bout.fighterB?.displayName}
+          club={bout.fighterB?.club?.name}
+          isWinner={Boolean(bout.result && bout.fighterBId && bout.result.winnerId === bout.fighterBId)}
+        />
       </div>
 
       {bout.result && (
-        <div className="rounded-card bg-panel border border-white/10 p-4">
+        <div className="rounded-card bg-panel border border-signal/30 p-4">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-1">Result</p>
-          <p className="text-sm">
+          <p className="text-sm font-semibold text-signal">
+            {bout.result.winnerId
+              ? `${bout.result.winnerId === bout.fighterAId ? bout.fighterA?.displayName : bout.fighterB?.displayName} won`
+              : "Draw"}
+          </p>
+          <p className="text-sm text-mute mt-0.5">
             {bout.result.method}
             {bout.result.round ? ` · Round ${bout.result.round}` : ""}
           </p>
@@ -128,10 +142,13 @@ export default async function BoutDetailPage({
   );
 }
 
-function FighterRow({ name, club }: { name?: string; club?: string | null }) {
+function FighterRow({ name, club, isWinner }: { name?: string; club?: string | null; isWinner?: boolean }) {
   return (
-    <div className="text-center">
-      <p className="font-semibold">{name ?? "TBD"}</p>
+    <div className={`text-center rounded-card py-1.5 ${isWinner ? "bg-signal/10 border border-signal/30" : ""}`}>
+      <div className="flex items-center justify-center gap-1.5">
+        <p className={`font-semibold ${isWinner ? "text-signal" : ""}`}>{name ?? "TBD"}</p>
+        {isWinner && <Badge tone="signal">Winner</Badge>}
+      </div>
       <p className="text-xs text-mute mt-0.5">{club ?? (name ? "Guest" : "—")}</p>
     </div>
   );

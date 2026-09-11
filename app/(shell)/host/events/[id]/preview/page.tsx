@@ -25,6 +25,7 @@ export default async function PreviewEventPage({ params }: { params: Promise<{ i
     weightClass: b.weightClass,
     status: b.status,
     delayMinutes: b.delayMinutes,
+    winnerName: b.result?.winnerId ? (b.result.winnerId === b.fighterAId ? b.fighterA?.displayName : b.fighterB?.displayName) ?? null : null,
     fighterAName: b.fighterA?.displayName ?? null,
     fighterBName: b.fighterB?.displayName ?? null,
     totalRounds: b.totalRounds,

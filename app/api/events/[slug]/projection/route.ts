@@ -34,7 +34,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     next: data.projection.next
       ? { id: data.projection.next.id, number: data.projection.next.number, status: data.projection.next.status }
       : null,
-    bouts: data.bouts.map((b) => ({ id: b.id, number: b.number, status: b.status })),
+    bouts: data.bouts.map((b) => ({
+      id: b.id,
+      number: b.number,
+      status: b.status,
+      winnerName: b.result?.winnerId ? (b.result.winnerId === b.fighterAId ? b.fighterA?.displayName : b.fighterB?.displayName) ?? null : null,
+    })),
     followerCount: data.event._count.follows,
     updatedAt: new Date().toISOString(),
   });
