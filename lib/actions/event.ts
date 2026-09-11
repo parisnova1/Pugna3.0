@@ -246,7 +246,10 @@ export async function setBoutStreamUrl(boutId: string, eventId: string, formData
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
 
   const streamUrl = String(formData.get("streamUrl") ?? "").trim() || null;
-  const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { event: true } });
+  const bout = await prisma.bout.findUnique({
+    where: { id: boutId },
+    include: { event: true, fighterA: true, fighterB: true },
+  });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Bout not found." };
 
   await prisma.bout.update({ where: { id: boutId }, data: { streamUrl } });
@@ -257,6 +260,16 @@ export async function setBoutStreamUrl(boutId: string, eventId: string, formData
       followerIds,
       "STREAM_LINK_ADDED",
       `A watch link was added for the live fight at ${bout.event.name}.`,
+      `/e/${bout.event.slug ?? ""}/bout/${boutId}`,
+    );
+  }
+
+  if (streamUrl && bout.status === "FINAL") {
+    const fighterUserIds = [bout.fighterA?.userId, bout.fighterB?.userId].filter((id): id is string => Boolean(id));
+    await notifyMany(
+      fighterUserIds,
+      "STREAM_LINK_ADDED",
+      "Your fight video is now available.",
       `/e/${bout.event.slug ?? ""}/bout/${boutId}`,
     );
   }

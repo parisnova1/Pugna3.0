@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
-import { signOut } from "@/lib/auth";
-import { becomeBoxer, becomeOrganizer } from "@/lib/actions/profile";
 import { AuthScreen } from "@/components/account/AuthScreen";
 import { formatEventDate, formatCountdown } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
@@ -40,7 +38,6 @@ export default async function AccountPage({
 
   const [
     user,
-    clubs,
     fighter,
     recentNotifications,
     unreadCount,
@@ -52,7 +49,6 @@ export default async function AccountPage({
     upcomingFollowedEvent,
   ] = await Promise.all([
     prisma.user.findUnique({ where: { id: actor.userId } }),
-    actor.clubIds.length > 0 ? prisma.club.findMany({ where: { id: { in: actor.clubIds } } }) : Promise.resolve([]),
     prisma.fighterProfile.findUnique({ where: { userId: actor.userId }, include: { club: true } }),
     prisma.notification.findMany({ where: { userId: actor.userId }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.notification.count({ where: { userId: actor.userId, read: false } }),
@@ -71,28 +67,26 @@ export default async function AccountPage({
   ]);
 
   const upNextEvent = liveFollowedEvent ?? upcomingFollowedEvent;
-  const hasAnyContext = actor.isBoxer || clubs.length > 0 || actor.isOrganizer;
 
   let nextFight: Awaited<ReturnType<typeof prisma.bout.findFirst>> | null = null;
   let nextFightEvent: { name: string; startTime: Date | null; slug: string | null } | null = null;
+  let nextFightOpponent: string | null = null;
   let nextSparring: Awaited<ReturnType<typeof prisma.sparringParticipant.findFirst>> | null = null;
   let nextSparringSession: { gym: string; date: Date } | null = null;
-  let upcomingEventCount = 0;
-  let upcomingSparringCount = 0;
-  let careerFightCount = 0;
-  let totalSparringCount = 0;
   let wins = 0;
   let losses = 0;
   let draws = 0;
+  let followerCount = 0;
+  let lastResult: { outcome: "Win" | "Loss" | "Draw"; date: Date; opponent: string } | null = null;
 
   if (fighter) {
-    const [boutRow, sparringRow, upcomingBouts, upcomingSparring, finishedBouts, sparringAllTime] = await Promise.all([
+    const [boutRow, sparringRow, finishedBouts, followers] = await Promise.all([
       prisma.bout.findFirst({
         where: {
           OR: [{ fighterAId: fighter.id }, { fighterBId: fighter.id }],
           status: { in: ["CONFIRMED", "READY", "DELAYED", "IN_PROGRESS"] },
         },
-        include: { event: true },
+        include: { event: true, fighterA: true, fighterB: true },
         orderBy: { scheduledTime: "asc" },
       }),
       prisma.sparringParticipant.findFirst({
@@ -100,30 +94,34 @@ export default async function AccountPage({
         include: { session: true },
         orderBy: { session: { date: "asc" } },
       }),
-      prisma.bout.count({
-        where: { OR: [{ fighterAId: fighter.id }, { fighterBId: fighter.id }], status: { in: ["CONFIRMED", "READY", "DELAYED"] } },
-      }),
-      prisma.sparringParticipant.count({
-        where: { fighterId: fighter.id, status: { in: ["CONFIRMED", "INVITED"] }, session: { date: { gte: new Date() } } },
-      }),
       prisma.bout.findMany({
         where: { OR: [{ fighterAId: fighter.id }, { fighterBId: fighter.id }], status: "FINAL" },
-        include: { result: true },
+        include: { result: true, event: true, fighterA: true, fighterB: true },
       }),
-      prisma.sparringParticipant.count({ where: { fighterId: fighter.id } }),
+      prisma.fighterFollow.count({ where: { fighterId: fighter.id } }),
     ]);
 
     nextFight = boutRow;
     nextFightEvent = boutRow?.event ?? null;
+    nextFightOpponent = boutRow ? (boutRow.fighterAId === fighter.id ? boutRow.fighterB?.displayName : boutRow.fighterA?.displayName) ?? null : null;
     nextSparring = sparringRow;
     nextSparringSession = sparringRow?.session ?? null;
-    upcomingEventCount = upcomingBouts;
-    upcomingSparringCount = upcomingSparring;
-    careerFightCount = finishedBouts.length;
-    totalSparringCount = sparringAllTime;
+    followerCount = followers;
     wins = finishedBouts.filter((b) => b.result?.winnerId === fighter.id).length;
     losses = finishedBouts.filter((b) => b.result?.winnerId && b.result.winnerId !== fighter.id).length;
     draws = finishedBouts.filter((b) => b.result && !b.result.winnerId).length;
+
+    const mostRecent = [...finishedBouts].sort((a, b) => b.event.date.getTime() - a.event.date.getTime())[0];
+    if (mostRecent) {
+      const opponent =
+        (mostRecent.fighterAId === fighter.id ? mostRecent.fighterB?.displayName : mostRecent.fighterA?.displayName) ?? "TBD";
+      const outcome = mostRecent.result?.winnerId
+        ? mostRecent.result.winnerId === fighter.id
+          ? "Win"
+          : "Loss"
+        : "Draw";
+      lastResult = { outcome, date: mostRecent.event.date, opponent };
+    }
   }
 
   // Whichever comes sooner: next fight or next sparring session.
@@ -231,120 +229,55 @@ export default async function AccountPage({
 
       {fighter && (
         <section className="space-y-2">
-          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Your activity</p>
-          <div className="grid grid-cols-2 gap-2">
-            <ActivityStat value={upcomingEventCount} label="Upcoming events" />
-            <ActivityStat value={upcomingSparringCount} label="Upcoming sparring" />
-            <ActivityStat value={careerFightCount} label="Career fights" />
-            <ActivityStat value={totalSparringCount} label="Sparring sessions" />
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Boxer</p>
+          <div className="rounded-card bg-panel border border-white/10 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-2xl font-bold tabular">
+                {wins}–{losses}–{draws}
+              </p>
+              {fighter.club && (
+                <Link href={`/clubs/${fighter.club.id}`} className="flex items-center gap-1.5 text-xs">
+                  <span className="text-signal">✓ Member</span>
+                  <span className="text-mute">{fighter.club.name}</span>
+                </Link>
+              )}
+            </div>
+
+            {nextFight && nextFightEvent && (
+              <div className="text-sm">
+                <span className="text-mute">Next: </span>
+                <span className="font-medium">vs {nextFightOpponent ?? "TBD"}</span>
+                <span className="text-mute"> · {nextFightEvent.startTime ? formatCountdown(nextFightEvent.startTime) : "Scheduled"}</span>
+              </div>
+            )}
+
+            {lastResult && (
+              <div className="text-sm">
+                <span className={lastResult.outcome === "Win" ? "text-signal font-medium" : "text-mute font-medium"}>
+                  {lastResult.outcome}
+                </span>
+                <span className="text-mute"> vs {lastResult.opponent} · {formatEventDate(lastResult.date)}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-1">
+              <p className="text-xs text-mute">
+                {followerCount} follower{followerCount === 1 ? "" : "s"}
+              </p>
+              <Link href="/you" className="text-xs text-signal font-semibold">
+                View Boxer Profile →
+              </Link>
+            </div>
           </div>
         </section>
       )}
 
-      {fighter?.club && (
-        <section className="space-y-2">
-          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Your club</p>
-          <Link href={`/clubs/${fighter.club.id}`} className="block rounded-card bg-panel border border-white/10 p-4">
-            <p className="font-semibold text-sm">{fighter.club.name}</p>
-          </Link>
-        </section>
-      )}
-
-      {fighter && careerFightCount > 0 && (
-        <section className="space-y-2">
-          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Your record</p>
-          <p className="text-3xl font-bold tabular">
-            {wins}–{losses}–{draws}
-          </p>
-        </section>
-      )}
-
-      <section className="space-y-3 pt-2 border-t border-white/10">
-        <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Your contexts</h2>
-
-        {actor.isBoxer && (
-          <Link href="/you" className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4">
-            <div>
-              <p className="font-semibold text-sm">Boxer</p>
-              <p className="text-xs text-mute mt-0.5">My fights</p>
-            </div>
-            <span className="text-mute">›</span>
-          </Link>
-        )}
-
-        {clubs.map((club) => (
-          <Link
-            key={club.id}
-            href={`/club?club=${club.id}`}
-            className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4"
-          >
-            <div>
-              <p className="font-semibold text-sm">{club.name}</p>
-              <p className="text-xs text-mute mt-0.5">Club dashboard</p>
-            </div>
-            <span className="text-mute">›</span>
-          </Link>
-        ))}
-
-        {actor.isOrganizer && (
-          <Link href="/host" className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4">
-            <div>
-              <p className="font-semibold text-sm">Organizer</p>
-              <p className="text-xs text-mute mt-0.5">Tournament dashboard</p>
-            </div>
-            <span className="text-mute">›</span>
-          </Link>
-        )}
-
-        {!hasAnyContext && <p className="text-sm text-mute">You&apos;re just browsing so far. Pick a space below to get started.</p>}
-      </section>
-
-      <section className="space-y-2">
-        {!actor.isBoxer && (
-          <form
-            action={async () => {
-              "use server";
-              await becomeBoxer();
-            }}
-          >
-            <button type="submit" className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3">
-              Register as boxer
-            </button>
-          </form>
-        )}
-        {clubs.length === 0 && (
-          <Link href="/club" className="block w-full text-center rounded-pill border border-white/20 text-ink font-semibold py-3">
-            Represent a club
-          </Link>
-        )}
-        {!actor.isOrganizer && (
-          <form
-            action={async () => {
-              "use server";
-              await becomeOrganizer();
-            }}
-          >
-            <button type="submit" className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3">
-              Become an organizer
-            </button>
-          </form>
-        )}
-      </section>
-
-      <div className="space-y-2 pt-2 border-t border-white/10">
-        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Account</p>
-        <p className="text-sm text-mute py-1">{user?.email}</p>
-        <form
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/" });
-          }}
-        >
-          <button type="submit" className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3">
-            Log out
-          </button>
-        </form>
-      </div>
+      <Link
+        href="/account/settings"
+        className="block rounded-card bg-panel border border-white/10 p-4 text-sm font-semibold text-center"
+      >
+        Account & Settings →
+      </Link>
     </div>
   );
 }
