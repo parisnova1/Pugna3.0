@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
+import { logScan } from "@/lib/actions/scanHistory";
 import type { CheckInSource } from "@prisma/client";
 
 export type CheckInAttempt =
@@ -55,6 +56,13 @@ export async function checkInViewer({
 
   if (!existing) {
     await prisma.eventCheckIn.create({ data: { eventId: event.id, userId: actor.userId, source } });
+    await logScan({
+      userId: actor.userId,
+      kind: "EVENT",
+      label: event.name,
+      detail: "Check in successful",
+      href: event.slug ? `/e/${event.slug}` : `/checkin/event/${event.id}`,
+    });
   }
 
   const liveBout = await prisma.bout.findFirst({ where: { eventId: event.id, status: "IN_PROGRESS" }, select: { id: true } });

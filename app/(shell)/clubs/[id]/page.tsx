@@ -20,6 +20,7 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ id
     include: {
       _count: { select: { roster: true, coaches: true } },
       roster: { take: 8, orderBy: { displayName: "asc" } },
+      coaches: { take: 8, orderBy: { displayName: "asc" } },
       organizedEvents: {
         where: { status: { in: ["PUBLISHED", "LIVE", "INTERMISSION"] } },
         orderBy: { date: "asc" },
@@ -143,6 +144,20 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ id
           </div>
         )}
       </section>
+
+      {club.coaches.length > 0 && (
+        <section className="space-y-2">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Coaches</p>
+          <div className="grid grid-cols-2 gap-2">
+            {club.coaches.map((coach) => (
+              <div key={coach.id} className="rounded-card bg-panel border border-white/10 p-3">
+                <p className="text-sm font-medium">{coach.displayName}</p>
+                {coach.bio && <p className="text-xs text-mute mt-0.5 line-clamp-2">{coach.bio}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {club.sparringSessions.length > 0 && (
         <section className="space-y-2">

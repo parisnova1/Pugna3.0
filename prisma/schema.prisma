@@ -215,6 +215,7 @@ model User {
   uploadedMedia Media[]
 
   eventCheckIns  EventCheckIn[]
+  scanEvents     ScanEvent[]
   crowdReactions CrowdReaction[]
   crowdShouts    CrowdShout[]
   crowdMutes     CrowdMute[]
@@ -680,6 +681,24 @@ model EventCheckIn {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
+}
+
+// One row per successful scan-hub action (QR decode or manual code) that
+// resolved to a real event/sparring destination — powers "Recent scans" on
+// the Scan hub. Denormalized label/detail/href so history survives even if
+// the underlying event/session is later deleted.
+model ScanEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String
+  label     String
+  detail    String
+  href      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind, createdAt])
 }
 
 // Venue reaction — "Live Crowd" while the bout is IN_PROGRESS, "Fight

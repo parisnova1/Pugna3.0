@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { signOut } from "@/lib/auth";
-import { updateName, becomeBoxer, becomeOrganizer } from "@/lib/actions/profile";
+import { updateName, becomeOrganizer } from "@/lib/actions/profile";
 import { BackButton } from "@/components/event/ContextBar";
 
 export default async function AccountSettingsPage() {
@@ -83,16 +83,9 @@ export default async function AccountSettingsPage() {
             {actor.isBoxer ? (
               <span className="text-signal text-sm font-semibold">✓</span>
             ) : (
-              <form
-                action={async () => {
-                  "use server";
-                  await becomeBoxer();
-                }}
-              >
-                <button type="submit" className="rounded-pill border border-white/20 px-3 py-1.5 text-xs font-semibold">
-                  Become a Boxer
-                </button>
-              </form>
+              <Link href="/become-boxer" className="rounded-pill border border-white/20 px-3 py-1.5 text-xs font-semibold">
+                Become a Boxer
+              </Link>
             )}
           </div>
 

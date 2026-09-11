@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/types";
 import type { CheckInAttachedType, CheckInStatus } from "@prisma/client";
 import { notifyMany } from "@/lib/actions/notify";
+import { logScan } from "@/lib/actions/scanHistory";
 
 async function getOwnFighter(userId: string) {
   return prisma.fighterProfile.findUnique({ where: { userId } });
@@ -21,6 +22,7 @@ export async function checkInToEvent(eventId: string): Promise<ActionResult> {
 
   const bout = await prisma.bout.findFirst({
     where: { eventId, OR: [{ fighterAId: fighter.id }, { fighterBId: fighter.id }] },
+    include: { event: true },
   });
   if (!bout) return { ok: false, code: "FORBIDDEN", reason: "You're not on this event's card." };
 
@@ -28,6 +30,14 @@ export async function checkInToEvent(eventId: string): Promise<ActionResult> {
     where: { attachedType_attachedId_fighterId: { attachedType: "EVENT", attachedId: eventId, fighterId: fighter.id } },
     update: { status: "CHECKED_IN", checkedInAt: new Date() },
     create: { attachedType: "EVENT", attachedId: eventId, fighterId: fighter.id, status: "CHECKED_IN" },
+  });
+
+  await logScan({
+    userId: actor.userId,
+    kind: "EVENT",
+    label: bout.event.name,
+    detail: "Check in successful",
+    href: bout.event.slug ? `/e/${bout.event.slug}` : `/checkin/event/${eventId}`,
   });
 
   revalidatePath(`/host/events/${eventId}/checkin`);
@@ -43,6 +53,7 @@ export async function checkInToSparring(sessionId: string): Promise<ActionResult
 
   const participant = await prisma.sparringParticipant.findUnique({
     where: { sessionId_fighterId: { sessionId, fighterId: fighter.id } },
+    include: { session: { include: { club: true } } },
   });
   if (!participant || participant.status !== "CONFIRMED") {
     return { ok: false, code: "FORBIDDEN", reason: "You're not confirmed for this session." };
@@ -56,6 +67,14 @@ export async function checkInToSparring(sessionId: string): Promise<ActionResult
     }),
     prisma.sparringParticipant.update({ where: { id: participant.id }, data: { status: "CHECKED_IN" } }),
   ]);
+
+  await logScan({
+    userId: actor.userId,
+    kind: "SPARRING",
+    label: participant.session.club.name,
+    detail: "Check in successful",
+    href: `/sparring/${sessionId}`,
+  });
 
   revalidatePath(`/sparring/${sessionId}`);
   return { ok: true };

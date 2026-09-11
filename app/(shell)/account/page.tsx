@@ -67,6 +67,14 @@ export default async function AccountPage({
   ]);
 
   const upNextEvent = liveFollowedEvent ?? upcomingFollowedEvent;
+  const upNextCoverUrl = upNextEvent
+    ? (
+        await prisma.media.findFirst({
+          where: { attachedType: "EVENT", attachedId: upNextEvent.id, kind: "EVENT_COVER" },
+          orderBy: { createdAt: "desc" },
+        })
+      )?.url ?? null
+    : null;
 
   let nextFight: Awaited<ReturnType<typeof prisma.bout.findFirst>> | null = null;
   let nextFightEvent: { name: string; startTime: Date | null; slug: string | null } | null = null;
@@ -142,6 +150,19 @@ export default async function AccountPage({
         </Link>
       </div>
 
+      <section className="grid grid-cols-2 gap-2">
+        <Link href="/scan?mode=event" className="rounded-card bg-panel border border-white/10 p-4 space-y-1">
+          <p className="text-sm font-semibold">Check In</p>
+          <p className="text-xs text-mute">at an event</p>
+          <p className="text-[11px] text-mute pt-1">Scan your ticket or find an event.</p>
+        </Link>
+        <Link href="/scan?mode=sparring" className="rounded-card bg-panel border border-white/10 p-4 space-y-1">
+          <p className="text-sm font-semibold">Check In</p>
+          <p className="text-xs text-mute">for sparring</p>
+          <p className="text-[11px] text-mute pt-1">Find a club or sparring session.</p>
+        </Link>
+      </section>
+
       <section className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Saved</p>
         <Link href="/you/saved" className="block rounded-card bg-panel border border-white/10 p-4">
@@ -155,9 +176,9 @@ export default async function AccountPage({
       <section className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Following</p>
         <div className="grid grid-cols-3 gap-2">
-          <ActivityStat value={fighterFollowCount} label="Fighters" />
-          <ActivityStat value={clubFollowCount} label="Clubs" />
-          <ActivityStat value={eventFollowCount} label="Events" />
+          <ActivityStat href="/you/fighters" value={fighterFollowCount} label="Fighters" />
+          <ActivityStat href="/you/clubs" value={clubFollowCount} label="Clubs" />
+          <ActivityStat href="/you/events" value={eventFollowCount} label="Events" />
         </div>
       </section>
 
@@ -166,10 +187,14 @@ export default async function AccountPage({
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Up next</p>
           <Link
             href={upNextEvent.slug ? `/e/${upNextEvent.slug}` : "#"}
-            className="block rounded-card bg-panel border border-signal/30 p-4"
+            className="block rounded-card bg-panel border border-signal/30 overflow-hidden"
           >
-            <p className="font-semibold">{upNextEvent.name}</p>
-            <div className="mt-2">
+            {upNextCoverUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={upNextCoverUrl} alt="" className="w-full aspect-video object-cover" />
+            )}
+            <div className="p-4 space-y-2">
+              <p className="font-semibold">{upNextEvent.name}</p>
               {upNextEvent.status === "LIVE" || upNextEvent.status === "INTERMISSION" ? (
                 <Badge live tone="signal">
                   Live
@@ -177,6 +202,7 @@ export default async function AccountPage({
               ) : (
                 <p className="text-sm text-mute">{formatEventDate(upNextEvent.date)}</p>
               )}
+              <p className="inline-flex items-center gap-1 text-sm font-semibold text-signal pt-1">Open Event →</p>
             </div>
           </Link>
         </section>
@@ -211,7 +237,10 @@ export default async function AccountPage({
           </Link>
         </div>
         {recentNotifications.length === 0 ? (
-          <p className="text-sm text-mute">Nothing yet.</p>
+          <div className="rounded-card border border-white/10 px-4 py-3">
+            <p className="text-sm font-medium">No activity yet.</p>
+            <p className="text-xs text-mute mt-0.5">Follow a fighter, club or event to see updates here.</p>
+          </div>
         ) : (
           <div className="space-y-1">
             {recentNotifications.map((n) => (
@@ -226,6 +255,33 @@ export default async function AccountPage({
           </div>
         )}
       </section>
+
+      {(!fighter || actor.clubIds.length === 0) && (
+        <section className="space-y-2">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Your PUGNA profiles</p>
+          {!fighter && (
+            <Link
+              href="/become-boxer"
+              className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4"
+            >
+              <div>
+                <p className="font-semibold text-sm">Boxer</p>
+                <p className="text-xs text-mute mt-0.5">Create your Boxer profile →</p>
+              </div>
+              <span className="text-mute">›</span>
+            </Link>
+          )}
+          {actor.clubIds.length === 0 && (
+            <Link href="/club" className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4">
+              <div>
+                <p className="font-semibold text-sm">Clubs</p>
+                <p className="text-xs text-mute mt-0.5">Join a club →</p>
+              </div>
+              <span className="text-mute">›</span>
+            </Link>
+          )}
+        </section>
+      )}
 
       {fighter && (
         <section className="space-y-2">
@@ -282,11 +338,11 @@ export default async function AccountPage({
   );
 }
 
-function ActivityStat({ value, label }: { value: number; label: string }) {
+function ActivityStat({ href, value, label }: { href: string; value: number; label: string }) {
   return (
-    <div className="rounded-card bg-panel border border-white/10 p-3">
+    <Link href={href} className="block rounded-card bg-panel border border-white/10 p-3">
       <p className="text-lg font-semibold tabular">{value}</p>
       <p className="text-[11px] text-mute mt-0.5">{label}</p>
-    </div>
+    </Link>
   );
 }

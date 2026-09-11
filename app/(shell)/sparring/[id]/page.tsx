@@ -407,22 +407,32 @@ export default async function SparringSessionPage({
         ))}
 
       {ownParticipant && (
-        <div className="rounded-card border border-white/10 p-4 flex items-center justify-between">
+        <div className="rounded-card border border-white/10 p-4 flex items-center justify-between gap-2">
           <div>
             <p className="text-sm font-medium">You&apos;re {STATUS_LABEL[ownParticipant.status].toLowerCase()}</p>
           </div>
-          {["REQUESTED", "INVITED", "CONFIRMED"].includes(ownParticipant.status) && (
-            <form
-              action={async () => {
-                "use server";
-                await cancelParticipant(ownParticipant.id);
-              }}
-            >
-              <button type="submit" className="text-xs text-mute underline">
-                Withdraw
-              </button>
-            </form>
-          )}
+          <div className="flex items-center gap-3 shrink-0">
+            {ownParticipant.status === "CONFIRMED" && checkInFor(ownParticipant.fighterId)?.status !== "CHECKED_IN" && (
+              <Link
+                href={`/checkin/sparring/${session.id}`}
+                className="rounded-pill bg-signal text-onsignal font-semibold px-4 py-2 text-xs"
+              >
+                Check In
+              </Link>
+            )}
+            {["REQUESTED", "INVITED", "CONFIRMED"].includes(ownParticipant.status) && (
+              <form
+                action={async () => {
+                  "use server";
+                  await cancelParticipant(ownParticipant.id);
+                }}
+              >
+                <button type="submit" className="text-xs text-mute underline">
+                  Withdraw
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       )}
 
