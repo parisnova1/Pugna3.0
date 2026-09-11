@@ -5,13 +5,16 @@ import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { computeRingProjections } from "@/lib/projection";
-import { formatEventDate, formatTime, currentDayNumber } from "@/lib/format";
+import { formatEventDate, formatTime, formatDateRange, currentDayNumber } from "@/lib/format";
 import { BackButton } from "@/components/event/ContextBar";
 import { FollowButton } from "@/components/event/FollowButton";
 import { ShareSheet } from "@/components/event/ShareSheet";
 import { LiveEventCard, type BoutView } from "@/components/event/LiveEventCard";
 import { BracketDiagram, isValidBracket, roundLabelForSize, type BracketRound } from "@/components/event/BracketDiagram";
-import { Badge } from "@/components/ui/Badge";
+import { DaySelector } from "@/components/event/overview/DaySelector";
+import { WeightClassChips } from "@/components/event/overview/WeightClassChips";
+import { RingSection } from "@/components/event/overview/RingSection";
+import { ScheduleList } from "@/components/event/overview/ScheduleList";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -136,8 +139,20 @@ export default async function EventCardPage({
   const selectedDay = day ? Math.min(Math.max(1, Number(day)), event.dayCount) : defaultDay;
   const dayBouts = event.bouts.filter((b) => b.day === selectedDay);
   const ringProjections = computeRingProjections(event.status, event.rings, dayBouts);
+  const boutCountsByDay = Array.from({ length: event.dayCount }, (_, i) =>
+    event.bouts.filter((b) => b.day === i + 1 && b.status !== "DRAFT").length,
+  );
+  const nextBoutIds = new Set(
+    Array.from(ringProjections.values())
+      .map((p) => p.next?.id)
+      .filter((id): id is string => Boolean(id)),
+  );
+  const liveRing = event.rings.find((r) => ringProjections.get(r.id)?.nowLabel === "LIVE") ?? null;
+  const liveNow = liveRing ? ringProjections.get(liveRing.id)?.now ?? null : null;
+  const stickyLabel = liveNow ? `LIVE · ${liveNow.weightClass} — ${liveNow.fighterA?.displayName ?? "TBD"} vs ${liveNow.fighterB?.displayName ?? "TBD"}` : null;
 
   const weightClasses = [...new Set(event.bouts.map((b) => b.weightClass))].sort((a, b) => weightKg(a) - weightKg(b));
+  const scheduleBouts = dayBouts.filter((b) => b.status !== "DRAFT" && (!weight || b.weightClass === weight));
   const bracketBouts = [...event.bouts]
     .filter((b) => b.status !== "DRAFT" && (!weight || b.weightClass === weight))
     .sort((a, b) => a.day - b.day || a.number - b.number);
@@ -170,135 +185,61 @@ export default async function EventCardPage({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card mb-5" />
       )}
-      <div className="space-y-1 mb-5">
+      <div className="space-y-1 mb-6">
         <h1 className="text-2xl font-semibold">{event.name}</h1>
-        <p className="text-mute text-sm">
-          {dateLabel} · {venueLabel}
+        <p className="text-mute text-sm flex items-center gap-1.5">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+            <path d="M12 22s7-7.58 7-12.5A7 7 0 0 0 5 9.5C5 14.42 12 22 12 22z" />
+            <circle cx="12" cy="9.5" r="2.5" />
+          </svg>
+          {venueLabel}
         </p>
+        <p className="text-mute text-sm">{formatDateRange(event.date, event.dayCount)}</p>
       </div>
 
-      {event.dayCount > 1 && (
-        <div className="flex gap-2 overflow-x-auto mb-5">
-          {Array.from({ length: event.dayCount }, (_, i) => i + 1).map((d) => (
-            <Link
-              key={d}
-              href={`/e/${slug}${buildQuery({ day, weight }, { day: String(d) })}`}
-              className={[
-                "rounded-pill border px-4 py-2 text-sm font-medium whitespace-nowrap",
-                d === selectedDay ? "border-signal bg-signal/10" : "border-white/15 text-mute",
-              ].join(" ")}
-            >
-              Day {d}
-            </Link>
-          ))}
-        </div>
-      )}
+      <DaySelector
+        slug={slug}
+        dayCount={event.dayCount}
+        eventDate={event.date}
+        selectedDay={selectedDay}
+        boutCounts={boutCountsByDay}
+        buildQuery={(changes) => buildQuery({ day, weight }, changes)}
+      />
 
-      <div className="space-y-3">
-        {event.rings.map((ring) => {
-          const ringProjection = ringProjections.get(ring.id) ?? { now: null, next: null, nowLabel: null };
-          const now = dayBouts.find((b) => b.id === ringProjection.now?.id) ?? null;
-          const pillText =
-            ringProjection.nowLabel === "LIVE"
-              ? "Live"
-              : ringProjection.nowLabel === "DELAYED"
-                ? "Delayed"
-                : ringProjection.nowLabel === "BREAK"
-                  ? "On break"
-                  : ringProjection.nowLabel === "UP_NEXT"
-                    ? "Up next"
-                    : "No bout";
-
-          return (
-            <Link
-              key={ring.id}
-              href={`/e/${slug}/ring/${ring.id}`}
-              className="block rounded-card bg-panel border border-white/10 p-4"
-            >
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-sm">{ring.name ?? `Ring ${ring.number}`}</p>
-                <Badge live={ringProjection.nowLabel === "LIVE"} tone={ringProjection.nowLabel === "LIVE" ? "signal" : "neutral"}>
-                  {pillText}
-                </Badge>
-              </div>
-              {now ? (
-                <p className="text-sm mt-2">
-                  {now.fighterA?.displayName ?? "TBD"} <span className="text-mute">vs</span> {now.fighterB?.displayName ?? "TBD"}
-                </p>
-              ) : (
-                <p className="text-sm text-mute mt-2">No bout in progress.</p>
-              )}
-            </Link>
-          );
-        })}
+      <div className="space-y-4">
+        {event.rings.map((ring) => (
+          <RingSection
+            key={ring.id}
+            slug={slug}
+            ring={ring}
+            projection={ringProjections.get(ring.id) ?? { now: null, next: null, nowLabel: null }}
+            stickyLabel={ring.id === liveRing?.id ? stickyLabel : null}
+          />
+        ))}
       </div>
 
       <div className="mt-8 space-y-3">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Weight classes</p>
-        <div className="flex gap-2 overflow-x-auto">
-          <Link
-            href={`/e/${slug}${buildQuery({ day, weight }, { weight: undefined })}`}
-            className={[
-              "rounded-pill border px-4 py-2 text-sm font-medium whitespace-nowrap",
-              !weight ? "border-signal bg-signal/10" : "border-white/15 text-mute",
-            ].join(" ")}
-          >
-            All
-          </Link>
-          {weightClasses.map((w) => (
-            <Link
-              key={w}
-              href={`/e/${slug}${buildQuery({ day, weight }, { weight: w })}`}
-              className={[
-                "rounded-pill border px-4 py-2 text-sm font-medium whitespace-nowrap",
-                w === weight ? "border-signal bg-signal/10" : "border-white/15 text-mute",
-              ].join(" ")}
-            >
-              {w}
-            </Link>
-          ))}
-        </div>
+        <WeightClassChips
+          slug={slug}
+          weight={weight}
+          weightClasses={weightClasses}
+          buildQuery={(changes) => buildQuery({ day, weight }, changes)}
+        />
 
         {showBracket ? (
           <BracketDiagram slug={slug} rounds={rounds} />
         ) : (
-        <div className="space-y-2">
-          {bracketBouts.map((bout) => {
-            const ringLabel = event.rings.find((r) => r.id === bout.ringId);
-            const isLive = bout.status === "IN_PROGRESS";
-            const isFinal = bout.status === "FINAL";
-            return (
-              <Link
-                key={bout.id}
-                href={`/e/${slug}/bout/${bout.id}`}
-                className={[
-                  "block rounded-card border px-4 py-3",
-                  isLive ? "border-signal/40 bg-signal/5" : "border-white/10 bg-panel",
-                ].join(" ")}
-              >
-                <div className="flex items-center justify-between text-[11px] text-mute">
-                  <span>
-                    Day {bout.day} · {ringLabel?.name ?? "Ring"} · {bout.weightClass}
-                    {bout.scheduledTime ? ` · ${formatTime(bout.scheduledTime)}` : ""}
-                  </span>
-                  <span className={isLive ? "text-signal font-semibold" : ""}>
-                    {isLive ? "Live" : isFinal ? "Final" : bout.status === "SCRATCHED" ? "Scratched" : bout.status === "NO_SHOW" ? "No-show" : "Scheduled"}
-                  </span>
-                </div>
-                <p className="text-sm font-medium mt-1">
-                  {bout.fighterA?.displayName ?? "TBD"} <span className="text-mute font-normal">vs</span>{" "}
-                  {bout.fighterB?.displayName ?? "TBD"}
-                </p>
-                {isFinal && bout.result && (
-                  <p className="text-xs text-mute mt-0.5">
-                    {bout.result.method}
-                    {bout.result.round ? ` · Round ${bout.result.round}` : ""}
-                  </p>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+          <>
+            <p className="text-xs font-semibold text-mute uppercase tracking-wide pt-2">Today&apos;s schedule</p>
+            <ScheduleList
+              slug={slug}
+              bouts={scheduleBouts}
+              weightClasses={weight ? [weight] : weightClasses}
+              rings={event.rings}
+              nextBoutIds={nextBoutIds}
+            />
+          </>
         )}
       </div>
     </div>

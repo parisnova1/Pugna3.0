@@ -29,6 +29,34 @@ export function currentDayNumber(eventDate: Date, dayCount: number, now: Date = 
   return Math.min(Math.max(1, diffDays + 1), dayCount);
 }
 
+/** "Sep 8–10, 2026" for a multi-day event, collapsing to a single date when
+ * there's only one day — days are assumed consecutive, same assumption
+ * `currentDayNumber` already makes. */
+export function formatDateRange(date: Date, dayCount: number): string {
+  if (dayCount <= 1) return formatEventDate(date);
+  const end = new Date(date);
+  end.setDate(end.getDate() + dayCount - 1);
+  const sameMonth = date.getMonth() === end.getMonth() && date.getFullYear() === end.getFullYear();
+  const startLabel = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
+  const endLabel = sameMonth
+    ? new Intl.DateTimeFormat("en-US", { day: "numeric" }).format(end)
+    : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(end);
+  return `${startLabel}–${endLabel}, ${end.getFullYear()}`;
+}
+
+/** "Today · 8 bouts" / "Tomorrow" / "Wednesday · 5 bouts" — the context line
+ * under the Day selector's active segment. */
+export function dayContextLabel(eventDate: Date, dayNumber: number, boutCount: number, now: Date = new Date()): string {
+  const dayDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+  dayDate.setDate(dayDate.getDate() + dayNumber - 1);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((dayDate.getTime() - today.getTime()) / 86_400_000);
+
+  const relative = diffDays === 0 ? "Today" : diffDays === 1 ? "Tomorrow" : diffDays === -1 ? "Yesterday" : null;
+  const label = relative ?? new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(dayDate);
+  return boutCount > 0 ? `${label} · ${boutCount} bout${boutCount === 1 ? "" : "s"}` : label;
+}
+
 /** "2d 14h" style countdown to a start time. */
 export function formatCountdown(target: Date, now: Date = new Date()): string {
   const ms = target.getTime() - now.getTime();
