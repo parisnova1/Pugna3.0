@@ -403,9 +403,7 @@ export default async function EventCardPage({
         </div>
 
         <EventTabs tabs={tabs} />
-      </div>
 
-      <div id="live" className="mt-6 space-y-4 scroll-mt-24">
         <DaySelector
           slug={slug}
           dayCount={event.dayCount}
@@ -414,7 +412,9 @@ export default async function EventCardPage({
           boutCounts={boutCountsByDay}
           buildQuery={(changes) => buildQuery({ day, weight }, changes)}
         />
+      </div>
 
+      <div id="live" className="mt-6 space-y-4 scroll-mt-24">
         <div className="space-y-4">
           {event.rings.map((ring) => (
             <RingSection
