@@ -53,6 +53,7 @@ export default async function RingLiveViewPage({
     currentRound: b.currentRound,
     roundPhase: b.roundPhase,
     phaseEndsAt: b.phaseEndsAt,
+    streamUrl: b.streamUrl,
   }));
 
   const dateLabel = `${formatEventDate(event.date)}${event.startTime ? ` · ${formatTime(event.startTime)}` : ""}`;

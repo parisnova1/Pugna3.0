@@ -29,6 +29,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
           currentRound: data.projection.now.currentRound,
           roundPhase: data.projection.now.roundPhase,
           phaseEndsAt: data.projection.now.phaseEndsAt,
+          streamUrl: data.projection.now.streamUrl,
         }
       : null,
     next: data.projection.next

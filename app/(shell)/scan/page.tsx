@@ -1,28 +1,32 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import jsQR from "jsqr";
 
 // Pugna QR codes always encode one of these path shapes — event, fighter,
-// club, event/sparring check-in — regardless of which origin generated them
-// (dev vs production), so match on path, not origin.
-const KNOWN_PATH = /^\/(go\/[^/]+|checkin\/event\/[^/]+|checkin\/sparring\/[^/]+|fighters\/[^/]+|clubs\/[^/]+|e\/[^/]+)/;
+// club, competitor check-in, audience check-in — regardless of which origin
+// generated them (dev vs production), so match on path, not origin.
+const KNOWN_PATH = /^\/(go\/[^/]+|in\/[^/]+|checkin\/event\/[^/]+|checkin\/sparring\/[^/]+|fighters\/[^/]+|clubs\/[^/]+|e\/[^/]+)/;
 
-/** Resolves a scanned QR payload to the in-app path it should open. */
-function resolveScannedPath(text: string): string | null {
+/** Resolves a scanned QR payload to the in-app path it should open. When
+ * `checkin` is true (arrived via /scan?intent=checkin), raw text that isn't
+ * already a known path is treated as a check-in code, not an entry code. */
+function resolveScannedPath(text: string, checkin: boolean): string | null {
   try {
     const url = new URL(text);
     if (KNOWN_PATH.test(url.pathname)) return url.pathname + url.search;
   } catch {
-    // not a URL — fall through to treating raw text as an event code
+    // not a URL — fall through to treating raw text as a code
   }
   const trimmed = text.trim();
-  return trimmed.length > 0 && trimmed.length < 64 ? `/go/${encodeURIComponent(trimmed)}` : null;
+  if (trimmed.length === 0 || trimmed.length >= 64) return null;
+  return checkin ? `/in/${encodeURIComponent(trimmed)}` : `/go/${encodeURIComponent(trimmed)}`;
 }
 
 export default function ScanPage() {
   const router = useRouter();
+  const checkin = useSearchParams().get("intent") === "checkin";
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
@@ -59,7 +63,7 @@ export default function ScanPage() {
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const result = jsQR(imageData.data, imageData.width, imageData.height);
           if (result?.data) {
-            const path = resolveScannedPath(result.data);
+            const path = resolveScannedPath(result.data, checkin);
             if (path) {
               router.push(path);
               return;
@@ -76,7 +80,7 @@ export default function ScanPage() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       stream?.getTracks().forEach((t) => t.stop());
     };
-  }, [manualMode, router]);
+  }, [manualMode, router, checkin]);
 
   if (denied || manualMode) {
     return (
@@ -90,7 +94,7 @@ export default function ScanPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            const path = resolveScannedPath(manualCode.trim());
+            const path = resolveScannedPath(manualCode.trim(), checkin);
             if (path) router.push(path);
           }}
           className="space-y-3"
@@ -98,7 +102,7 @@ export default function ScanPage() {
           <input
             value={manualCode}
             onChange={(e) => setManualCode(e.target.value)}
-            placeholder="Enter fight code"
+            placeholder={checkin ? "Enter check-in code" : "Enter fight code"}
             className="w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute text-center"
           />
           <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
@@ -116,7 +120,9 @@ export default function ScanPage() {
 
   return (
     <div className="pt-6 space-y-4">
-      <h1 className="text-xl font-semibold text-center">Point at a fight QR code</h1>
+      <h1 className="text-xl font-semibold text-center">
+        {checkin ? "Point at the venue QR to check in" : "Point at a fight QR code"}
+      </h1>
       <div className="relative aspect-square rounded-card overflow-hidden bg-panel border border-white/10">
         <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
         <div className="absolute inset-8 rounded-card border-2 border-signal/70" />

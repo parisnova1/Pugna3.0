@@ -1,5 +1,5 @@
 import { requireHostEvent } from "@/lib/host-guard";
-import { setBoutSchedule, markBoutReady } from "@/lib/actions/event";
+import { setBoutSchedule, markBoutReady, setBoutStreamUrl } from "@/lib/actions/event";
 import { BackButton } from "@/components/event/ContextBar";
 import { formatTime } from "@/lib/format";
 
@@ -56,6 +56,29 @@ export default async function ScheduleStepPage({ params }: { params: Promise<{ i
                       Save
                     </button>
                   </form>
+                  <form
+                    action={async (formData: FormData) => {
+                      "use server";
+                      await setBoutStreamUrl(bout.id, event.id, formData);
+                    }}
+                    className="flex gap-2"
+                  >
+                    <input
+                      name="streamUrl"
+                      type="url"
+                      placeholder="Fight link (stream or recording)"
+                      defaultValue={bout.streamUrl ?? ""}
+                      className="flex-1 rounded-card bg-void border border-white/10 px-3 py-2 text-sm"
+                    />
+                    <button type="submit" className="rounded-pill border border-white/20 px-4 text-sm font-medium">
+                      Save
+                    </button>
+                  </form>
+                  {!bout.streamUrl && (
+                    <p className="text-[11px] text-mute">
+                      Until you add a link, viewers see &ldquo;Stream link coming soon.&rdquo;
+                    </p>
+                  )}
                   {bout.status === "CONFIRMED" && (
                     <form
                       action={async () => {

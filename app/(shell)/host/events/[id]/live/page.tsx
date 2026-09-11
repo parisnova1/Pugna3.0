@@ -24,6 +24,7 @@ export default async function LiveConsolePage({ params }: { params: Promise<{ id
     currentRound: b.currentRound,
     roundPhase: b.roundPhase,
     phaseEndsAt: b.phaseEndsAt,
+    streamUrl: b.streamUrl,
   }));
 
   const rings: ConsoleRing[] = event.rings.map((r) => ({

@@ -3,26 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 import { deleteMedia } from "@/lib/actions/media";
+import { hideShout, muteUser } from "@/lib/actions/crowd";
+import { getCrowdSnapshot, getMyReactions } from "@/lib/crowd-query";
 import { MediaUploader } from "@/components/host/MediaUploader";
 import { BackButton } from "@/components/event/ContextBar";
 import { NotifyButton } from "@/components/event/NotifyButton";
-import { Badge } from "@/components/ui/Badge";
+import { BoutLiveClient } from "@/components/live/BoutLiveClient";
 import type { BoutStatus } from "@prisma/client";
 
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "Draft",
-  TBD: "Opponent TBD",
-  CONFIRMED: "Confirmed",
-  READY: "Scheduled",
-  DELAYED: "Delayed",
-  IN_PROGRESS: "Live",
-  FINAL: "Final",
-  SCRATCHED: "Scratched",
-  NO_SHOW: "No-show",
-};
-
 // A fight is "upcoming" — worth notifying about — before it's live and before it's over.
-const UPCOMING_STATUSES: BoutStatus[] = ["TBD", "CONFIRMED", "READY", "DELAYED"];
+const UPCOMING_STATUSES: BoutStatus[] = ["TBD", "CONFIRMED", "READY"];
 
 export default async function BoutDetailPage({
   params,
@@ -33,7 +23,12 @@ export default async function BoutDetailPage({
 
   const bout = await prisma.bout.findUnique({
     where: { id: boutId },
-    include: { event: true, fighterA: { include: { club: true } }, fighterB: { include: { club: true } }, result: true },
+    include: {
+      event: { include: { _count: { select: { follows: true } } } },
+      fighterA: { include: { club: true } },
+      fighterB: { include: { club: true } },
+      result: true,
+    },
   });
 
   if (!bout || bout.event.slug !== slug) notFound();
@@ -44,15 +39,36 @@ export default async function BoutDetailPage({
   if (!view.allowed) notFound();
 
   const canEdit = can(actor, "event.edit", { eventId: bout.event.id }).allowed;
-  const media = await prisma.media.findMany({
-    where: { attachedType: "BOUT", attachedId: bout.id },
-    orderBy: { createdAt: "desc" },
-  });
+  const [media, snapshot, myReactions, checkIn, mute, moderationShouts] = await Promise.all([
+    prisma.media.findMany({ where: { attachedType: "BOUT", attachedId: bout.id }, orderBy: { createdAt: "desc" } }),
+    getCrowdSnapshot(bout.id),
+    actor ? getMyReactions(bout.id, actor.userId) : Promise.resolve([]),
+    actor
+      ? prisma.eventCheckIn.findUnique({ where: { eventId_userId: { eventId: bout.eventId, userId: actor.userId } } })
+      : Promise.resolve(null),
+    actor
+      ? prisma.crowdMute.findUnique({ where: { eventId_userId: { eventId: bout.eventId, userId: actor.userId } } })
+      : Promise.resolve(null),
+    canEdit
+      ? prisma.crowdShout.findMany({
+          where: { boutId: bout.id },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: { user: true },
+        })
+      : Promise.resolve([]),
+  ]);
 
   const isUpcoming = UPCOMING_STATUSES.includes(bout.status);
   const following = actor
     ? Boolean(await prisma.follow.findUnique({ where: { userId_eventId: { userId: actor.userId, eventId: bout.event.id } } }))
     : false;
+
+  const writeGate = can(actor, "crowd.write", {
+    checkedIn: Boolean(checkIn),
+    boutInProgress: bout.status === "IN_PROGRESS",
+    muted: Boolean(mute),
+  });
 
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10 space-y-6">
@@ -69,41 +85,40 @@ export default async function BoutDetailPage({
         )}
       </div>
 
-      <div className="text-center space-y-1">
-        <p className="text-xs text-mute">
-          Bout {bout.number} · {bout.weightClass}
-        </p>
-        <p className="text-xs font-semibold text-signal uppercase tracking-wide">{STATUS_LABEL[bout.status]}</p>
-      </div>
-
-      <div className="rounded-card bg-panel border border-white/10 p-6 space-y-4">
-        <FighterRow
-          name={bout.fighterA?.displayName}
-          club={bout.fighterA?.club?.name}
-          isWinner={Boolean(bout.result && bout.fighterAId && bout.result.winnerId === bout.fighterAId)}
-        />
-        <div className="text-center text-mute text-sm">vs</div>
-        <FighterRow
-          name={bout.fighterB?.displayName}
-          club={bout.fighterB?.club?.name}
-          isWinner={Boolean(bout.result && bout.fighterBId && bout.result.winnerId === bout.fighterBId)}
-        />
-      </div>
-
-      {bout.result && (
-        <div className="rounded-card bg-panel border border-signal/30 p-4">
-          <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-1">Result</p>
-          <p className="text-sm font-semibold text-signal">
-            {bout.result.winnerId
-              ? `${bout.result.winnerId === bout.fighterAId ? bout.fighterA?.displayName : bout.fighterB?.displayName} won`
-              : "Draw"}
-          </p>
-          <p className="text-sm text-mute mt-0.5">
-            {bout.result.method}
-            {bout.result.round ? ` · Round ${bout.result.round}` : ""}
-          </p>
-        </div>
-      )}
+      <BoutLiveClient
+        boutId={bout.id}
+        slug={slug}
+        isGuest={!actor}
+        number={bout.number}
+        weightClass={bout.weightClass}
+        fighterAId={bout.fighterAId}
+        fighterBId={bout.fighterBId}
+        fighterAName={bout.fighterA?.displayName ?? "TBD"}
+        fighterBName={bout.fighterB?.displayName ?? "TBD"}
+        fighterAClub={bout.fighterA?.club?.name ?? null}
+        fighterBClub={bout.fighterB?.club?.name ?? null}
+        initial={{
+          status: bout.status,
+          delayMinutes: bout.delayMinutes,
+          streamUrl: bout.streamUrl,
+          eventStreamUrl: bout.event.streamUrl,
+          totalRounds: bout.totalRounds,
+          currentRound: bout.currentRound,
+          roundPhase: bout.roundPhase,
+          phaseEndsAt: bout.phaseEndsAt ? bout.phaseEndsAt.toISOString() : null,
+          result: bout.result
+            ? { winnerId: bout.result.winnerId, method: bout.result.method, round: bout.result.round }
+            : null,
+          reactionCounts: snapshot.reactionCounts,
+          shouts: snapshot.shouts.map((s) => ({ ...s, createdAt: s.createdAt.toISOString() })),
+          crowdSize: snapshot.crowdSize,
+          myReactions,
+          checkedIn: Boolean(checkIn),
+          canWrite: writeGate.allowed,
+          followerCount: bout.event._count.follows,
+          updatedAt: new Date().toISOString(),
+        }}
+      />
 
       {(media.length > 0 || canEdit) && (
         <div className="space-y-3">
@@ -138,18 +153,34 @@ export default async function BoutDetailPage({
           {canEdit && <MediaUploader kind="BOUT_MEDIA" attachedType="BOUT" attachedId={bout.id} label="Add photo" />}
         </div>
       )}
-    </div>
-  );
-}
 
-function FighterRow({ name, club, isWinner }: { name?: string; club?: string | null; isWinner?: boolean }) {
-  return (
-    <div className={`text-center rounded-card py-1.5 ${isWinner ? "bg-signal/10 border border-signal/30" : ""}`}>
-      <div className="flex items-center justify-center gap-1.5">
-        <p className={`font-semibold ${isWinner ? "text-signal" : ""}`}>{name ?? "TBD"}</p>
-        {isWinner && <Badge tone="signal">Winner</Badge>}
-      </div>
-      <p className="text-xs text-mute mt-0.5">{club ?? (name ? "Guest" : "—")}</p>
+      {canEdit && moderationShouts.length > 0 && (
+        <div className="space-y-2 pt-2 border-t border-white/10">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Moderate crowd</p>
+          {moderationShouts.map((s) => (
+            <div key={s.id} className="flex items-center justify-between gap-2 rounded-card border border-white/10 px-3 py-2">
+              <div className="min-w-0">
+                <p className={`text-sm truncate ${s.hidden ? "text-mute line-through" : ""}`}>&ldquo;{s.text}&rdquo;</p>
+                <p className="text-[11px] text-mute truncate">{s.user.name ?? s.user.email}</p>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                {!s.hidden && (
+                  <form action={async () => { "use server"; await hideShout(s.id, bout.eventId); }}>
+                    <button type="submit" className="text-xs font-medium text-mute underline">
+                      Hide
+                    </button>
+                  </form>
+                )}
+                <form action={async () => { "use server"; await muteUser(bout.eventId, s.userId); }}>
+                  <button type="submit" className="text-xs font-medium text-signal underline">
+                    Mute
+                  </button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

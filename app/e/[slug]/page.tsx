@@ -108,6 +108,7 @@ export default async function EventCardPage({
       currentRound: b.currentRound,
       roundPhase: b.roundPhase,
       phaseEndsAt: b.phaseEndsAt,
+      streamUrl: b.streamUrl,
     }));
 
     return (
@@ -214,6 +215,7 @@ export default async function EventCardPage({
             ring={ring}
             projection={ringProjections.get(ring.id) ?? { now: null, next: null, nowLabel: null }}
             stickyLabel={ring.id === liveRing?.id ? stickyLabel : null}
+            eventStreamUrl={event.streamUrl}
           />
         ))}
       </div>
@@ -238,6 +240,7 @@ export default async function EventCardPage({
               weightClasses={weight ? [weight] : weightClasses}
               rings={event.rings}
               nextBoutIds={nextBoutIds}
+              eventStreamUrl={event.streamUrl}
             />
           </>
         )}

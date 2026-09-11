@@ -109,6 +109,7 @@ enum NotificationType {
   SPARRING_CLUB_RESPONDED
   SPARRING_NOMINATED
   SPARRING_NOMINATION_RESPONDED
+  STREAM_LINK_ADDED
 }
 
 enum CheckInAttachedType {
@@ -164,6 +165,23 @@ enum SparringNominationStatus {
   WITHDRAWN
 }
 
+// Audience/venue check-in — distinct from the fighterId-scoped `CheckIn` model
+// above (that one is competitor roster check-in). Any signed-in viewer, not
+// just fighters, checks in here to unlock the crowd composer on Live Fight.
+enum CheckInSource {
+  QR
+  CODE
+  CARD
+}
+
+enum CrowdEmoji {
+  FIRE
+  GLOVES
+  CLAP
+  HEART
+  SHOCK
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -190,6 +208,11 @@ model User {
   follows       Follow[]
   notifications Notification[]
   uploadedMedia Media[]
+
+  eventCheckIns  EventCheckIn[]
+  crowdReactions CrowdReaction[]
+  crowdShouts    CrowdShout[]
+  crowdMutes     CrowdMute[]
 }
 
 model Club {
@@ -299,6 +322,8 @@ model Event {
   bouts       Bout[]
   rings       Ring[]
   follows     Follow[]
+  checkIns    EventCheckIn[]
+  crowdMutes  CrowdMute[]
 }
 
 /**
@@ -379,6 +404,7 @@ model Bout {
   currentRound     Int            @default(0)
   roundPhase       RoundPhase?
   phaseEndsAt      DateTime?
+  streamUrl        String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -387,6 +413,9 @@ model Bout {
   fighterA FighterProfile? @relation("BoutFighterA", fields: [fighterAId], references: [id])
   fighterB FighterProfile? @relation("BoutFighterB", fields: [fighterBId], references: [id])
   result   Result?
+
+  crowdReactions CrowdReaction[]
+  crowdShouts    CrowdShout[]
 
   @@unique([eventId, number])
 }
@@ -582,4 +611,66 @@ model CheckIn {
 
   @@unique([attachedType, attachedId, fighterId])
   @@index([attachedType, attachedId])
+}
+
+// Audience check-in — any signed-in viewer (not just fighters/competitors)
+// checking in at the door to unlock the crowd composer on Live Fight. Lasts
+// until the event is FINISHED/CANCELLED/ARCHIVED, enforced by checking event
+// status live rather than expiring the row.
+model EventCheckIn {
+  id        String        @id @default(cuid())
+  eventId   String
+  userId    String
+  source    CheckInSource @default(CARD)
+  createdAt DateTime      @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+// Venue reaction — "Live Crowd" while the bout is IN_PROGRESS, "Fight
+// reaction" once FINAL. One row per (bout, user, emoji) — tapping toggles it.
+model CrowdReaction {
+  id        String     @id @default(cuid())
+  boutId    String
+  userId    String
+  emoji     CrowdEmoji
+  createdAt DateTime   @default(now())
+
+  bout Bout @relation(fields: [boutId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([boutId, userId, emoji])
+}
+
+// Short venue "shout" (max 60 chars, rate-limited in lib/actions/crowd.ts).
+// `hidden` covers both host moderation and the profanity blocklist.
+model CrowdShout {
+  id        String   @id @default(cuid())
+  boutId    String
+  userId    String
+  text      String
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  bout Bout @relation(fields: [boutId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([boutId, createdAt])
+}
+
+// A host mutes a user for the whole event (not per-bout). Moderation itself
+// is gated by the existing `event.edit` RBAC case, not by crowd membership.
+model CrowdMute {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
 }

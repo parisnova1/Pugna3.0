@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
+import { WatchArea } from "@/components/live/WatchArea";
 import { StickyLiveBar } from "./StickyLiveBar";
 import type { Projection } from "@/lib/projection";
 import type { EventCardData } from "@/lib/event-query";
@@ -12,11 +13,13 @@ export function RingSection({
   ring,
   projection,
   stickyLabel,
+  eventStreamUrl,
 }: {
   slug: string;
   ring: EventRing;
   projection: Projection<EventBout>;
   stickyLabel: string | null;
+  eventStreamUrl: string | null;
 }) {
   const pillText =
     projection.nowLabel === "LIVE"
@@ -30,24 +33,31 @@ export function RingSection({
             : "No bout";
 
   const nowCard = (
-    <Link href={`/e/${slug}/ring/${ring.id}`} className="block rounded-card bg-panel border border-white/10 p-4">
-      <div className="flex items-center justify-between">
-        <Badge live={projection.nowLabel === "LIVE"} tone={projection.nowLabel === "LIVE" ? "signal" : "neutral"}>
-          {pillText}
-        </Badge>
-      </div>
-      {projection.now ? (
-        <>
-          <p className="text-xs text-mute mt-2">{projection.now.weightClass}</p>
-          <p className="text-lg font-semibold mt-0.5">
-            {projection.now.fighterA?.displayName ?? "TBD"} <span className="text-mute font-normal">vs</span>{" "}
-            {projection.now.fighterB?.displayName ?? "TBD"}
-          </p>
-        </>
-      ) : (
-        <p className="text-sm text-mute mt-2">No bout in progress.</p>
+    <div className="rounded-card bg-panel border border-white/10 p-4">
+      <Link href={`/e/${slug}/ring/${ring.id}`} className="block">
+        <div className="flex items-center justify-between">
+          <Badge live={projection.nowLabel === "LIVE"} tone={projection.nowLabel === "LIVE" ? "signal" : "neutral"}>
+            {pillText}
+          </Badge>
+        </div>
+        {projection.now ? (
+          <>
+            <p className="text-xs text-mute mt-2">{projection.now.weightClass}</p>
+            <p className="text-lg font-semibold mt-0.5">
+              {projection.now.fighterA?.displayName ?? "TBD"} <span className="text-mute font-normal">vs</span>{" "}
+              {projection.now.fighterB?.displayName ?? "TBD"}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-mute mt-2">No bout in progress.</p>
+        )}
+      </Link>
+      {projection.now && (
+        <div className="mt-2">
+          <WatchArea url={projection.now.streamUrl ?? eventStreamUrl} status={projection.now.status} size="compact" />
+        </div>
       )}
-    </Link>
+    </div>
   );
 
   return (

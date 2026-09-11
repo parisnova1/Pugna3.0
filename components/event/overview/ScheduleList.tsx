@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatTime } from "@/lib/format";
 import { boutStatusLabel } from "@/lib/bout-status";
+import { WatchArea } from "@/components/live/WatchArea";
 import type { EventCardData } from "@/lib/event-query";
 
 type EventBout = EventCardData["event"]["bouts"][number];
@@ -12,12 +13,14 @@ export function ScheduleList({
   weightClasses,
   rings,
   nextBoutIds,
+  eventStreamUrl,
 }: {
   slug: string;
   bouts: EventBout[];
   weightClasses: string[];
   rings: EventRing[];
   nextBoutIds: Set<string>;
+  eventStreamUrl: string | null;
 }) {
   if (bouts.length === 0) {
     return <p className="text-sm text-mute py-6 text-center">No bouts scheduled for this day.</p>;
@@ -39,32 +42,38 @@ export function ScheduleList({
               const label = boutStatusLabel(bout.status, nextBoutIds.has(bout.id), bout.delayMinutes);
 
               return (
-                <Link
+                <div
                   key={bout.id}
-                  href={`/e/${slug}/bout/${bout.id}`}
                   className={[
-                    "block rounded-card border px-4 py-3",
+                    "rounded-card border px-4 py-3",
                     isLive ? "border-signal/40 bg-signal/5" : "border-white/10 bg-panel",
                   ].join(" ")}
                 >
-                  <div className="flex items-center justify-between text-[11px] text-mute">
-                    <span>
-                      {ring?.name ?? "Ring"}
-                      {bout.scheduledTime ? ` · ${formatTime(bout.scheduledTime)}` : ""}
-                    </span>
-                    <span className={isLive || label.startsWith("NEXT") ? "text-signal font-semibold" : ""}>{label}</span>
-                  </div>
-                  <p className="text-sm font-medium mt-1">
-                    {bout.fighterA?.displayName ?? "TBD"} <span className="text-mute font-normal">vs</span>{" "}
-                    {bout.fighterB?.displayName ?? "TBD"}
-                  </p>
-                  {isFinal && bout.result && (
-                    <p className="text-xs text-mute mt-0.5">
-                      {bout.result.method}
-                      {bout.result.round ? ` · Round ${bout.result.round}` : ""}
+                  <Link href={`/e/${slug}/bout/${bout.id}`} className="block">
+                    <div className="flex items-center justify-between text-[11px] text-mute">
+                      <span>
+                        {ring?.name ?? "Ring"}
+                        {bout.scheduledTime ? ` · ${formatTime(bout.scheduledTime)}` : ""}
+                      </span>
+                      <span className={isLive || label.startsWith("NEXT") ? "text-signal font-semibold" : ""}>{label}</span>
+                    </div>
+                    <p className="text-sm font-medium mt-1">
+                      {bout.fighterA?.displayName ?? "TBD"} <span className="text-mute font-normal">vs</span>{" "}
+                      {bout.fighterB?.displayName ?? "TBD"}
                     </p>
+                    {isFinal && bout.result && (
+                      <p className="text-xs text-mute mt-0.5">
+                        {bout.result.method}
+                        {bout.result.round ? ` · Round ${bout.result.round}` : ""}
+                      </p>
+                    )}
+                  </Link>
+                  {isLive && (
+                    <div className="mt-2">
+                      <WatchArea url={bout.streamUrl ?? eventStreamUrl} status={bout.status} size="compact" />
+                    </div>
                   )}
-                </Link>
+                </div>
               );
             })}
           </div>

@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { BoutStatus, EventStatus, RoundPhase } from "@prisma/client";
-import { formatUpdatedAt, formatTime } from "@/lib/format";
+import { formatTime } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import { RoundTimer } from "@/components/live/RoundTimer";
+import { FreshnessMeter } from "@/components/live/FreshnessMeter";
+import { WatchArea } from "@/components/live/WatchArea";
 
 export type BoutView = {
   id: string;
@@ -16,6 +18,7 @@ export type BoutView = {
   fighterAName: string | null;
   fighterBName: string | null;
   winnerName?: string | null;
+  streamUrl?: string | null;
   totalRounds?: number | null;
   currentRound?: number;
   roundPhase?: RoundPhase | null;
@@ -36,6 +39,7 @@ type ProjectionResponse = {
     currentRound: number;
     roundPhase: RoundPhase | null;
     phaseEndsAt: string | null;
+    streamUrl: string | null;
   } | null;
   next: { id: string; number: number; status: BoutStatus } | null;
   bouts: { id: string; number: number; status: BoutStatus; winnerName: string | null }[];
@@ -174,8 +178,10 @@ export function LiveEventCard({
           prev.map((b) => {
             const match = data.bouts.find((d) => d.id === b.id);
             if (!match) return b;
-            const delay = data.now?.id === b.id ? data.now.delayMinutes : null;
-            return { ...b, status: match.status, delayMinutes: delay, winnerName: match.winnerName };
+            const isNow = data.now?.id === b.id;
+            const delay = isNow ? data.now!.delayMinutes : null;
+            const streamUrl = isNow ? data.now!.streamUrl : b.streamUrl;
+            return { ...b, status: match.status, delayMinutes: delay, winnerName: match.winnerName, streamUrl };
           }),
         );
         setUpdatedAt(new Date(data.updatedAt));
@@ -243,15 +249,7 @@ export function LiveEventCard({
         )}
       </div>
 
-      {isPolling && (
-        <p className="text-[11px] text-mute tabular">
-          {connectionLost ? (
-            <>Connection lost · Showing last update {formatUpdatedAt(updatedAt)} · Retrying…</>
-          ) : (
-            <>Updated {formatUpdatedAt(updatedAt)}</>
-          )}
-        </p>
-      )}
+      {isPolling && <FreshnessMeter updatedAt={updatedAt} connectionLost={connectionLost} />}
 
       {nowLabel === "INTERMISSION" ? (
         <div className="rounded-card bg-panel border border-white/10 p-5">
@@ -268,7 +266,7 @@ export function LiveEventCard({
           </p>
         </div>
       ) : now ? (
-        <BoutHero bout={now} slug={slug} label={nowLabel} round={nowRound} />
+        <BoutHero bout={now} slug={slug} label={nowLabel} round={nowRound} eventStreamUrl={streamUrl} />
       ) : (
         <div className="rounded-card bg-panel border border-white/10 p-5">
           <p className="text-sm text-mute">
@@ -382,49 +380,54 @@ function BoutHero({
   slug,
   label,
   round,
+  eventStreamUrl,
 }: {
   bout: BoutView;
   slug: string;
   label: ProjectionResponse["nowLabel"];
   round?: { totalRounds: number | null; currentRound: number; roundPhase: RoundPhase | null; phaseEndsAt: Date | null } | null;
+  eventStreamUrl?: string | null;
 }) {
   const isLive = label === "LIVE";
   const inRound = round?.roundPhase === "ROUND";
   const inRest = round?.roundPhase === "REST";
   return (
-    <BoutLink
-      slug={slug}
-      boutId={bout.id}
+    <div
       className={[
-        "block rounded-card border p-5",
+        "rounded-card border p-5",
         inRound ? "bg-signal/10 border-signal/40" : inRest ? "bg-panel border-white/20" : "bg-panel border-white/10",
       ].join(" ")}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {isLive && <span className="live-pulse w-2 h-2 rounded-full bg-signal" />}
-          <p className="text-xs font-semibold uppercase tracking-wide text-signal">
-            {label === "LIVE" ? "Live now" : label === "DELAYED" ? statusLabel(bout) : "Up next"}
-          </p>
+      <BoutLink slug={slug} boutId={bout.id} className="block">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isLive && <span className="live-pulse w-2 h-2 rounded-full bg-signal" />}
+            <p className="text-xs font-semibold uppercase tracking-wide text-signal">
+              {label === "LIVE" ? "Live now" : label === "DELAYED" ? statusLabel(bout) : "Up next"}
+            </p>
+          </div>
+          {round?.roundPhase && round.phaseEndsAt && (
+            <span
+              className={[
+                "text-sm font-semibold tabular px-2 py-0.5 rounded-pill",
+                inRound ? "bg-signal text-onsignal" : "bg-white/10 text-ink",
+              ].join(" ")}
+            >
+              <RoundTimer phaseEndsAt={round.phaseEndsAt} />
+            </span>
+          )}
         </div>
-        {round?.roundPhase && round.phaseEndsAt && (
-          <span
-            className={[
-              "text-sm font-semibold tabular px-2 py-0.5 rounded-pill",
-              inRound ? "bg-signal text-onsignal" : "bg-white/10 text-ink",
-            ].join(" ")}
-          >
-            <RoundTimer phaseEndsAt={round.phaseEndsAt} />
-          </span>
-        )}
+        <p className="mt-3 text-xl font-semibold">
+          {bout.fighterAName ?? "TBD"} <span className="text-mute font-normal">vs</span> {bout.fighterBName ?? "TBD"}
+        </p>
+        <p className="text-sm text-mute mt-1">
+          Bout {bout.number} · {bout.weightClass}
+          {round?.totalRounds && round.roundPhase ? ` · Round ${round.currentRound} of ${round.totalRounds}${inRest ? " · Rest" : ""}` : ""}
+        </p>
+      </BoutLink>
+      <div className="mt-3">
+        <WatchArea url={bout.streamUrl ?? eventStreamUrl ?? null} status={bout.status} size="compact" />
       </div>
-      <p className="mt-3 text-xl font-semibold">
-        {bout.fighterAName ?? "TBD"} <span className="text-mute font-normal">vs</span> {bout.fighterBName ?? "TBD"}
-      </p>
-      <p className="text-sm text-mute mt-1">
-        Bout {bout.number} · {bout.weightClass}
-        {round?.totalRounds && round.roundPhase ? ` · Round ${round.currentRound} of ${round.totalRounds}${inRest ? " · Rest" : ""}` : ""}
-      </p>
-    </BoutLink>
+    </div>
   );
 }

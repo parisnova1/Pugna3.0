@@ -19,6 +19,7 @@ import {
   startRest,
   finishEvent,
 } from "@/lib/actions/live";
+import { setBoutStreamUrl } from "@/lib/actions/event";
 
 export type ConsoleBout = {
   id: string;
@@ -39,6 +40,7 @@ export type ConsoleBout = {
   currentRound: number;
   roundPhase: RoundPhase | null;
   phaseEndsAt: Date | null;
+  streamUrl: string | null;
 };
 
 export type ConsoleRing = {
@@ -56,6 +58,7 @@ type Sheet =
   | { type: "result"; boutId: string }
   | { type: "intermission" }
   | { type: "break"; ringId: string }
+  | { type: "link"; boutId: string }
   | null;
 
 const TERMINAL: BoutStatus[] = ["FINAL", "SCRATCHED", "NO_SHOW"];
@@ -204,10 +207,18 @@ export function LiveConsole({
                 : "bg-panel border-white/10",
           ].join(" ")}
         >
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-mute uppercase tracking-wide">
-              {activeRing ? `${ringLabel(activeRing)} · ` : ""}Now · Bout {now.number} · {now.weightClass}
-            </p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-xs font-semibold text-mute uppercase tracking-wide truncate">
+                {activeRing ? `${ringLabel(activeRing)} · ` : ""}Now · Bout {now.number} · {now.weightClass}
+              </p>
+              <button
+                onClick={() => setSheet({ type: "link", boutId: now.id })}
+                className="text-xs font-medium text-mute underline shrink-0"
+              >
+                {now.streamUrl ? "Edit link" : "Watch link"}
+              </button>
+            </div>
             {now.roundPhase && now.phaseEndsAt && (
               <span
                 className={[
@@ -431,6 +442,16 @@ export function LiveConsole({
         </Sheet>
       )}
 
+      {sheet?.type === "link" && (
+        <Sheet onClose={() => setSheet(null)} title="Fight link">
+          <LinkForm
+            pending={pending}
+            defaultValue={bouts.find((b) => b.id === sheet.boutId)?.streamUrl ?? ""}
+            onSubmit={(fd) => run(() => setBoutStreamUrl(sheet.boutId, eventId, fd))}
+          />
+        </Sheet>
+      )}
+
       {sheet?.type === "break" && (
         <Sheet onClose={() => setSheet(null)} title={`Break ${findRingLabel(rings, sheet.ringId)}`}>
           <ResumeTimeForm
@@ -488,6 +509,35 @@ function ResumeTimeForm({
       </div>
       <button type="submit" disabled={pending} className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60">
         {submitLabel}
+      </button>
+    </form>
+  );
+}
+
+function LinkForm({
+  pending,
+  defaultValue,
+  onSubmit,
+}: {
+  pending: boolean;
+  defaultValue: string;
+  onSubmit: (fd: FormData) => void;
+}) {
+  return (
+    <form action={(fd) => onSubmit(fd)} className="space-y-3">
+      <div>
+        <label className="text-xs text-mute">Stream or recording URL</label>
+        <input
+          name="streamUrl"
+          type="url"
+          defaultValue={defaultValue}
+          placeholder="https://..."
+          className="w-full mt-1 rounded-card bg-void border border-white/10 px-4 py-3 text-sm"
+        />
+      </div>
+      <p className="text-[11px] text-mute">Until you add a link, viewers see &ldquo;Stream link coming soon.&rdquo;</p>
+      <button type="submit" disabled={pending} className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60">
+        Save link
       </button>
     </form>
   );

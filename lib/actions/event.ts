@@ -240,6 +240,32 @@ export async function setBoutSchedule(boutId: string, eventId: string, formData:
   return { ok: true };
 }
 
+export async function setBoutStreamUrl(boutId: string, eventId: string, formData: FormData): Promise<ActionResult> {
+  const actor = await getActor();
+  const gate = can(actor, "event.edit", { eventId });
+  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  const streamUrl = String(formData.get("streamUrl") ?? "").trim() || null;
+  const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { event: true } });
+  if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Bout not found." };
+
+  await prisma.bout.update({ where: { id: boutId }, data: { streamUrl } });
+
+  if (streamUrl && bout.status === "IN_PROGRESS" && bout.event.status === "LIVE") {
+    const followerIds = await getFollowerUserIds(eventId);
+    await notifyMany(
+      followerIds,
+      "STREAM_LINK_ADDED",
+      `A watch link was added for the live fight at ${bout.event.name}.`,
+      `/e/${bout.event.slug ?? ""}/bout/${boutId}`,
+    );
+  }
+
+  revalidatePath(`/host/events/${eventId}`);
+  revalidatePath(`/host/events/${eventId}/live`);
+  return { ok: true };
+}
+
 export async function markBoutReady(boutId: string, eventId: string): Promise<ActionResult> {
   const actor = await getActor();
   const gate = can(actor, "event.edit", { eventId });

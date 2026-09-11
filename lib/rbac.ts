@@ -49,7 +49,8 @@ export type Action =
   | "club.admin"
   | "club.nominate"
   | "nomination.respond"
-  | "sparring.view";
+  | "sparring.view"
+  | "crowd.write";
 
 export type Resource = {
   eventId?: string;
@@ -58,6 +59,9 @@ export type Resource = {
   clubClaimed?: boolean;
   sparringAccessMode?: "INVITE" | "OPEN_TO_CLUBS" | "OPEN";
   sparringPrivileged?: boolean;
+  checkedIn?: boolean;
+  boutInProgress?: boolean;
+  muted?: boolean;
 };
 
 export function can(actor: Actor, action: Action, resource: Resource = {}): CanResult {
@@ -129,6 +133,14 @@ export function can(actor: Actor, action: Action, resource: Resource = {}): CanR
       if (!actor) return deny("FORBIDDEN", "This session is invite-only.");
       if (resource.sparringPrivileged) return allow();
       return deny("FORBIDDEN", "This session is invite-only.");
+    }
+
+    case "crowd.write": {
+      if (!actor) return deny("AUTH_REQUIRED", "Sign in to join the crowd.");
+      if (!resource.checkedIn) return deny("CONTEXT_REQUIRED", "Check in at the event to join the crowd.");
+      if (!resource.boutInProgress) return deny("FORBIDDEN", "This fight isn't live.");
+      if (resource.muted) return deny("FORBIDDEN", "You've been muted for this event.");
+      return allow();
     }
 
     default:
