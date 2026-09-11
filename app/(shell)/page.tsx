@@ -87,10 +87,19 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-10">
-      <section className="space-y-3 pt-2">
-        <h1 className="text-4xl font-bold leading-none tracking-tight">PUGNA</h1>
-        <p className="text-lg font-semibold text-ink">Train. Match. Compete. Track.</p>
-        <p className="text-mute text-sm">The operating system for combat sports.</p>
+      <section className="flex items-center justify-between pt-1">
+        <div>
+          <h1 className="text-2xl font-bold leading-none tracking-tight">
+            PUGNA<span className="text-signal">.</span>
+          </h1>
+          <p className="text-mute text-xs mt-1">Train. Match. Compete. Track.</p>
+        </div>
+        <Link href="/account" aria-label="Account" className="rounded-full border border-white/15 p-2.5 shrink-0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
+          </svg>
+        </Link>
       </section>
 
       <HomeTabs live={liveWithCover} upcoming={upcomingWithCover} openSparring={openSparring} />

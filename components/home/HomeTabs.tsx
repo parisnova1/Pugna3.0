@@ -58,8 +58,6 @@ export function HomeTabs({
 
   return (
     <div className="space-y-6">
-      <EventCodeBar />
-
       <div className="flex gap-2">
         <button
           onClick={() => setTab("events")}
@@ -89,9 +87,17 @@ export function HomeTabs({
               <SeeAllLink href="/events?filter=live" />
             </div>
             {eventPoints.length > 0 ? (
-              <LiveMap points={eventPoints} />
+              <div className="relative mb-6">
+                <LiveMap points={eventPoints} />
+                <div className="absolute -bottom-4 left-3 right-3 z-[1001]">
+                  <EventCodeBar />
+                </div>
+              </div>
             ) : (
-              <p className="text-sm text-mute">No events on the map yet.</p>
+              <>
+                <p className="text-sm text-mute">No events on the map yet.</p>
+                <EventCodeBar />
+              </>
             )}
           </section>
 

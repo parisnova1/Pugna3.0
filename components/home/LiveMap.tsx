@@ -38,6 +38,7 @@ export function LiveMap({ points }: { points: MapPoint[] }) {
     const map = L.map(containerRef.current, { zoomControl: true, attributionControl: true });
     mapRef.current = map;
 
+    map.attributionControl.setPrefix(false);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
@@ -71,10 +72,10 @@ export function LiveMap({ points }: { points: MapPoint[] }) {
 
   return (
     <div className="relative">
-      <div ref={containerRef} className="pugna-map w-full h-56 rounded-card overflow-hidden border border-white/10" />
+      <div ref={containerRef} className="pugna-map w-full h-72 rounded-card overflow-hidden border border-white/10 shadow-lg shadow-black/40" />
       <button
         onClick={fitAll}
-        className="absolute bottom-2 left-2 z-[1000] rounded-pill bg-void/80 border border-white/20 text-ink text-xs font-medium px-3 py-1.5"
+        className="absolute top-2 right-2 z-[1000] rounded-pill bg-void/80 border border-white/20 text-ink text-xs font-medium px-3 py-1.5"
       >
         Fit all
       </button>
