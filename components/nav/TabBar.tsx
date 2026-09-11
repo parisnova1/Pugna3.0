@@ -25,10 +25,11 @@ const TABS: Tab[] = [
 
 export function TabBar() {
   const pathname = usePathname();
+  const onProfile = pathname.startsWith("/account");
 
   return (
     <>
-      <ScanFab />
+      {!onProfile && <ScanFab />}
 
       <nav className="glass fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)]">
         {TABS.map((tab) => {
