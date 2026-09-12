@@ -117,14 +117,21 @@ export default async function EventsPage({
   }
 
   const eventIds = events.map((e) => e.id);
-  const checkIns =
+  const [checkIns, covers] =
     eventIds.length > 0
-      ? await prisma.checkIn.findMany({
-          where: { attachedType: "EVENT", attachedId: { in: eventIds }, status: "CHECKED_IN" },
-          select: { attachedId: true },
-        })
-      : [];
+      ? await Promise.all([
+          prisma.checkIn.findMany({
+            where: { attachedType: "EVENT", attachedId: { in: eventIds }, status: "CHECKED_IN" },
+            select: { attachedId: true },
+          }),
+          prisma.media.findMany({
+            where: { attachedType: "EVENT", attachedId: { in: eventIds }, kind: "EVENT_COVER" },
+            orderBy: { createdAt: "desc" },
+          }),
+        ])
+      : [[], []];
   const checkedInCountFor = (eventId: string) => checkIns.filter((c) => c.attachedId === eventId).length;
+  const coverFor = (eventId: string) => covers.find((m) => m.attachedId === eventId)?.url ?? null;
 
   const currentParams = { q, filter, nearby, lat, lng, saved };
 
@@ -195,7 +202,12 @@ export default async function EventsPage({
       ) : (
         <div className="space-y-3">
           {events.map((event) => (
-            <EventPreviewCard key={event.id} event={event} checkedInCount={checkedInCountFor(event.id)} />
+            <EventPreviewCard
+              key={event.id}
+              event={event}
+              coverUrl={coverFor(event.id)}
+              checkedInCount={checkedInCountFor(event.id)}
+            />
           ))}
         </div>
       )}

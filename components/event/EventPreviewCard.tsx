@@ -47,47 +47,36 @@ export function EventPreviewCard({
       </span>
     ) : null;
 
-  if (coverUrl) {
-    return (
-      <Link
-        href={`/e/${event.slug}`}
-        className="relative block rounded-card overflow-hidden aspect-[16/10] hover:opacity-95 transition-opacity"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
-        <div className="absolute inset-0 p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            {pill}
-            <span className="text-xs text-white/80 tabular">{formatEventDateTime(event.date, event.startTime)}</span>
-          </div>
-          <div>
-            <h3 className="font-semibold text-white">{event.name}</h3>
-            <div className="flex items-center justify-between mt-0.5">
-              {(event.venue || event.city) && (
-                <p className="text-sm text-white/70">{[event.venue, event.city].filter(Boolean).join(" · ")}</p>
-              )}
-              {checkInBadge}
-            </div>
-          </div>
-        </div>
-      </Link>
-    );
-  }
-
   return (
     <Link
       href={`/e/${event.slug}`}
-      className="block rounded-card bg-panel border border-white/10 p-4 hover:border-white/20 transition-colors"
+      className="relative block rounded-card bg-panel border border-white/10 overflow-hidden p-4 hover:border-white/20 transition-colors"
     >
-      <div className="flex items-center justify-between">
+      {coverUrl && (
+        // Right-weighted poster bleed, not a full-card photo: pinned to the right ~58%
+        // and masked so it fades into the panel on the left, keeping the title/venue
+        // column on a plain dark background instead of overlaid on top of a photo.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={coverUrl}
+          alt=""
+          className="absolute inset-y-0 right-0 w-[58%] h-full object-cover pointer-events-none"
+          style={{
+            objectPosition: "center right",
+            maskImage: "linear-gradient(to right, transparent 0%, black 28%)",
+            WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 28%)",
+            opacity: isLive ? 0.7 : 0.55,
+          }}
+        />
+      )}
+      <div className="relative max-w-[58%] flex items-center justify-between">
         {pill}
         <span className="text-xs text-mute tabular">{formatEventDateTime(event.date, event.startTime)}</span>
       </div>
-      <h3 className="mt-2 font-semibold text-ink">{event.name}</h3>
-      <div className="flex items-center justify-between mt-0.5">
+      <h3 className="relative max-w-[58%] mt-2 font-semibold text-ink truncate">{event.name}</h3>
+      <div className="relative max-w-[58%] flex items-center justify-between mt-0.5">
         {(event.venue || event.city) && (
-          <p className="text-sm text-mute">{[event.venue, event.city].filter(Boolean).join(" · ")}</p>
+          <p className="text-sm text-mute truncate">{[event.venue, event.city].filter(Boolean).join(" · ")}</p>
         )}
         {checkInBadge}
       </div>
