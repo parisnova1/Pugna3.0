@@ -39,7 +39,7 @@ export default async function FollowedEventsPage() {
                 <p className="text-xs text-mute mt-0.5">{formatEventDate(event.date)}</p>
               </div>
               {event.status === "LIVE" || event.status === "INTERMISSION" ? (
-                <Badge live tone="signal">
+                <Badge live tone="live">
                   Live
                 </Badge>
               ) : (

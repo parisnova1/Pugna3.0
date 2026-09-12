@@ -75,13 +75,13 @@ export default async function AccountSettingsPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4">
             <p className="font-medium text-sm">Viewer</p>
-            <span className="text-signal text-sm font-semibold">✓</span>
+            <span className="text-success text-sm font-semibold">✓</span>
           </div>
 
           <div className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4">
             <p className="font-medium text-sm">Boxer</p>
             {actor.isBoxer ? (
-              <span className="text-signal text-sm font-semibold">✓</span>
+              <span className="text-success text-sm font-semibold">✓</span>
             ) : (
               <Link href="/become-boxer" className="rounded-pill border border-white/20 px-3 py-1.5 text-xs font-semibold">
                 Become a Boxer
@@ -92,7 +92,7 @@ export default async function AccountSettingsPage() {
           <div className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4">
             <p className="font-medium text-sm">Organizer</p>
             {actor.isOrganizer ? (
-              <span className="text-signal text-sm font-semibold">✓</span>
+              <span className="text-success text-sm font-semibold">✓</span>
             ) : (
               <form
                 action={async () => {

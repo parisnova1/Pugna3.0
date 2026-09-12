@@ -39,7 +39,7 @@ export function FollowButton({
       }
       className={[
         "rounded-pill text-sm font-medium px-4 py-2 border",
-        following ? "bg-signal text-onsignal border-signal" : "border-white/20 text-ink",
+        following ? "bg-success text-onsignal border-success" : "border-white/20 text-ink",
       ].join(" ")}
     >
       {following ? "Following" : "Follow"}

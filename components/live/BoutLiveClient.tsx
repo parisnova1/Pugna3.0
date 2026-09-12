@@ -110,7 +110,7 @@ export function BoutLiveClient({
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Badge live={isLive} tone={isLive ? "signal" : "neutral"}>
+          <Badge live={isLive} tone={isLive ? "live" : "neutral"}>
             {isLive
               ? "Live"
               : data.status === "DELAYED"
@@ -143,7 +143,7 @@ export function BoutLiveClient({
           <span
             className={[
               "text-sm font-semibold tabular px-2 py-0.5 rounded-pill",
-              inRound ? "bg-signal text-onsignal" : "bg-white/10 text-ink",
+              inRound ? "bg-live text-onsignal" : "bg-white/10 text-ink",
             ].join(" ")}
           >
             <RoundTimer phaseEndsAt={new Date(data.phaseEndsAt)} />
@@ -152,9 +152,9 @@ export function BoutLiveClient({
       )}
 
       {data.status === "FINAL" && data.result && (
-        <div className="rounded-card bg-panel border border-signal/30 p-4">
+        <div className={`rounded-card bg-panel border p-4 ${winnerName ? "border-success/30" : "border-white/10"}`}>
           <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-1">Result</p>
-          <p className="text-sm font-semibold text-signal">{winnerName ? `${winnerName} won` : "Draw"}</p>
+          <p className={`text-sm font-semibold ${winnerName ? "text-success" : "text-ink"}`}>{winnerName ? `${winnerName} won` : "Draw"}</p>
           <p className="text-sm text-mute mt-0.5">
             {data.result.method}
             {data.result.round ? ` · Round ${data.result.round}` : ""}
@@ -202,10 +202,10 @@ export function BoutLiveClient({
 
 function FighterRow({ name, club, isWinner }: { name: string; club: string | null; isWinner: boolean }) {
   return (
-    <div className={`text-center rounded-card py-1.5 ${isWinner ? "bg-signal/10 border border-signal/30" : ""}`}>
+    <div className={`text-center rounded-card py-1.5 ${isWinner ? "bg-success/10 border border-success/30" : ""}`}>
       <div className="flex items-center justify-center gap-1.5">
-        <p className={`font-semibold ${isWinner ? "text-signal" : ""}`}>{name}</p>
-        {isWinner && <Badge tone="signal">Winner</Badge>}
+        <p className={`font-semibold ${isWinner ? "text-success" : ""}`}>{name}</p>
+        {isWinner && <Badge tone="success">Winner</Badge>}
       </div>
       <p className="text-xs text-mute mt-0.5">{club ?? "Guest"}</p>
     </div>

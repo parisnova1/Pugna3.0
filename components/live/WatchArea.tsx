@@ -31,7 +31,10 @@ export function WatchArea({
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 rounded-pill border border-signal/40 bg-signal/10 px-3 py-1.5 text-xs font-semibold text-signal"
+        className={[
+          "inline-flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs font-semibold",
+          isLive ? "border-live/40 bg-live/10 text-live" : "border-signal/40 bg-signal/10 text-signal",
+        ].join(" ")}
       >
         <PlayIcon />
         {isLive ? "Watch live" : "Watch fight video"}
@@ -59,7 +62,10 @@ export function WatchArea({
           href={url!}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm"
+          className={[
+            "inline-flex items-center gap-2 rounded-pill text-onsignal font-semibold px-5 py-3 text-sm",
+            isLive ? "bg-live" : "bg-signal",
+          ].join(" ")}
         >
           <PlayIcon /> Watch fight
         </a>

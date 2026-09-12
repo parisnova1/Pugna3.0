@@ -3,12 +3,13 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { THEME } from "@/lib/theme";
 
 export type MapPoint = { id: string; lat: number; lng: number; label: string; href: string };
 
 const pinIcon = L.divIcon({
   className: "",
-  html: `<div style="width:16px;height:16px;border-radius:50%;background:#e8453c;border:2px solid #F4F1EC;box-shadow:0 0 0 2px rgba(232,69,60,0.35)"></div>`,
+  html: `<div style="width:16px;height:16px;border-radius:50%;background:${THEME.live};border:2px solid ${THEME.ink};box-shadow:0 0 0 2px rgba(229,72,77,0.35)"></div>`,
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 });

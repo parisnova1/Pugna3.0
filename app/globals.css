@@ -4,16 +4,45 @@
 
 :root {
   color-scheme: dark;
+
+  /* Backgrounds */
+  --void: #0b0b0c;
+  --panel: #151517;
+  --panel-elevated: #1d1d20;
+  --panel-hover: #232326;
+
+  /* Text */
+  --ink: #f5f3ee;
+  --mute: #a7a5a0;
+  --muted: #77756f;
+  --disabled: #55545a;
+
+  /* Borders (available for new/updated surfaces; existing border-white/X
+     opacity borders are left as-is — see design-token migration plan) */
+  --border: #2a2a2d;
+  --border-subtle: #202023;
+  --border-strong: #38383c;
+
+  /* PUGNA brand accent — action/CTA/selection, never "live" or "success" */
+  --signal: #e85d3f;
+  --signal-hover: #f06a4b;
+  --onsignal: #0b0b0c;
+
+  /* Semantic status */
+  --live: #e5484d;
+  --success: #35b779;
+  --warning: #e6a23c;
+  --error: #e05252;
 }
 
 html,
 body {
-  background: #0b0c0e;
-  color: #f4f1ec;
+  background: var(--void);
+  color: var(--ink);
 }
 
 .glass {
-  background: rgba(20, 22, 26, 0.64);
+  background: color-mix(in srgb, var(--panel) 64%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -25,7 +54,7 @@ body {
 
 button.bg-signal,
 a.bg-signal {
-  box-shadow: 0 4px 20px -4px rgba(220, 58, 44, 0.45);
+  box-shadow: 0 4px 20px -4px color-mix(in srgb, var(--signal) 45%, transparent);
 }
 
 @keyframes live-pulse {

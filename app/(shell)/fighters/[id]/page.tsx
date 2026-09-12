@@ -120,7 +120,7 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
               </div>
               <span
                 className={`text-xs shrink-0 ml-2 font-medium ${
-                  b.status === "FINAL" && b.winnerId === fighter.id ? "text-signal" : "text-mute"
+                  b.status === "FINAL" && b.winnerId === fighter.id ? "text-success" : "text-mute"
                 }`}
               >
                 {b.status === "FINAL"

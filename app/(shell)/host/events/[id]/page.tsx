@@ -91,7 +91,7 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
 
       {event.status !== "CANCELLED" && event.status !== "ARCHIVED" && (
         <details className="rounded-card border border-white/10 p-4">
-          <summary className="text-sm text-signal cursor-pointer">Cancel event</summary>
+          <summary className="text-sm text-error cursor-pointer">Cancel event</summary>
           <form
             action={async (formData: FormData) => {
               "use server";

@@ -36,7 +36,7 @@ export default async function SparringCheckInPage({ params }: { params: Promise<
       ) : !participant || !["CONFIRMED", "CHECKED_IN"].includes(participant.status) ? (
         <p className="text-mute text-sm">You&apos;re not confirmed for this session.</p>
       ) : participant.status === "CHECKED_IN" ? (
-        <p className="text-signal text-sm font-semibold">🟢 You&apos;re checked in.</p>
+        <p className="text-success text-sm font-semibold">🟢 You&apos;re checked in.</p>
       ) : (
         <form
           action={async () => {

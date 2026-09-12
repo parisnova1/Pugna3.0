@@ -75,9 +75,9 @@ function findRingLabel(rings: ConsoleRing[], ringId: string): string {
 function ringDotClass(label: string | null) {
   switch (label) {
     case "LIVE":
-      return "bg-signal";
+      return "bg-live";
     case "DELAYED":
-      return "bg-yellow-500";
+      return "bg-warning";
     case "BREAK":
       return "bg-mute";
     default:
@@ -201,7 +201,7 @@ export function LiveConsole({
           className={[
             "rounded-card border p-5 space-y-3",
             now.roundPhase === "ROUND"
-              ? "bg-signal/10 border-signal/40"
+              ? "bg-live/10 border-live/40"
               : now.roundPhase === "REST"
                 ? "bg-panel border-white/20"
                 : "bg-panel border-white/10",
@@ -223,7 +223,7 @@ export function LiveConsole({
               <span
                 className={[
                   "text-sm font-semibold tabular px-2 py-0.5 rounded-pill",
-                  now.roundPhase === "ROUND" ? "bg-signal text-onsignal" : "bg-white/10 text-ink",
+                  now.roundPhase === "ROUND" ? "bg-live text-onsignal" : "bg-white/10 text-ink",
                 ].join(" ")}
               >
                 <RoundTimer phaseEndsAt={now.phaseEndsAt} />
@@ -336,21 +336,21 @@ export function LiveConsole({
             <div
               key={b.id}
               className={`flex items-center justify-between rounded-card border px-4 py-2 text-sm ${
-                isFinal && winnerName ? "border-signal/20" : "border-white/10"
+                isFinal && winnerName ? "border-success/20" : "border-white/10"
               }`}
             >
               <span>
                 {b.number}.{" "}
-                <span className={winnerName && winnerName === b.fighterAName ? "text-signal font-semibold" : ""}>
+                <span className={winnerName && winnerName === b.fighterAName ? "text-success font-semibold" : ""}>
                   {b.fighterAName ?? "TBD"}
                 </span>{" "}
                 vs{" "}
-                <span className={winnerName && winnerName === b.fighterBName ? "text-signal font-semibold" : ""}>
+                <span className={winnerName && winnerName === b.fighterBName ? "text-success font-semibold" : ""}>
                   {b.fighterBName ?? "TBD"}
                 </span>
                 {rings.length > 1 ? <span className="text-mute"> · {findRingLabel(rings, b.ringId)}</span> : null}
               </span>
-              <span className={`text-xs ${isFinal && winnerName ? "text-signal font-medium" : "text-mute"}`}>
+              <span className={`text-xs ${isFinal && winnerName ? "text-success font-medium" : "text-mute"}`}>
                 {isFinal && winnerName ? `${winnerName} won` : b.status}
               </span>
             </div>

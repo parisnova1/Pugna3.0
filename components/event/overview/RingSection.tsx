@@ -36,7 +36,7 @@ export function RingSection({
     <div className="rounded-card bg-panel border border-white/10 p-4">
       <Link href={`/e/${slug}/ring/${ring.id}`} className="block">
         <div className="flex items-center justify-between">
-          <Badge live={projection.nowLabel === "LIVE"} tone={projection.nowLabel === "LIVE" ? "signal" : "neutral"}>
+          <Badge live={projection.nowLabel === "LIVE"} tone={projection.nowLabel === "LIVE" ? "live" : "neutral"}>
             {pillText}
           </Badge>
         </div>

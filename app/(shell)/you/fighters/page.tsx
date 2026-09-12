@@ -39,7 +39,7 @@ export default async function FollowedFightersPage() {
               <div>
                 <p className="text-sm font-medium">{fighter.displayName}</p>
                 <p className="text-xs text-mute mt-0.5">{fighter.club?.name ?? "Independent"}</p>
-                {alertSet.has(fighter.id) && <p className="text-xs text-signal mt-0.5">✓ Next fight alert enabled</p>}
+                {alertSet.has(fighter.id) && <p className="text-xs text-success mt-0.5">✓ Next fight alert enabled</p>}
               </div>
               <span className="text-mute">›</span>
             </Link>

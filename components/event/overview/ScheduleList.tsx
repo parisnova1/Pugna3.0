@@ -46,7 +46,7 @@ export function ScheduleList({
                   key={bout.id}
                   className={[
                     "rounded-card border px-4 py-3",
-                    isLive ? "border-signal/40 bg-signal/5" : "border-white/10 bg-panel",
+                    isLive ? "border-live/40 bg-live/5" : "border-white/10 bg-panel",
                   ].join(" ")}
                 >
                   <Link href={`/e/${slug}/bout/${bout.id}`} className="block">
@@ -55,7 +55,9 @@ export function ScheduleList({
                         {ring?.name ?? "Ring"}
                         {bout.scheduledTime ? ` · ${formatTime(bout.scheduledTime)}` : ""}
                       </span>
-                      <span className={isLive || label.startsWith("NEXT") ? "text-signal font-semibold" : ""}>{label}</span>
+                      <span className={isLive ? "text-live font-semibold" : label.startsWith("NEXT") ? "text-signal font-semibold" : ""}>
+                        {label}
+                      </span>
                     </div>
                     <p className="text-sm font-medium mt-1">
                       {bout.fighterA?.displayName ?? "TBD"} <span className="text-mute font-normal">vs</span>{" "}

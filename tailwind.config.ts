@@ -5,12 +5,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        void: "#0B0C0E",
-        panel: "#14161A",
-        ink: "#F4F1EC",
-        mute: "#8A8580",
-        signal: "#DC3A2C",
-        onsignal: "#0B0C0E",
+        void: "var(--void)",
+        panel: "var(--panel)",
+        "panel-elevated": "var(--panel-elevated)",
+        "panel-hover": "var(--panel-hover)",
+        ink: "var(--ink)",
+        mute: "var(--mute)",
+        muted: "var(--muted)",
+        disabled: "var(--disabled)",
+        line: "var(--border)",
+        "line-subtle": "var(--border-subtle)",
+        "line-strong": "var(--border-strong)",
+        signal: "var(--signal)",
+        "signal-hover": "var(--signal-hover)",
+        onsignal: "var(--onsignal)",
+        live: "var(--live)",
+        success: "var(--success)",
+        warning: "var(--warning)",
+        error: "var(--error)",
       },
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
@@ -18,6 +30,10 @@ const config: Config = {
       borderRadius: {
         card: "16px",
         pill: "999px",
+        sm: "8px",
+        md: "12px",
+        lg: "16px",
+        xl: "20px",
       },
       backdropBlur: {
         glass: "16px",

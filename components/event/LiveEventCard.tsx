@@ -222,7 +222,7 @@ export function LiveEventCard({
         <div>
           {pill && (
             <div className="flex items-center gap-2 mb-2">
-              <Badge live={pill.live} tone={pill.live ? "signal" : "neutral"}>
+              <Badge live={pill.live} tone={pill.live ? "live" : "neutral"}>
                 {pill.text}
               </Badge>
               {followerCount > 0 && <span className="text-[11px] text-mute tabular">{watchingLabel(followerCount)}</span>}
@@ -252,7 +252,7 @@ export function LiveEventCard({
             </a>
           )}
           {status === "CANCELLED" && cancelReason && (
-            <p className="text-sm text-signal mt-2">Cancelled: {cancelReason}</p>
+            <p className="text-sm text-error mt-2">Cancelled: {cancelReason}</p>
           )}
         </div>
       )}
@@ -321,19 +321,19 @@ export function LiveEventCard({
                 className={[
                   "flex items-center justify-between rounded-card border px-4 py-3",
                   bout.id === nowId
-                    ? "border-signal/40 bg-signal/5"
+                    ? "border-live/40 bg-live/5"
                     : isFinal && bout.winnerName
-                      ? "border-signal/20 bg-panel"
+                      ? "border-success/20 bg-panel"
                       : "border-white/10 bg-panel",
                 ].join(" ")}
               >
                 <div>
                   <p className="text-sm font-medium">
-                    <span className={bout.winnerName && bout.winnerName === bout.fighterAName ? "text-signal font-semibold" : ""}>
+                    <span className={bout.winnerName && bout.winnerName === bout.fighterAName ? "text-success font-semibold" : ""}>
                       {bout.fighterAName ?? "TBD"}
                     </span>{" "}
                     <span className="text-mute">vs</span>{" "}
-                    <span className={bout.winnerName && bout.winnerName === bout.fighterBName ? "text-signal font-semibold" : ""}>
+                    <span className={bout.winnerName && bout.winnerName === bout.fighterBName ? "text-success font-semibold" : ""}>
                       {bout.fighterBName ?? "TBD"}
                     </span>
                   </p>
@@ -343,7 +343,13 @@ export function LiveEventCard({
                 </div>
                 <span
                   className={`text-xs shrink-0 ml-2 font-medium ${
-                    isFinal && bout.winnerName ? "text-signal" : bout.id === nowId || bout.id === nextId ? "text-signal" : "text-mute"
+                    isFinal && bout.winnerName
+                      ? "text-success"
+                      : bout.id === nowId
+                        ? "text-live"
+                        : bout.id === nextId
+                          ? "text-signal"
+                          : "text-mute"
                   }`}
                 >
                   {isFinal && bout.winnerName ? `${bout.winnerName} won` : boutStatusLabel(bout.status, bout.id === nextId, bout.delayMinutes)}
@@ -418,14 +424,19 @@ function BoutHero({
     <div
       className={[
         "rounded-card border p-5",
-        inRound ? "bg-signal/10 border-signal/40" : inRest ? "bg-panel border-white/20" : "bg-panel border-white/10",
+        inRound ? "bg-live/10 border-live/40" : inRest ? "bg-panel border-white/20" : "bg-panel border-white/10",
       ].join(" ")}
     >
       <BoutLink slug={slug} boutId={bout.id} className="block">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {isLive && <span className="live-pulse w-2 h-2 rounded-full bg-signal" />}
-            <p className="text-xs font-semibold uppercase tracking-wide text-signal">
+            {isLive && <span className="live-pulse w-2 h-2 rounded-full bg-live" />}
+            <p
+              className={[
+                "text-xs font-semibold uppercase tracking-wide",
+                isLive ? "text-live" : label === "DELAYED" ? "text-warning" : "text-signal",
+              ].join(" ")}
+            >
               {label === "LIVE" ? "Live now" : label === "DELAYED" ? statusLabel(bout) : "Up next"}
             </p>
           </div>
@@ -433,7 +444,7 @@ function BoutHero({
             <span
               className={[
                 "text-sm font-semibold tabular px-2 py-0.5 rounded-pill",
-                inRound ? "bg-signal text-onsignal" : "bg-white/10 text-ink",
+                inRound ? "bg-live text-onsignal" : "bg-white/10 text-ink",
               ].join(" ")}
             >
               <RoundTimer phaseEndsAt={round.phaseEndsAt} />

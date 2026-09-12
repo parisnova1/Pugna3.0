@@ -56,7 +56,7 @@ export default async function MySparringPage() {
                   {p.session.gym} · {formatEventDate(p.session.date)}
                 </p>
               </div>
-              <Badge tone={p.status === "CONFIRMED" ? "signal" : "neutral"}>{STATUS_LABEL[p.status]}</Badge>
+              <Badge tone={p.status === "CONFIRMED" ? "success" : "neutral"}>{STATUS_LABEL[p.status]}</Badge>
             </Link>
           ))}
         </div>

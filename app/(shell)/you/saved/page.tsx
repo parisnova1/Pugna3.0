@@ -42,12 +42,12 @@ export default async function SavedFightsPage() {
                 href={`/e/${bout.event.slug}/bout/${bout.id}`}
                 className={[
                   "block rounded-card border px-4 py-3",
-                  isLive ? "border-signal/40 bg-signal/5" : "border-white/10 bg-panel",
+                  isLive ? "border-live/40 bg-live/5" : "border-white/10 bg-panel",
                 ].join(" ")}
               >
                 <div className="flex items-center justify-between">
                   {isLive ? (
-                    <Badge live tone="signal">
+                    <Badge live tone="live">
                       Live
                     </Badge>
                   ) : (

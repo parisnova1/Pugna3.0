@@ -33,7 +33,7 @@ export function ClubCard({ club }: { club: ClubCardData }) {
         {metaLine && <p className="text-xs text-mute mt-0.5">{metaLine}</p>}
         {club.isVerified && (
           <div className="mt-1.5">
-            <Badge tone="signal">✓ PUGNA Verified</Badge>
+            <Badge tone="success">✓ PUGNA Verified</Badge>
           </div>
         )}
         {statParts.length > 0 && <p className="text-xs text-mute mt-1.5">{statParts.join(" · ")}</p>}

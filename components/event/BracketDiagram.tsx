@@ -100,7 +100,7 @@ export function BracketDiagram({ slug, rounds }: { slug: string; rounds: Bracket
                   href={`/e/${slug}/bout/${bout.id}`}
                   className={[
                     "absolute flex flex-col justify-center rounded-card border px-3 py-1 text-xs overflow-hidden",
-                    isLive ? "border-signal/50 bg-signal/10" : "border-white/10 bg-panel",
+                    isLive ? "border-live/50 bg-live/10" : "border-white/10 bg-panel",
                   ].join(" ")}
                   style={{
                     left: r * (BOX_W + COL_GAP),
@@ -110,7 +110,7 @@ export function BracketDiagram({ slug, rounds }: { slug: string; rounds: Bracket
                   }}
                 >
                   {isLive && (
-                    <span className="absolute top-1 right-2 text-[9px] font-semibold text-signal tracking-wide">LIVE</span>
+                    <span className="absolute top-1 right-2 text-[9px] font-semibold text-live tracking-wide">LIVE</span>
                   )}
                   <p className={`truncate ${bout.aWon === false ? "text-mute" : "font-medium"}`}>{bout.fighterAName ?? "TBD"}</p>
                   <p className={`truncate ${bout.aWon === true ? "text-mute" : "font-medium"}`}>{bout.fighterBName ?? "TBD"}</p>

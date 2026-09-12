@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { THEME } from "@/lib/theme";
 
 export function ShareSheet({ code, name }: { code: string | null; name: string }) {
   const [open, setOpen] = useState(false);
@@ -13,7 +14,7 @@ export function ShareSheet({ code, name }: { code: string | null; name: string }
   useEffect(() => {
     if (!open || !code) return;
     const url = `${window.location.origin}/go/${code}`;
-    QRCode.toDataURL(url, { margin: 1, width: 240, color: { dark: "#F4F1EC", light: "#00000000" } }).then(setQr);
+    QRCode.toDataURL(url, { margin: 1, width: 240, color: { dark: THEME.ink, light: "#00000000" } }).then(setQr);
   }, [open, code]);
 
   if (!code) return null;

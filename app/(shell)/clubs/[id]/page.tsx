@@ -68,7 +68,7 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ id
             {metaLine && <p className="text-mute text-sm mt-0.5">{metaLine}</p>}
             {club.isVerified && (
               <div className="mt-1.5">
-                <Badge tone="signal">✓ PUGNA Verified</Badge>
+                <Badge tone="success">✓ PUGNA Verified</Badge>
               </div>
             )}
           </div>

@@ -709,7 +709,7 @@ export default async function SparringSessionPage({
 
           {session.status !== "CANCELLED" && session.status !== "COMPLETED" && (
             <details className="rounded-card border border-white/10 p-4">
-              <summary className="text-sm text-signal cursor-pointer">Cancel session</summary>
+              <summary className="text-sm text-error cursor-pointer">Cancel session</summary>
               <form
                 action={async () => {
                   "use server";

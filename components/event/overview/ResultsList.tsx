@@ -48,11 +48,11 @@ export function ResultsList({
                   <p className="text-[11px] text-mute">Bout {bout.number}</p>
                   <div className="mt-1 space-y-0.5">
                     <p className="text-sm flex items-center justify-between gap-2">
-                      <span className={aWon ? "font-semibold" : "font-medium"}>{bout.fighterA?.displayName ?? "TBD"}</span>
+                      <span className={aWon ? "font-semibold text-success" : "font-medium"}>{bout.fighterA?.displayName ?? "TBD"}</span>
                       {aWon && <span className="shrink-0">🏆</span>}
                     </p>
                     <p className="text-sm flex items-center justify-between gap-2">
-                      <span className={bWon ? "font-semibold" : "font-medium"}>{bout.fighterB?.displayName ?? "TBD"}</span>
+                      <span className={bWon ? "font-semibold text-success" : "font-medium"}>{bout.fighterB?.displayName ?? "TBD"}</span>
                       {bWon && <span className="shrink-0">🏆</span>}
                     </p>
                   </div>

@@ -57,7 +57,7 @@ export function CheckInResultScreen({ result }: { result: CheckInAttempt }) {
   // OK
   return (
     <Screen title={result.eventName}>
-      <p className="text-signal text-sm font-semibold">
+      <p className="text-success text-sm font-semibold">
         {result.alreadyCheckedIn ? "You're already in the room." : "You're in the room."}
       </p>
       <div className="flex flex-col gap-2 pt-2">

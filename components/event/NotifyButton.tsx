@@ -44,7 +44,7 @@ export function NotifyButton({
       }
       className={[
         "rounded-full p-2.5 border disabled:opacity-60",
-        following ? "bg-signal text-onsignal border-signal" : "border-white/15",
+        following ? "bg-success text-onsignal border-success" : "border-white/15",
       ].join(" ")}
     >
       <ClockIcon className="shrink-0" />

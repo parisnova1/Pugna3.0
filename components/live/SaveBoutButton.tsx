@@ -42,7 +42,7 @@ export function SaveBoutButton({
       }
       className={[
         "rounded-full p-2.5 border disabled:opacity-60",
-        saved ? "bg-signal text-onsignal border-signal" : "border-white/15",
+        saved ? "bg-success text-onsignal border-success" : "border-white/15",
       ].join(" ")}
     >
       {saved ? "♥" : "♡"}

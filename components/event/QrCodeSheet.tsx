@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
+import { THEME } from "@/lib/theme";
 
 /** Generic QR display sheet — used for event/sparring check-in QR codes shown at the door. */
 export function QrCodeSheet({
@@ -21,7 +22,7 @@ export function QrCodeSheet({
 
   useEffect(() => {
     if (!open) return;
-    QRCode.toDataURL(url, { margin: 1, width: 240, color: { dark: "#F4F1EC", light: "#00000000" } }).then(setQr);
+    QRCode.toDataURL(url, { margin: 1, width: 240, color: { dark: THEME.ink, light: "#00000000" } }).then(setQr);
   }, [open, url]);
 
   return (

@@ -196,7 +196,7 @@ export default async function AccountPage({
             <div className="p-4 space-y-2">
               <p className="font-semibold">{upNextEvent.name}</p>
               {upNextEvent.status === "LIVE" || upNextEvent.status === "INTERMISSION" ? (
-                <Badge live tone="signal">
+                <Badge live tone="live">
                   Live
                 </Badge>
               ) : (
@@ -293,7 +293,7 @@ export default async function AccountPage({
               </p>
               {fighter.club && (
                 <Link href={`/clubs/${fighter.club.id}`} className="flex items-center gap-1.5 text-xs">
-                  <span className="text-signal">✓ Member</span>
+                  <span className="text-success">✓ Member</span>
                   <span className="text-mute">{fighter.club.name}</span>
                 </Link>
               )}
@@ -309,7 +309,7 @@ export default async function AccountPage({
 
             {lastResult && (
               <div className="text-sm">
-                <span className={lastResult.outcome === "Win" ? "text-signal font-medium" : "text-mute font-medium"}>
+                <span className={lastResult.outcome === "Win" ? "text-success font-medium" : "text-mute font-medium"}>
                   {lastResult.outcome}
                 </span>
                 <span className="text-mute"> vs {lastResult.opponent} · {formatEventDate(lastResult.date)}</span>

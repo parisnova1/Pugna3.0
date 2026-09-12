@@ -37,7 +37,7 @@ export default async function EventCheckInPage({ params }: { params: Promise<{ e
       ) : !fighter ? (
         <p className="text-mute text-sm">Only registered fighters can check in.</p>
       ) : existing?.status === "CHECKED_IN" ? (
-        <p className="text-signal text-sm font-semibold">🟢 You&apos;re checked in.</p>
+        <p className="text-success text-sm font-semibold">🟢 You&apos;re checked in.</p>
       ) : (
         <form
           action={async () => {

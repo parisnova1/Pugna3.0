@@ -73,7 +73,7 @@ export function NotifyNextFightButton({
       }
       className={[
         "w-full text-center rounded-pill text-sm font-semibold px-4 py-3 border disabled:opacity-60",
-        alertOn ? "bg-signal text-onsignal border-signal" : "border-white/20 text-ink",
+        alertOn ? "bg-success text-onsignal border-success" : "border-white/20 text-ink",
       ].join(" ")}
     >
       {alertOn ? `✓ You'll be notified when ${fighterName} fights next` : `🔔 Notify me when ${fighterName} fights next`}

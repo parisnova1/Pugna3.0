@@ -145,7 +145,7 @@ export default async function EventCardPage({
           <div className="space-y-1.5 mb-4">
             {pill && (
               <div className="flex items-center gap-2">
-                <Badge live={pill.live} tone={pill.live ? "signal" : "neutral"}>
+                <Badge live={pill.live} tone={pill.live ? "live" : "neutral"}>
                   {pill.text}
                 </Badge>
                 {event._count.follows > 0 && (
@@ -170,7 +170,7 @@ export default async function EventCardPage({
               </svg>
             </Link>
             {event.status === "CANCELLED" && event.cancelReason && (
-              <p className="text-sm text-signal">Cancelled: {event.cancelReason}</p>
+              <p className="text-sm text-error">Cancelled: {event.cancelReason}</p>
             )}
           </div>
 
@@ -372,7 +372,7 @@ export default async function EventCardPage({
         <div className="space-y-1.5 mb-4">
           {pill && (
             <div className="flex items-center gap-2">
-              <Badge live={pill.live} tone={pill.live ? "signal" : "neutral"}>
+              <Badge live={pill.live} tone={pill.live ? "live" : "neutral"}>
                 {pill.text}
               </Badge>
               {event._count.follows > 0 && (
@@ -403,7 +403,7 @@ export default async function EventCardPage({
             </svg>
           </Link>
           {event.status === "CANCELLED" && event.cancelReason && (
-            <p className="text-sm text-signal">Cancelled: {event.cancelReason}</p>
+            <p className="text-sm text-error">Cancelled: {event.cancelReason}</p>
           )}
         </div>
 

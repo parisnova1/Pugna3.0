@@ -34,15 +34,15 @@ export function EventPreviewCard({
   const isLive = event.status === "LIVE" || event.status === "INTERMISSION";
 
   const pill = (
-    <Badge live={isLive} tone={isLive ? "signal" : "neutral"}>
+    <Badge live={isLive} tone={isLive ? "live" : "neutral"}>
       {STATUS_LABEL[event.status] ?? event.status}
     </Badge>
   );
 
   const checkInBadge =
     checkedInCount && checkedInCount > 0 ? (
-      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-signal">
-        <span className="w-1.5 h-1.5 rounded-full bg-signal" />
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-live">
+        <span className="w-1.5 h-1.5 rounded-full bg-live" />
         {checkedInCount} checked in
       </span>
     ) : null;
