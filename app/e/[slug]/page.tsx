@@ -16,6 +16,8 @@ import { DaySelector } from "@/components/event/overview/DaySelector";
 import { WeightClassChips } from "@/components/event/overview/WeightClassChips";
 import { RingSection } from "@/components/event/overview/RingSection";
 import { ScheduleList } from "@/components/event/overview/ScheduleList";
+import { ResultsList } from "@/components/event/overview/ResultsList";
+import { ScheduleResultsToggle } from "@/components/event/overview/ScheduleResultsToggle";
 import { EventTabs } from "@/components/event/EventTabs";
 import { LiveAudience } from "@/components/event/LiveAudience";
 import { Badge } from "@/components/ui/Badge";
@@ -308,7 +310,7 @@ export default async function EventCardPage({
   const stickyLabel = liveNow ? `LIVE · ${liveNow.weightClass} — ${liveNow.fighterA?.displayName ?? "TBD"} vs ${liveNow.fighterB?.displayName ?? "TBD"}` : null;
 
   const weightClasses = [...new Set(event.bouts.map((b) => b.weightClass))].sort((a, b) => weightKg(a) - weightKg(b));
-  const scheduleBouts = dayBouts.filter((b) => b.status !== "DRAFT" && (!weight || b.weightClass === weight));
+  const scheduleBouts = dayBouts.filter((b) => b.status !== "DRAFT" && b.status !== "FINAL" && (!weight || b.weightClass === weight));
   const bracketBouts = [...event.bouts]
     .filter((b) => b.status !== "DRAFT" && (!weight || b.weightClass === weight))
     .sort((a, b) => a.day - b.day || a.number - b.number);
@@ -335,17 +337,20 @@ export default async function EventCardPage({
   const showBracket = weight && isValidBracket(rounds);
 
   const finalBouts = dayBouts.filter((b) => b.status === "FINAL");
+  const resultBouts = finalBouts.filter((b) => !weight || b.weightClass === weight);
   const liveBoutId = liveNow?.id ?? null;
   const pill = eventStatusPillFor(
     event.status,
     isEventLive(ringProjections) ? "LIVE" : event.status === "INTERMISSION" ? "INTERMISSION" : null,
   );
 
+  // Results are now a toggle inside the Card tab (see #card below), not a
+  // separate anchor stop — one control for "what's happening" vs. "what's
+  // already happened," instead of two overlapping ones.
   const tabs = [
     { id: "overview", label: "Overview" },
     { id: "live", label: "Live" },
     { id: "card", label: "Card" },
-    ...(finalBouts.length > 0 ? [{ id: "results", label: "Results" }] : []),
     { id: "info", label: "Info" },
   ];
 
@@ -448,51 +453,35 @@ export default async function EventCardPage({
         {showBracket ? (
           <BracketDiagram slug={slug} rounds={rounds} />
         ) : (
-          <>
-            <p className="text-xs font-semibold text-mute uppercase tracking-wide pt-2">Today&apos;s schedule</p>
-            <ScheduleList
-              slug={slug}
-              bouts={scheduleBouts}
-              weightClasses={weight ? [weight] : weightClasses}
-              rings={event.rings}
-              nextBoutIds={nextBoutIds}
-              eventStreamUrl={event.streamUrl}
-            />
-          </>
+          <ScheduleResultsToggle
+            resultsCount={resultBouts.length}
+            schedule={
+              <>
+                <p className="text-xs font-semibold text-mute uppercase tracking-wide pt-2">Today&apos;s schedule</p>
+                <ScheduleList
+                  slug={slug}
+                  bouts={scheduleBouts}
+                  weightClasses={weight ? [weight] : weightClasses}
+                  rings={event.rings}
+                  nextBoutIds={nextBoutIds}
+                  eventStreamUrl={event.streamUrl}
+                />
+              </>
+            }
+            results={
+              <>
+                <p className="text-xs font-semibold text-mute uppercase tracking-wide pt-2">Results</p>
+                <ResultsList
+                  slug={slug}
+                  bouts={resultBouts}
+                  weightClasses={weight ? [weight] : weightClasses}
+                  rings={event.rings}
+                />
+              </>
+            }
+          />
         )}
       </div>
-
-      {finalBouts.length > 0 && (
-        <div id="results" className="mt-8 space-y-3 scroll-mt-24">
-          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Results</p>
-          <div className="space-y-2">
-            {finalBouts.map((bout) => {
-              const winnerName = bout.result?.winnerId
-                ? bout.result.winnerId === bout.fighterAId
-                  ? bout.fighterA?.displayName
-                  : bout.fighterB?.displayName
-                : null;
-              return (
-                <Link
-                  key={bout.id}
-                  href={`/e/${slug}/bout/${bout.id}`}
-                  className="block rounded-card bg-panel border border-signal/20 px-4 py-3 hover:border-signal/40 transition-colors"
-                >
-                  <p className="text-sm font-medium">
-                    {bout.fighterA?.displayName ?? "TBD"} <span className="text-mute font-normal">vs</span>{" "}
-                    {bout.fighterB?.displayName ?? "TBD"}
-                  </p>
-                  <p className="text-xs text-mute mt-0.5">
-                    Bout {bout.number} · {bout.weightClass}
-                    {winnerName ? ` · ${winnerName} won` : ""}
-                    {bout.result?.method ? ` · ${bout.result.method}` : ""}
-                  </p>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       <div id="info" className="mt-8 space-y-4 scroll-mt-24">
         <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
