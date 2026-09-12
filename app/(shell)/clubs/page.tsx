@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getActor } from "@/lib/actor";
 import { haversineDistanceKm } from "@/lib/geo";
 import { ClubCard, type ClubCardData } from "@/components/clubs/ClubCard";
 import { NearbyToggle } from "@/components/clubs/NearbyToggle";
@@ -33,6 +34,7 @@ export default async function ClubsPage({
   searchParams: Promise<{ q?: string; sport?: string; verified?: string; nearby?: string; lat?: string; lng?: string }>;
 }) {
   const { q, sport, verified, nearby, lat, lng } = await searchParams;
+  const actor = await getActor();
 
   const where: Prisma.ClubWhereInput = {
     ...(q
@@ -74,6 +76,17 @@ export default async function ClubsPage({
       : [];
   const coverFor = (clubId: string) => covers.find((m) => m.attachedId === clubId)?.url ?? null;
 
+  const followedClubIds = actor
+    ? new Set(
+        (
+          await prisma.clubFollow.findMany({
+            where: { userId: actor.userId, clubId: { in: clubIds } },
+            select: { clubId: true },
+          })
+        ).map((f) => f.clubId),
+      )
+    : new Set<string>();
+
   const toCardData = (club: (typeof allClubs)[number]): ClubCardData => ({
     id: club.id,
     name: club.name,
@@ -83,6 +96,7 @@ export default async function ClubsPage({
     coverUrl: coverFor(club.id),
     rosterCount: club._count.roster,
     coachCount: club._count.coaches,
+    following: followedClubIds.has(club.id),
   });
 
   let clubs = allClubs.map(toCardData);
@@ -165,7 +179,7 @@ export default async function ClubsPage({
           <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 sm:overflow-visible">
             {featuredCards.map((club) => (
               <div key={club.id} className="w-72 shrink-0 sm:w-auto">
-                <ClubCard club={club} />
+                <ClubCard club={club} isGuest={!actor} />
               </div>
             ))}
           </div>
@@ -182,7 +196,7 @@ export default async function ClubsPage({
         ) : (
           <div className="space-y-2 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0">
             {clubs.map((club) => (
-              <ClubCard key={club.id} club={club} />
+              <ClubCard key={club.id} club={club} isGuest={!actor} />
             ))}
           </div>
         )}

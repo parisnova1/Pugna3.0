@@ -77,6 +77,8 @@ enum MediaKind {
   BOUT_MEDIA
   SPARRING_MEDIA
   CLUB_COVER
+  FIGHTER_AVATAR
+  FIGHTER_MEDIA
 }
 
 enum MediaAttachedType {
@@ -84,6 +86,7 @@ enum MediaAttachedType {
   BOUT
   SPARRING_SESSION
   CLUB
+  FIGHTER
 }
 
 // blueprint §9 — event-driven only, no social notifications.

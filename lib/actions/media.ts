@@ -31,6 +31,15 @@ export async function canManageMedia(
     return gate.allowed ? { ok: true } : { ok: false, code: gate.code, reason: gate.reason };
   }
 
+  if (attachedType === "FIGHTER") {
+    const fighter = await prisma.fighterProfile.findUnique({ where: { id: attachedId }, select: { userId: true } });
+    if (!fighter) return { ok: false, code: "NOT_FOUND", reason: "Fighter not found." };
+    if (!actor || fighter.userId !== actor.userId) {
+      return { ok: false, code: "FORBIDDEN", reason: "Only this boxer can manage their profile media." };
+    }
+    return { ok: true };
+  }
+
   const session = await prisma.sparringSession.findUnique({ where: { id: attachedId }, select: { clubId: true } });
   if (!session) return { ok: false, code: "NOT_FOUND", reason: "Sparring session not found." };
   const gate = can(actor, "club.admin", { clubId: session.clubId });

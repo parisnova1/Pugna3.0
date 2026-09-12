@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { formatEventDate } from "@/lib/format";
-import type { Prisma, EventStatus } from "@prisma/client";
+import type { Prisma, EventStatus, MediaAttachedType, MediaKind } from "@prisma/client";
 
 const CANDIDATE_LIMIT = 20;
 
@@ -13,7 +13,20 @@ export type SearchResult = {
   subtitle: string;
   href: string;
   badge?: { text: string; tone: "live" | "success" };
+  thumbnailUrl?: string;
 };
+
+/** Batched Media lookup for a candidate set — one query per entity search, never one per row. */
+async function thumbnailsFor(attachedType: MediaAttachedType, kind: MediaKind, ids: string[]) {
+  if (ids.length === 0) return new Map<string, string>();
+  const rows = await prisma.media.findMany({
+    where: { attachedType, kind, attachedId: { in: ids } },
+    orderBy: { createdAt: "desc" },
+  });
+  const map = new Map<string, string>();
+  for (const row of rows) if (!map.has(row.attachedId)) map.set(row.attachedId, row.url);
+  return map;
+}
 
 /** Simple structured relevance rank (0 = exact match, 1 = prefix, 2 = contains) across a set of
  * candidate fields — not a search engine, just enough to satisfy "exact > prefix > substring"
@@ -54,14 +67,17 @@ export async function searchEvents(q: string, limit = 8): Promise<SearchResult[]
   const ranked = trimmed
     ? [...events].sort((a, b) => rank(trimmed, a.name, a.venue, a.city, a.sport) - rank(trimmed, b.name, b.venue, b.city, b.sport))
     : events;
+  const sliced = ranked.slice(0, limit);
+  const covers = await thumbnailsFor("EVENT", "EVENT_COVER", sliced.map((e) => e.id));
 
-  return ranked.slice(0, limit).map((e) => ({
+  return sliced.map((e) => ({
     kind: "event",
     id: e.id,
     title: e.name,
     subtitle: [e.venue ?? e.city, formatEventDate(e.date)].filter(Boolean).join(" · "),
     href: `/e/${e.slug}`,
     badge: e.status === "LIVE" || e.status === "INTERMISSION" ? { text: "LIVE", tone: "live" } : undefined,
+    thumbnailUrl: covers.get(e.id),
   }));
 }
 
@@ -85,13 +101,16 @@ export async function searchFighters(q: string, limit = 8): Promise<SearchResult
   const ranked = trimmed
     ? [...fighters].sort((a, b) => rank(trimmed, a.displayName, a.weightClass) - rank(trimmed, b.displayName, b.weightClass))
     : fighters;
+  const sliced = ranked.slice(0, limit);
+  const avatars = await thumbnailsFor("FIGHTER", "FIGHTER_AVATAR", sliced.map((f) => f.id));
 
-  return ranked.slice(0, limit).map((f) => ({
+  return sliced.map((f) => ({
     kind: "fighter",
     id: f.id,
     title: f.displayName,
     subtitle: [f.club?.name ?? "Independent", f.weightClass].filter(Boolean).join(" · "),
     href: `/fighters/${f.id}`,
+    thumbnailUrl: avatars.get(f.id),
   }));
 }
 
@@ -116,14 +135,17 @@ export async function searchClubs(q: string, limit = 8): Promise<SearchResult[]>
   const ranked = trimmed
     ? [...clubs].sort((a, b) => rank(trimmed, a.name, a.city, a.sport) - rank(trimmed, b.name, b.city, b.sport))
     : clubs;
+  const sliced = ranked.slice(0, limit);
+  const covers = await thumbnailsFor("CLUB", "CLUB_COVER", sliced.map((c) => c.id));
 
-  return ranked.slice(0, limit).map((c) => ({
+  return sliced.map((c) => ({
     kind: "club",
     id: c.id,
     title: c.name,
     subtitle: [c.city, `${c._count.roster} fighter${c._count.roster === 1 ? "" : "s"}`].filter(Boolean).join(" · "),
     href: `/clubs/${c.id}`,
     badge: undefined,
+    thumbnailUrl: covers.get(c.id),
   }));
 }
 

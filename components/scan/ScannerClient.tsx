@@ -132,6 +132,9 @@ export function ScannerClient({
             <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
               Open
             </button>
+            <Link href="/events" className="block text-sm font-medium text-mute underline">
+              Find an event
+            </Link>
           </form>
         ) : (
           <Link href="/sparring" className="block w-full rounded-pill bg-signal text-onsignal font-semibold py-3">

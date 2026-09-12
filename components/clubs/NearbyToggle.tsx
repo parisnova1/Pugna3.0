@@ -6,8 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 /** One-tap "Nearby" filter chip — a single browser geolocation permission
  * prompt (never stored, never a persistent/trust-bearing use of location),
  * then the server sorts by haversine distance same as Sparring's existing
- * radius search. Clubs with no coordinates just don't show up. */
-export function NearbyToggle({ active }: { active: boolean }) {
+ * radius search. Rows with no coordinates just don't show up. Reused as-is
+ * on both `/clubs` (default) and `/events` via `basePath`. */
+export function NearbyToggle({ active, basePath = "/clubs" }: { active: boolean; basePath?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [pending, setPending] = useState(false);
@@ -16,7 +17,7 @@ export function NearbyToggle({ active }: { active: boolean }) {
   function pushParams(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString());
     mutate(params);
-    router.push(`/clubs?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   function handleClick() {

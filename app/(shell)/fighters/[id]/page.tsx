@@ -5,7 +5,10 @@ import { getActor } from "@/lib/actor";
 import { formatEventDate } from "@/lib/format";
 import { WeightTag } from "@/components/ui/WeightTag";
 import { FighterFollowButton } from "@/components/fighters/FighterFollowButton";
+import { FighterAvatar } from "@/components/fighters/FighterAvatar";
 import { NextFightPanel } from "@/components/live/NextFightPanel";
+import { MediaUploader } from "@/components/host/MediaUploader";
+import { deleteMedia } from "@/lib/actions/media";
 
 const UPCOMING_STATUSES = ["TBD", "CONFIRMED", "READY", "DELAYED", "IN_PROGRESS"];
 
@@ -86,25 +89,43 @@ export default async function FighterProfilePage({
         )
       : false;
 
+  const isOwnProfile = actor?.userId === fighter.userId;
+  const fighterMedia = await prisma.media.findMany({
+    where: { attachedType: "FIGHTER", attachedId: fighter.id },
+    orderBy: { createdAt: "desc" },
+  });
+  const avatarUrl = fighterMedia.find((m) => m.kind === "FIGHTER_AVATAR")?.url ?? null;
+  const photos = fighterMedia.filter((m) => m.kind === "FIGHTER_MEDIA");
+
   return (
     <div className="space-y-6 pt-2">
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">{fighter.displayName}</h1>
-            <p className="text-mute text-sm mt-1">
-              {fighter.club ? (
-                <Link href={`/clubs/${fighter.club.id}`} className="underline">
-                  {fighter.club.name}
-                </Link>
-              ) : (
-                "Independent"
-              )}
-              {fighter.weightClass ? ` · ${fighter.weightClass}` : ""}
-            </p>
+          <div className="flex items-start gap-3 min-w-0">
+            <FighterAvatar name={fighter.displayName} avatarUrl={avatarUrl} />
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold">{fighter.displayName}</h1>
+              <p className="text-mute text-sm mt-1">
+                {fighter.club ? (
+                  <Link href={`/clubs/${fighter.club.id}`} className="underline">
+                    {fighter.club.name}
+                  </Link>
+                ) : (
+                  "Independent"
+                )}
+                {fighter.weightClass ? ` · ${fighter.weightClass}` : ""}
+              </p>
+            </div>
           </div>
           <FighterFollowButton fighterId={fighter.id} isGuest={!actor} following={following} />
         </div>
+
+        {isOwnProfile && (
+          <div className="flex gap-2">
+            <MediaUploader kind="FIGHTER_AVATAR" attachedType="FIGHTER" attachedId={fighter.id} label="Set avatar" />
+            <MediaUploader kind="FIGHTER_MEDIA" attachedType="FIGHTER" attachedId={fighter.id} label="Add photo" />
+          </div>
+        )}
 
         <p className="text-3xl font-bold tabular">
           {wins}–{losses}–{draws}
@@ -166,6 +187,39 @@ export default async function FighterProfilePage({
             ringName: nextFight.ringName,
           }}
         />
+      )}
+
+      {(photos.length > 0 || isOwnProfile) && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Photos</p>
+          {photos.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {photos.map((m) => (
+                <div key={m.id} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={m.url} alt="" className="w-full aspect-square object-cover rounded-card" />
+                  {isOwnProfile && (
+                    <form
+                      action={async () => {
+                        "use server";
+                        await deleteMedia(m.id);
+                      }}
+                      className="absolute top-1 right-1"
+                    >
+                      <button
+                        type="submit"
+                        aria-label="Delete"
+                        className="flex items-center justify-center w-5 h-5 text-xs rounded-full bg-black/70 text-ink"
+                      >
+                        ×
+                      </button>
+                    </form>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       <section className="space-y-2">
