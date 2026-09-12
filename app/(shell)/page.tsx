@@ -4,6 +4,7 @@ import { getActor } from "@/lib/actor";
 import { formatCountdown } from "@/lib/format";
 import { SeeAllLink } from "@/components/event/SeeAllLink";
 import { HomeTabs } from "@/components/home/HomeTabs";
+import { Badge } from "@/components/ui/Badge";
 
 export default async function HomePage() {
   const actor = await getActor();
@@ -22,7 +23,7 @@ export default async function HomePage() {
     prisma.club.findMany({
       orderBy: { createdAt: "desc" },
       take: 4,
-      include: { _count: { select: { roster: true } } },
+      select: { id: true, name: true, city: true, isVerified: true, _count: { select: { roster: true } } },
     }),
     actor
       ? prisma.event.findMany({
@@ -94,7 +95,7 @@ export default async function HomePage() {
           <h1 className="text-2xl font-bold leading-none tracking-tight">
             PUGNA<span className="text-signal">.</span>
           </h1>
-          <p className="text-mute text-xs mt-1">Train. Match. Compete. Track.</p>
+          <p className="text-mute text-xs mt-1">Find your next fight — events, sparring &amp; clubs, all in one place.</p>
         </div>
         <Link href="/account" aria-label="Account" className="rounded-full border border-white/15 p-2.5 shrink-0">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -104,7 +105,28 @@ export default async function HomePage() {
         </Link>
       </section>
 
+      <Link
+        href="/search"
+        className="flex items-center gap-2 rounded-pill bg-panel border border-white/10 px-4 py-3 text-sm text-mute"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+        Search events, boxers, clubs...
+      </Link>
+
       <HomeTabs live={liveWithCover} upcoming={upcomingWithCover} following={followingWithCover} openSparring={openSparring} />
+
+      <section className="rounded-card bg-panel border border-white/10 p-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">Going to an event?</p>
+          <p className="text-xs text-mute mt-0.5">Scan your PUGNA QR code to check in and follow the action.</p>
+        </div>
+        <Link href="/scan" className="shrink-0 rounded-pill bg-signal text-onsignal text-sm font-semibold px-4 py-2">
+          Scan
+        </Link>
+      </section>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
@@ -125,6 +147,11 @@ export default async function HomePage() {
                 <p className="text-xs text-mute mt-1">
                   {club.city ?? "—"} · {club._count.roster} fighters
                 </p>
+                {club.isVerified && (
+                  <div className="mt-2">
+                    <Badge tone="success">✓ Verified</Badge>
+                  </div>
+                )}
               </Link>
             ))}
           </div>
@@ -144,7 +171,7 @@ export default async function HomePage() {
                     ? yourPugna.nextBout.fighterB?.displayName ?? "TBA"
                     : yourPugna.nextBout.fighterA?.displayName ?? "TBA"}
                 </p>
-                <p className="text-xs text-signal mt-0.5">
+                <p className={`text-xs mt-0.5 ${yourPugna.nextBout.status === "IN_PROGRESS" ? "text-live" : "text-signal"}`}>
                   {yourPugna.nextBout.status === "IN_PROGRESS"
                     ? "Live"
                     : yourPugna.nextBout.event.startTime

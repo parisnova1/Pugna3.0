@@ -5,16 +5,26 @@ import { getActor } from "@/lib/actor";
 import { formatEventDate } from "@/lib/format";
 import { WeightTag } from "@/components/ui/WeightTag";
 import { FighterFollowButton } from "@/components/fighters/FighterFollowButton";
+import { NextFightPanel } from "@/components/live/NextFightPanel";
 
-export default async function FighterProfilePage({ params }: { params: Promise<{ id: string }> }) {
+const UPCOMING_STATUSES = ["TBD", "CONFIRMED", "READY", "DELAYED", "IN_PROGRESS"];
+
+export default async function FighterProfilePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ autoAlert?: string }>;
+}) {
   const { id } = await params;
+  const { autoAlert } = await searchParams;
 
   const fighter = await prisma.fighterProfile.findUnique({
     where: { id },
     include: {
       club: true,
-      boutsAsFighterA: { include: { event: true, fighterB: true, result: true } },
-      boutsAsFighterB: { include: { event: true, fighterA: true, result: true } },
+      boutsAsFighterA: { include: { event: true, fighterB: true, result: true, ring: true } },
+      boutsAsFighterB: { include: { event: true, fighterA: true, result: true, ring: true } },
     },
   });
 
@@ -34,6 +44,9 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
       status: b.status,
       result: b.result,
       winnerId: b.result?.winnerId ?? null,
+      number: b.number,
+      weightClass: b.weightClass,
+      ringName: b.ring.name ?? `Ring ${b.ring.number}`,
     })),
     ...fighter.boutsAsFighterB.map((b) => ({
       id: b.id,
@@ -43,6 +56,9 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
       status: b.status,
       result: b.result,
       winnerId: b.result?.winnerId ?? null,
+      number: b.number,
+      weightClass: b.weightClass,
+      ringName: b.ring.name ?? `Ring ${b.ring.number}`,
     })),
   ]
     .filter((b) => b.event.status !== "DRAFT" && b.event.status !== "READY")
@@ -53,6 +69,22 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
   const losses = finished.filter((b) => b.winnerId && b.winnerId !== fighter.id).length;
   const draws = finished.filter((b) => !b.winnerId).length;
   const opponentsFaced = new Set(finished.map((b) => b.opponentId).filter(Boolean)).size;
+
+  // Soonest upcoming/in-progress bout, regardless of event — distinct from the
+  // Bout Detail winner panel's "next bout after this one in the same event."
+  const nextFight = [...bouts.filter((b) => UPCOMING_STATUSES.includes(b.status))].sort(
+    (a, b) => a.event.date.getTime() - b.event.date.getTime(),
+  )[0] ?? null;
+  const lastResult = finished[0] ?? null;
+
+  const alertOn =
+    actor && nextFight
+      ? Boolean(
+          await prisma.fighterNextBoutAlert.findUnique({
+            where: { userId_fighterId_eventId: { userId: actor.userId, fighterId: fighter.id, eventId: nextFight.event.id } },
+          }),
+        )
+      : false;
 
   return (
     <div className="space-y-6 pt-2">
@@ -99,7 +131,42 @@ export default async function FighterProfilePage({ params }: { params: Promise<{
             <p className="text-[11px] text-mute mt-0.5">Sparring</p>
           </div>
         </div>
+
+        {lastResult && (
+          <div className="rounded-card bg-panel border border-white/10 p-3">
+            <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-1">Last result</p>
+            <p className="text-sm font-medium">
+              <span className={lastResult.winnerId === fighter.id ? "text-success font-semibold" : ""}>
+                {lastResult.winnerId === fighter.id ? "🏆 Win" : lastResult.winnerId ? "Loss" : "Draw"}
+              </span>
+              <span className="text-mute">
+                {" "}
+                · {lastResult.result?.method}
+                {lastResult.result?.round ? ` · Round ${lastResult.result.round}` : ""}
+              </span>
+            </p>
+          </div>
+        )}
       </div>
+
+      {nextFight && nextFight.event.slug && (
+        <NextFightPanel
+          fighterId={fighter.id}
+          fighterName={fighter.displayName}
+          eventId={nextFight.event.id}
+          slug={nextFight.event.slug}
+          isGuest={!actor}
+          alertOn={alertOn}
+          autoAlertFighterId={autoAlert}
+          nextBout={{
+            id: nextFight.id,
+            opponentName: nextFight.opponent,
+            weightClass: nextFight.weightClass,
+            number: nextFight.number,
+            ringName: nextFight.ringName,
+          }}
+        />
+      )}
 
       <section className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Bouts</p>
