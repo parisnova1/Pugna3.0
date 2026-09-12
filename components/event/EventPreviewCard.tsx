@@ -41,8 +41,8 @@ export function EventPreviewCard({
 
   const checkInBadge =
     checkedInCount && checkedInCount > 0 ? (
-      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-live">
-        <span className="w-1.5 h-1.5 rounded-full bg-live" />
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-live shrink-0 whitespace-nowrap">
+        <span className="w-1.5 h-1.5 rounded-full bg-live shrink-0" />
         {checkedInCount} checked in
       </span>
     ) : null;
@@ -69,14 +69,14 @@ export function EventPreviewCard({
           }}
         />
       )}
-      <div className="relative max-w-[58%] flex items-center justify-between">
+      <div className={`relative flex items-center justify-between ${coverUrl ? "max-w-[58%]" : ""}`}>
         {pill}
         <span className="text-xs text-mute tabular">{formatEventDateTime(event.date, event.startTime)}</span>
       </div>
-      <h3 className="relative max-w-[58%] mt-2 font-semibold text-ink truncate">{event.name}</h3>
-      <div className="relative max-w-[58%] flex items-center justify-between mt-0.5">
+      <h3 className={`relative mt-2 font-semibold text-ink truncate ${coverUrl ? "max-w-[58%]" : ""}`}>{event.name}</h3>
+      <div className={`relative flex items-center justify-between mt-0.5 gap-2 ${coverUrl ? "max-w-[58%]" : ""}`}>
         {(event.venue || event.city) && (
-          <p className="text-sm text-mute truncate">{[event.venue, event.city].filter(Boolean).join(" · ")}</p>
+          <p className="text-sm text-mute truncate min-w-0">{[event.venue, event.city].filter(Boolean).join(" · ")}</p>
         )}
         {checkInBadge}
       </div>
