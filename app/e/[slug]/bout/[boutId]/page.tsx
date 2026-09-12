@@ -10,6 +10,9 @@ import { BackButton } from "@/components/event/ContextBar";
 import { NotifyButton } from "@/components/event/NotifyButton";
 import { SaveBoutButton } from "@/components/live/SaveBoutButton";
 import { BoutLiveClient } from "@/components/live/BoutLiveClient";
+import { BoutSequenceNav } from "@/components/live/BoutSequenceNav";
+import { NextFightPanel } from "@/components/live/NextFightPanel";
+import { FighterFollowButton } from "@/components/fighters/FighterFollowButton";
 import type { BoutStatus } from "@prisma/client";
 
 // A fight is "upcoming" — worth notifying about — before it's live and before it's over.
@@ -17,10 +20,13 @@ const UPCOMING_STATUSES: BoutStatus[] = ["TBD", "CONFIRMED", "READY"];
 
 export default async function BoutDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; boutId: string }>;
+  searchParams: Promise<{ autoAlert?: string }>;
 }) {
   const { slug, boutId } = await params;
+  const { autoAlert } = await searchParams;
 
   const bout = await prisma.bout.findUnique({
     where: { id: boutId },
@@ -72,6 +78,75 @@ export default async function BoutDetailPage({
   const following = Boolean(followRow);
   const saved = Boolean(savedRow);
 
+  const [previousBout, nextBoutInOrder] = await Promise.all([
+    prisma.bout.findFirst({
+      where: {
+        eventId: bout.eventId,
+        status: { not: "DRAFT" },
+        AND: [{ OR: [{ day: { lt: bout.day } }, { day: bout.day, number: { lt: bout.number } }] }],
+      },
+      orderBy: [{ day: "desc" }, { number: "desc" }],
+      select: { id: true },
+    }),
+    prisma.bout.findFirst({
+      where: {
+        eventId: bout.eventId,
+        status: { not: "DRAFT" },
+        AND: [{ OR: [{ day: { gt: bout.day } }, { day: bout.day, number: { gt: bout.number } }] }],
+      },
+      orderBy: [{ day: "asc" }, { number: "asc" }],
+      select: { id: true },
+    }),
+  ]);
+
+  // The bout's winner, made actionable — distinct from event-order nav above:
+  // this tracks the fighter into whichever bout they appear in next, on any
+  // day/ring, not just the next slot in the card.
+  const winnerId = bout.result?.winnerId ?? null;
+  const winner = winnerId ? (winnerId === bout.fighterAId ? bout.fighterA : bout.fighterB) : null;
+
+  let winnerFollowing = false;
+  let winnerAlertOn = false;
+  let winnerNextBout: { id: string; opponentName: string; weightClass: string; number: number; ringName: string } | null = null;
+
+  if (winner) {
+    const [followRow, alertRow, nextForWinner] = await Promise.all([
+      actor
+        ? prisma.fighterFollow.findUnique({ where: { userId_fighterId: { userId: actor.userId, fighterId: winner.id } } })
+        : Promise.resolve(null),
+      actor
+        ? prisma.fighterNextBoutAlert.findUnique({
+            where: { userId_fighterId_eventId: { userId: actor.userId, fighterId: winner.id, eventId: bout.eventId } },
+          })
+        : Promise.resolve(null),
+      prisma.bout.findFirst({
+        where: {
+          eventId: bout.eventId,
+          status: { notIn: ["SCRATCHED", "NO_SHOW", "DRAFT"] },
+          AND: [
+            { OR: [{ fighterAId: winner.id }, { fighterBId: winner.id }] },
+            { OR: [{ day: { gt: bout.day } }, { day: bout.day, number: { gt: bout.number } }] },
+          ],
+        },
+        orderBy: [{ day: "asc" }, { number: "asc" }],
+        include: { fighterA: true, fighterB: true, ring: true },
+      }),
+    ]);
+
+    winnerFollowing = Boolean(followRow);
+    winnerAlertOn = Boolean(alertRow);
+    if (nextForWinner) {
+      const opponent = nextForWinner.fighterAId === winner.id ? nextForWinner.fighterB : nextForWinner.fighterA;
+      winnerNextBout = {
+        id: nextForWinner.id,
+        opponentName: opponent?.displayName ?? "TBD",
+        weightClass: nextForWinner.weightClass,
+        number: nextForWinner.number,
+        ringName: nextForWinner.ring.name ?? `Ring ${nextForWinner.ring.number}`,
+      };
+    }
+  }
+
   const writeGate = can(actor, "crowd.write", {
     checkedIn: Boolean(checkIn),
     boutInProgress: bout.status === "IN_PROGRESS",
@@ -95,6 +170,8 @@ export default async function BoutDetailPage({
           )}
         </div>
       </div>
+
+      <BoutSequenceNav slug={slug} previousBoutId={previousBout?.id ?? null} nextBoutId={nextBoutInOrder?.id ?? null} />
 
       <BoutLiveClient
         boutId={bout.id}
@@ -130,6 +207,25 @@ export default async function BoutDetailPage({
           updatedAt: new Date().toISOString(),
         }}
       />
+
+      {winner && (
+        <div className="rounded-card bg-panel border border-signal/20 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">🏆 {winner.displayName} won</p>
+            <FighterFollowButton fighterId={winner.id} isGuest={!actor} following={winnerFollowing} />
+          </div>
+          <NextFightPanel
+            fighterId={winner.id}
+            fighterName={winner.displayName}
+            eventId={bout.eventId}
+            slug={slug}
+            isGuest={!actor}
+            alertOn={winnerAlertOn}
+            autoAlertFighterId={autoAlert}
+            nextBout={winnerNextBout}
+          />
+        </div>
+      )}
 
       {(media.length > 0 || canEdit) && (
         <div className="space-y-3">

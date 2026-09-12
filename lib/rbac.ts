@@ -51,6 +51,7 @@ export type Action =
   | "club.follow"
   | "club.join"
   | "fighter.follow"
+  | "fighter.notifyNextBout"
   | "bout.save"
   | "nomination.respond"
   | "sparring.view"
@@ -148,6 +149,11 @@ export function can(actor: Actor, action: Action, resource: Resource = {}): CanR
 
     case "fighter.follow": {
       if (!actor) return deny("AUTH_REQUIRED", "Sign in to follow this fighter.");
+      return allow();
+    }
+
+    case "fighter.notifyNextBout": {
+      if (!actor) return deny("AUTH_REQUIRED", "Sign in to get notified.");
       return allow();
     }
 

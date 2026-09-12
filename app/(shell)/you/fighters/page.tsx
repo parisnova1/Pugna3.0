@@ -8,11 +8,15 @@ export default async function FollowedFightersPage() {
   const actor = await getActor();
   if (!actor) redirect("/account?returnTo=/you/fighters");
 
-  const follows = await prisma.fighterFollow.findMany({
-    where: { userId: actor.userId },
-    include: { fighter: { include: { club: true } } },
-    orderBy: { id: "desc" },
-  });
+  const [follows, alertedFighterIds] = await Promise.all([
+    prisma.fighterFollow.findMany({
+      where: { userId: actor.userId },
+      include: { fighter: { include: { club: true } } },
+      orderBy: { id: "desc" },
+    }),
+    prisma.fighterNextBoutAlert.findMany({ where: { userId: actor.userId }, select: { fighterId: true } }),
+  ]);
+  const alertSet = new Set(alertedFighterIds.map((a) => a.fighterId));
 
   return (
     <div className="space-y-4 pt-2">
@@ -35,6 +39,7 @@ export default async function FollowedFightersPage() {
               <div>
                 <p className="text-sm font-medium">{fighter.displayName}</p>
                 <p className="text-xs text-mute mt-0.5">{fighter.club?.name ?? "Independent"}</p>
+                {alertSet.has(fighter.id) && <p className="text-xs text-signal mt-0.5">✓ Next fight alert enabled</p>}
               </div>
               <span className="text-mute">›</span>
             </Link>

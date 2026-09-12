@@ -112,6 +112,7 @@ enum NotificationType {
   SPARRING_NOMINATED
   SPARRING_NOMINATION_RESPONDED
   STREAM_LINK_ADDED
+  FIGHTER_NEXT_BOUT_LIVE
 }
 
 enum CheckInAttachedType {
@@ -210,6 +211,7 @@ model User {
   follows       Follow[]
   clubFollows   ClubFollow[]
   fighterFollows FighterFollow[]
+  fighterNextBoutAlerts FighterNextBoutAlert[]
   savedBouts    SavedBout[]
   notifications Notification[]
   uploadedMedia Media[]
@@ -274,6 +276,25 @@ model FighterFollow {
   @@unique([userId, fighterId])
 }
 
+// "Notify me when this fighter fights next" — deliberately separate from
+// FighterFollow: following a fighter and wanting a live-fight alert are
+// independent actions. Scoped to one event — "next bout" means "next bout
+// in this tournament," a standing subscription that fires every time any of
+// the fighter's bouts in this event goes live (see startBout).
+model FighterNextBoutAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  fighterId String
+  eventId   String
+  createdAt DateTime @default(now())
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fighter FighterProfile @relation(fields: [fighterId], references: [id], onDelete: Cascade)
+  event   Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fighterId, eventId])
+}
+
 // A lighter-weight, per-bout "I care about this one" than following a whole
 // event — the "Saved Fights" list on the account dashboard.
 model SavedBout {
@@ -329,6 +350,7 @@ model FighterProfile {
   sparringNominations    SparringNomination[]
   checkIns               CheckIn[]
   followers              FighterFollow[]
+  nextBoutAlerts         FighterNextBoutAlert[]
 }
 
 /**
@@ -376,6 +398,7 @@ model Event {
   follows     Follow[]
   checkIns    EventCheckIn[]
   crowdMutes  CrowdMute[]
+  fighterNextBoutAlerts FighterNextBoutAlert[]
 }
 
 /**

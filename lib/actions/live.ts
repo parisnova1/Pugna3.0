@@ -85,6 +85,28 @@ export async function startBout(boutId: string, eventId: string): Promise<Action
     `/e/${event.slug ?? ""}/bout/${boutId}`,
   );
 
+  // Separately, anyone who asked to be notified next time THIS fighter fights
+  // (not the same as following the event) — a standing subscription, so it
+  // fires for every one of the fighter's bouts in this event, not just one.
+  const boutFighterIds = [bout.fighterAId, bout.fighterBId].filter((id): id is string => Boolean(id));
+  if (boutFighterIds.length > 0) {
+    const alerts = await prisma.fighterNextBoutAlert.findMany({
+      where: { eventId, fighterId: { in: boutFighterIds } },
+      include: { fighter: true },
+    });
+    for (const fighterId of boutFighterIds) {
+      const subscriberIds = alerts.filter((a) => a.fighterId === fighterId).map((a) => a.userId);
+      if (subscriberIds.length === 0) continue;
+      const fighterName = alerts.find((a) => a.fighterId === fighterId)?.fighter.displayName ?? "The fighter you follow";
+      await notifyMany(
+        subscriberIds,
+        "FIGHTER_NEXT_BOUT_LIVE",
+        `${fighterName} is fighting now.`,
+        `/e/${event.slug ?? ""}/bout/${boutId}`,
+      );
+    }
+  }
+
   revalidateLive(eventId);
   return { ok: true };
 }
