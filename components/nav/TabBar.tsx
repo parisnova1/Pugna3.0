@@ -15,7 +15,7 @@ type Tab = { label: string; href: string; icon: ComponentType<{ className?: stri
  * capability check happens once, in the (shell) layout, and is passed in as
  * plain props — TabBar itself still does zero data-fetching of its own.
  */
-const HOME: Tab = { label: "Home", href: "/", icon: CompassIcon };
+const HOME: Tab = { label: "Explore", href: "/", icon: CompassIcon };
 const EVENTS: Tab = { label: "Events", href: "/events", icon: CalendarIcon };
 const SCAN: Tab = { label: "Scan", href: "/scan", icon: ScanIcon };
 const CLUBS: Tab = { label: "Clubs", href: "/clubs", icon: BuildingIcon };
