@@ -23,7 +23,7 @@ export function ScheduleResultsToggle({
 
   return (
     <div>
-      <div className="sticky top-0 z-30 -mx-4 px-4 py-2 glass">
+      <div className="sticky z-20 -mx-4 px-4 py-2 glass" style={{ top: "var(--event-nav-height)" }}>
         <div className="flex rounded-pill border border-white/15 p-1 gap-1">
           <button
             type="button"

@@ -15,12 +15,15 @@ import { BracketDiagram, isValidBracket, roundLabelForSize, type BracketRound } 
 import { DaySelector } from "@/components/event/overview/DaySelector";
 import { WeightClassChips } from "@/components/event/overview/WeightClassChips";
 import { RingSection } from "@/components/event/overview/RingSection";
+import { LiveRingFilter } from "@/components/event/overview/LiveRingFilter";
 import { ScheduleList } from "@/components/event/overview/ScheduleList";
 import { ResultsList } from "@/components/event/overview/ResultsList";
 import { ScheduleResultsToggle } from "@/components/event/overview/ScheduleResultsToggle";
-import { EventTabs } from "@/components/event/EventTabs";
+import { EventStickyNav } from "@/components/event/EventStickyNav";
+import type { EventTab } from "@/components/event/EventTabs";
 import { LiveAudience } from "@/components/event/LiveAudience";
 import { Badge } from "@/components/ui/Badge";
+import { LiveDot } from "@/components/ui/LiveDot";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -118,10 +121,21 @@ export default async function EventCardPage({
     const finalBouts = event.bouts.filter((b) => b.status === "FINAL");
     const liveBoutId = projection.nowLabel === "LIVE" ? (projection.now?.id ?? null) : null;
     const pill = eventStatusPillFor(event.status, projection.nowLabel);
+    const isLive = projection.nowLabel === "LIVE";
 
-    const tabs = [
+    const tabs: EventTab[] = [
       { id: "overview", label: "Overview" },
-      { id: "live", label: "Live" },
+      {
+        id: "live",
+        label: isLive ? (
+          <span className="inline-flex items-center gap-1.5">
+            <LiveDot /> Live
+          </span>
+        ) : (
+          "Live"
+        ),
+        emphasize: isLive,
+      },
       { id: "card", label: "Card" },
       ...(finalBouts.length > 0 ? [{ id: "results", label: "Results" }] : []),
       { id: "info", label: "Info" },
@@ -130,13 +144,6 @@ export default async function EventCardPage({
     return (
       <div className="mx-auto w-full max-w-md lg:max-w-5xl px-4 pt-4 pb-10">
         <div id="overview" className="scroll-mt-24">
-          <div className="flex items-center justify-between mb-4">
-            <BackButton fallbackHref="/events" />
-            <Link href="/" aria-label="Go to PUGNA home" className="font-bold tracking-tight text-sm shrink-0">
-              PUGNA<span className="text-signal">.</span>
-            </Link>
-          </div>
-
           {coverUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card mb-4" />
@@ -173,9 +180,12 @@ export default async function EventCardPage({
               <p className="text-sm text-error">Cancelled: {event.cancelReason}</p>
             )}
           </div>
-
-          <EventTabs tabs={tabs} />
         </div>
+
+        {/* Sibling of #overview, not a child of it — its sticky containing block needs to span the
+            whole page (this outer div), not just the hero, or it would stop sticking as soon as
+            #overview's own (short) box scrolled past. */}
+        <EventStickyNav eventName={event.name} isLive={isLive} fallbackHref="/events" tabs={tabs} />
 
         <div className="mt-6 lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start">
           <div id="live" className="lg:col-span-2 space-y-6 scroll-mt-24">
@@ -339,17 +349,25 @@ export default async function EventCardPage({
   const finalBouts = dayBouts.filter((b) => b.status === "FINAL");
   const resultBouts = finalBouts.filter((b) => !weight || b.weightClass === weight);
   const liveBoutId = liveNow?.id ?? null;
-  const pill = eventStatusPillFor(
-    event.status,
-    isEventLive(ringProjections) ? "LIVE" : event.status === "INTERMISSION" ? "INTERMISSION" : null,
-  );
+  const isLive = isEventLive(ringProjections);
+  const pill = eventStatusPillFor(event.status, isLive ? "LIVE" : event.status === "INTERMISSION" ? "INTERMISSION" : null);
 
   // Results are now a toggle inside the Card tab (see #card below), not a
   // separate anchor stop — one control for "what's happening" vs. "what's
   // already happened," instead of two overlapping ones.
-  const tabs = [
+  const tabs: EventTab[] = [
     { id: "overview", label: "Overview" },
-    { id: "live", label: "Live" },
+    {
+      id: "live",
+      label: isLive ? (
+        <span className="inline-flex items-center gap-1.5">
+          <LiveDot /> Live
+        </span>
+      ) : (
+        "Live"
+      ),
+      emphasize: isLive,
+    },
     { id: "card", label: "Card" },
     { id: "info", label: "Info" },
   ];
@@ -357,13 +375,6 @@ export default async function EventCardPage({
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10">
       <div id="overview" className="scroll-mt-24">
-        <div className="flex items-center justify-between mb-4">
-          <BackButton fallbackHref="/events" />
-          <Link href="/" aria-label="Go to PUGNA home" className="font-bold tracking-tight text-sm shrink-0">
-            PUGNA<span className="text-signal">.</span>
-          </Link>
-        </div>
-
         {coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card mb-4" />
@@ -406,9 +417,12 @@ export default async function EventCardPage({
             <p className="text-sm text-error">Cancelled: {event.cancelReason}</p>
           )}
         </div>
+      </div>
 
-        <EventTabs tabs={tabs} />
+      {/* Sibling of #overview, not a child of it — see isSimple branch above for why. */}
+      <EventStickyNav eventName={event.name} isLive={isLive} fallbackHref="/events" tabs={tabs} />
 
+      <div className="mt-4">
         <DaySelector
           slug={slug}
           dayCount={event.dayCount}
@@ -420,18 +434,37 @@ export default async function EventCardPage({
       </div>
 
       <div id="live" className="mt-6 space-y-4 scroll-mt-24">
-        <div className="space-y-4">
-          {event.rings.map((ring) => (
-            <RingSection
-              key={ring.id}
-              slug={slug}
-              ring={ring}
-              projection={ringProjections.get(ring.id) ?? { now: null, next: null, nowLabel: null }}
-              stickyLabel={ring.id === liveRing?.id ? stickyLabel : null}
-              eventStreamUrl={event.streamUrl}
-            />
-          ))}
-        </div>
+        {event.rings.length > 1 ? (
+          <LiveRingFilter
+            sections={event.rings.map((ring) => ({
+              id: ring.id,
+              label: ring.name ?? `Ring ${ring.number}`,
+              node: (
+                <RingSection
+                  key={ring.id}
+                  slug={slug}
+                  ring={ring}
+                  projection={ringProjections.get(ring.id) ?? { now: null, next: null, nowLabel: null }}
+                  stickyLabel={ring.id === liveRing?.id ? stickyLabel : null}
+                  eventStreamUrl={event.streamUrl}
+                />
+              ),
+            }))}
+          />
+        ) : (
+          <div className="space-y-4">
+            {event.rings.map((ring) => (
+              <RingSection
+                key={ring.id}
+                slug={slug}
+                ring={ring}
+                projection={ringProjections.get(ring.id) ?? { now: null, next: null, nowLabel: null }}
+                stickyLabel={ring.id === liveRing?.id ? stickyLabel : null}
+                eventStreamUrl={event.streamUrl}
+              />
+            ))}
+          </div>
+        )}
 
         <LiveAudience
           slug={slug}

@@ -26,7 +26,8 @@ export function StickyLiveBar({ label, children }: { label: string; children: Re
       {outOfView && (
         <button
           onClick={() => ref.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
-          className="fixed top-0 inset-x-0 z-40 mx-auto flex w-full max-w-md items-center gap-2 bg-live px-4 py-3 text-sm font-semibold text-onsignal shadow-lg shadow-black/40"
+          style={{ top: "var(--event-nav-height)" }}
+          className="fixed inset-x-0 z-20 mx-auto flex w-full max-w-md items-center gap-2 bg-live px-4 py-3 text-sm font-semibold text-onsignal shadow-lg shadow-black/40"
         >
           <span className="live-pulse h-1.5 w-1.5 shrink-0 rounded-full bg-onsignal" />
           <span className="truncate">{label}</span>

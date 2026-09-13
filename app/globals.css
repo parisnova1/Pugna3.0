@@ -33,6 +33,12 @@
   --success: #35b779;
   --warning: #e6a23c;
   --error: #e05252;
+
+  /* Height of the event page's persistent sticky nav (EventStickyNav) — other
+     sticky/fixed elements on that page (ScheduleResultsToggle's toggle,
+     StickyLiveBar) offset from this instead of top:0 so they stack below it
+     rather than overlapping it. Measured against the real rendered bar. */
+  --event-nav-height: 106px;
 }
 
 html,
