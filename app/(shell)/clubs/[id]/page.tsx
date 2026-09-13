@@ -103,13 +103,18 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ id
 
         <div className="flex gap-2">
           <ClubFollowButton clubId={club.id} isGuest={!actor} following={Boolean(following)} />
-          <JoinClubButton
-            clubId={club.id}
-            isGuest={!actor}
-            hasFighterProfile={Boolean(fighter)}
-            isMember={fighter?.clubId === club.id}
-            inAnotherClub={Boolean(fighter?.clubId) && fighter?.clubId !== club.id}
-          />
+          {/* An organizer is here to network with this club (invite it to events),
+              not to become its athlete member — "Join Club" / "Already with a
+              club" is athlete-membership UI that doesn't belong in that flow. */}
+          {!actor?.isOrganizer && (
+            <JoinClubButton
+              clubId={club.id}
+              isGuest={!actor}
+              hasFighterProfile={Boolean(fighter)}
+              isMember={fighter?.clubId === club.id}
+              inAnotherClub={Boolean(fighter?.clubId) && fighter?.clubId !== club.id}
+            />
+          )}
         </div>
 
         {canEdit && (
