@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { BoutStatus, EventStatus, RoundPhase, ScratchReason } from "@prisma/client";
 import { computeRingProjections } from "@/lib/projection";
@@ -15,11 +16,13 @@ import {
   startIntermission,
   endIntermission,
   setRingBreak,
+  setRingsBreak,
+  postAnnouncement,
   startRound,
   startRest,
   finishEvent,
 } from "@/lib/actions/live";
-import { setBoutStreamUrl } from "@/lib/actions/event";
+import { setBoutStreamUrl, cancelEvent } from "@/lib/actions/event";
 
 export type ConsoleBout = {
   id: string;
@@ -59,6 +62,8 @@ type Sheet =
   | { type: "intermission" }
   | { type: "break"; ringId: string }
   | { type: "link"; boutId: string }
+  | { type: "announcement" }
+  | { type: "cancel" }
   | null;
 
 const TERMINAL: BoutStatus[] = ["FINAL", "SCRATCHED", "NO_SHOW"];
@@ -91,12 +96,14 @@ export function LiveConsole({
   intermissionUntil,
   rings,
   bouts,
+  slug,
 }: {
   eventId: string;
   eventStatus: EventStatus;
   intermissionUntil: Date | null;
   rings: ConsoleRing[];
   bouts: ConsoleBout[];
+  slug: string | null;
 }) {
   const router = useRouter();
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -138,12 +145,23 @@ export function LiveConsole({
 
   return (
     <div className="space-y-6 pb-24">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Live console</h1>
-        <span className="text-xs text-mute">Live on the public card</span>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold">PUGNA Event Control</h1>
+        {slug && (
+          <Link
+            href={`/e/${slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-pill border border-white/20 px-3 py-1.5 text-xs font-semibold text-ink"
+          >
+            Public view →
+          </Link>
+        )}
       </div>
 
       {error && <p className="text-signal text-sm rounded-card border border-signal/40 bg-signal/5 p-3">{error}</p>}
+
+      <CustomTimer />
 
       {rings.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -327,6 +345,43 @@ export function LiveConsole({
         </div>
       )}
 
+      <div className="rounded-card border border-white/10 p-4 space-y-2">
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Event control</p>
+        <div className="grid grid-cols-2 gap-2">
+          {eventStatus === "INTERMISSION" ? (
+            <button
+              disabled={pending}
+              onClick={() => run(() => endIntermission(eventId))}
+              className="rounded-pill bg-signal text-onsignal font-semibold py-2.5 text-sm disabled:opacity-60"
+            >
+              Resume all rings
+            </button>
+          ) : (
+            <button
+              disabled={pending}
+              onClick={() => setSheet({ type: "intermission" })}
+              className="rounded-pill border border-white/20 text-ink font-semibold py-2.5 text-sm"
+            >
+              Pause all rings
+            </button>
+          )}
+          <button
+            disabled={pending}
+            onClick={() => setSheet({ type: "announcement" })}
+            className="rounded-pill border border-white/20 text-ink font-semibold py-2.5 text-sm"
+          >
+            Announcement
+          </button>
+        </div>
+        <button
+          disabled={pending}
+          onClick={() => setSheet({ type: "cancel" })}
+          className="w-full rounded-pill border border-error/40 text-error font-semibold py-2.5 text-sm"
+        >
+          Cancel event
+        </button>
+      </div>
+
       <div className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Full card</p>
         {bouts.map((b) => {
@@ -453,12 +508,25 @@ export function LiveConsole({
       )}
 
       {sheet?.type === "break" && (
-        <Sheet onClose={() => setSheet(null)} title={`Break ${findRingLabel(rings, sheet.ringId)}`}>
-          <ResumeTimeForm
+        <Sheet onClose={() => setSheet(null)} title="Start break">
+          <BreakForm
+            rings={rings}
+            defaultRingId={sheet.ringId}
             pending={pending}
-            submitLabel="Start break"
-            onSubmit={(fd) => run(() => setRingBreak(sheet.ringId, eventId, true, fd))}
+            onSubmit={(ringIds, fd) => run(() => setRingsBreak(eventId, ringIds, true, fd))}
           />
+        </Sheet>
+      )}
+
+      {sheet?.type === "announcement" && (
+        <Sheet onClose={() => setSheet(null)} title="Announcement">
+          <AnnouncementForm pending={pending} onSubmit={(fd) => run(() => postAnnouncement(eventId, fd))} />
+        </Sheet>
+      )}
+
+      {sheet?.type === "cancel" && (
+        <Sheet onClose={() => setSheet(null)} title="Cancel event">
+          <CancelEventForm pending={pending} onSubmit={(fd) => run(() => cancelEvent(eventId, fd))} />
         </Sheet>
       )}
     </div>
@@ -585,5 +653,224 @@ function ResultForm({
         Confirm result
       </button>
     </form>
+  );
+}
+
+const BREAK_REASONS = ["Lunch", "Medical", "Technical", "Officials", "Schedule Adjustment", "Other"] as const;
+
+function BreakForm({
+  rings,
+  defaultRingId,
+  pending,
+  onSubmit,
+}: {
+  rings: ConsoleRing[];
+  defaultRingId: string;
+  pending: boolean;
+  onSubmit: (ringIds: string[], fd: FormData) => void;
+}) {
+  const [reason, setReason] = useState<string>(BREAK_REASONS[0]);
+  const [minutes, setMinutes] = useState(15);
+  const [selectedRingIds, setSelectedRingIds] = useState<string[]>([defaultRingId]);
+
+  function toggleRing(ringId: string) {
+    setSelectedRingIds((ids) => (ids.includes(ringId) ? ids.filter((id) => id !== ringId) : [...ids, ringId]));
+  }
+
+  return (
+    <form
+      action={() => {
+        const fd = new FormData();
+        fd.set("reason", reason);
+        fd.set("minutes", String(minutes));
+        onSubmit(selectedRingIds, fd);
+      }}
+      className="space-y-4"
+    >
+      <div>
+        <label className="text-xs text-mute">Reason</label>
+        <div className="grid grid-cols-2 gap-2 mt-1">
+          {BREAK_REASONS.map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setReason(r)}
+              className={[
+                "rounded-card border py-2.5 text-sm font-medium",
+                reason === r ? "border-signal bg-signal/10 text-ink" : "border-white/15 text-mute",
+              ].join(" ")}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs text-mute">Duration</label>
+        <div className="flex items-center gap-3 mt-1">
+          <button
+            type="button"
+            onClick={() => setMinutes((m) => Math.max(5, m - 5))}
+            className="rounded-full border border-white/20 w-9 h-9 text-lg font-semibold"
+          >
+            −
+          </button>
+          <span className="flex-1 text-center text-sm font-semibold tabular">{minutes} min</span>
+          <button
+            type="button"
+            onClick={() => setMinutes((m) => m + 5)}
+            className="rounded-full border border-white/20 w-9 h-9 text-lg font-semibold"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      {rings.length > 1 && (
+        <div>
+          <label className="text-xs text-mute">Affected rings</label>
+          <div className="space-y-1.5 mt-1">
+            {rings.map((ring) => (
+              <label key={ring.id} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={selectedRingIds.includes(ring.id)} onChange={() => toggleRing(ring.id)} />
+                {ringLabel(ring)}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={pending || selectedRingIds.length === 0}
+        className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+      >
+        Start break
+      </button>
+    </form>
+  );
+}
+
+function AnnouncementForm({ pending, onSubmit }: { pending: boolean; onSubmit: (fd: FormData) => void }) {
+  return (
+    <form action={(fd) => onSubmit(fd)} className="space-y-3">
+      <textarea
+        name="message"
+        required
+        rows={3}
+        placeholder="e.g. Doors close at 7pm — please take your seats."
+        className="w-full rounded-card bg-void border border-white/10 px-4 py-3 text-sm resize-none"
+      />
+      <p className="text-[11px] text-mute">Sent as a notification to everyone following this event.</p>
+      <button type="submit" disabled={pending} className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60">
+        Post announcement
+      </button>
+    </form>
+  );
+}
+
+function CancelEventForm({ pending, onSubmit }: { pending: boolean; onSubmit: (fd: FormData) => void }) {
+  return (
+    <form action={(fd) => onSubmit(fd)} className="space-y-3">
+      <p className="text-sm text-mute">This cancels the whole event and notifies everyone involved. This can&apos;t be undone.</p>
+      <input
+        name="reason"
+        placeholder="Reason"
+        className="w-full rounded-card bg-void border border-white/10 px-4 py-3 text-sm"
+      />
+      <button type="submit" disabled={pending} className="w-full rounded-pill bg-error text-ink font-semibold py-3 disabled:opacity-60">
+        Confirm cancel event
+      </button>
+    </form>
+  );
+}
+
+/** Organizer-local only — a plain countdown for warm-ups, ring prep, weigh-ins,
+ * ceremonies. Never touches the network: not persisted, not shown to
+ * spectators, resets if the page reloads. */
+function CustomTimer() {
+  const [open, setOpen] = useState(false);
+  const [totalSeconds, setTotalSeconds] = useState(5 * 60);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  function start() {
+    setRemaining(totalSeconds);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setRemaining((r) => {
+        if (r === null || r <= 1) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          return 0;
+        }
+        return r - 1;
+      });
+    }, 1000);
+  }
+
+  function reset() {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setRemaining(null);
+  }
+
+  const mm = remaining !== null ? String(Math.floor(remaining / 60)).padStart(2, "0") : null;
+  const ss = remaining !== null ? String(remaining % 60).padStart(2, "0") : null;
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full rounded-card border border-white/10 py-2 text-xs font-medium text-mute"
+      >
+        + Custom timer (warm-up, weigh-in, ceremony)
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-card border border-white/10 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Custom timer</p>
+        <button onClick={() => setOpen(false)} className="text-xs text-mute underline">
+          Hide
+        </button>
+      </div>
+      {remaining !== null ? (
+        <p className="text-3xl font-bold tabular text-center">
+          {mm}:{ss}
+        </p>
+      ) : (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setTotalSeconds((s) => Math.max(60, s - 60))}
+            className="rounded-full border border-white/20 w-9 h-9 text-lg font-semibold"
+          >
+            −
+          </button>
+          <span className="flex-1 text-center text-sm font-semibold tabular">{Math.round(totalSeconds / 60)} min</span>
+          <button onClick={() => setTotalSeconds((s) => s + 60)} className="rounded-full border border-white/20 w-9 h-9 text-lg font-semibold">
+            +
+          </button>
+        </div>
+      )}
+      <div className="flex gap-2">
+        {remaining === null ? (
+          <button onClick={start} className="flex-1 rounded-pill bg-signal text-onsignal font-semibold py-2.5 text-sm">
+            Start
+          </button>
+        ) : (
+          <button onClick={reset} className="flex-1 rounded-pill border border-white/20 text-ink font-semibold py-2.5 text-sm">
+            Reset
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

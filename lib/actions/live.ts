@@ -304,6 +304,20 @@ export async function endIntermission(eventId: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+/** A break's resume time can come as an absolute "HH:MM" (`resumeAt`, the
+ * original input) or as minutes-from-now (`minutes`, the new duration
+ * stepper) — minutes wins when both are present since it's what the
+ * redesigned break sheet actually submits. */
+function resolveBreakUntil(formData?: FormData): Date | null {
+  if (!formData) return null;
+  const minutesStr = String(formData.get("minutes") ?? "");
+  if (minutesStr) {
+    const minutes = Number(minutesStr);
+    return Number.isFinite(minutes) && minutes > 0 ? new Date(Date.now() + minutes * 60 * 1000) : null;
+  }
+  return timeStringToDate(String(formData.get("resumeAt") ?? "") || null);
+}
+
 export async function setRingBreak(ringId: string, eventId: string, onBreak: boolean, formData?: FormData): Promise<ActionResult> {
   const denied = await gateLive(eventId);
   if (denied) return denied;
@@ -311,9 +325,49 @@ export async function setRingBreak(ringId: string, eventId: string, onBreak: boo
   const ring = await prisma.ring.findUnique({ where: { id: ringId } });
   if (!ring || ring.eventId !== eventId) return { ok: false, code: "NOT_FOUND", reason: "Ring not found." };
 
-  const breakUntil = onBreak ? timeStringToDate(formData ? String(formData.get("resumeAt") ?? "") || null : null) : null;
+  const breakUntil = onBreak ? resolveBreakUntil(formData) : null;
+  const breakReason = onBreak ? String(formData?.get("reason") ?? "").trim() || null : null;
 
-  await prisma.ring.update({ where: { id: ringId }, data: { onBreak, breakUntil } });
+  await prisma.ring.update({ where: { id: ringId }, data: { onBreak, breakUntil, breakReason } });
+
+  revalidateLive(eventId);
+  return { ok: true };
+}
+
+/** Same as `setRingBreak` but for several rings at once (the redesigned break
+ * sheet's "Affected Rings" checkboxes) — one atomic transaction instead of N
+ * separate taps/round trips. */
+export async function setRingsBreak(eventId: string, ringIds: string[], onBreak: boolean, formData?: FormData): Promise<ActionResult> {
+  const denied = await gateLive(eventId);
+  if (denied) return denied;
+  if (ringIds.length === 0) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Select at least one ring." };
+
+  const rings = await prisma.ring.findMany({ where: { id: { in: ringIds }, eventId } });
+  if (rings.length !== ringIds.length) return { ok: false, code: "NOT_FOUND", reason: "Ring not found." };
+
+  const breakUntil = onBreak ? resolveBreakUntil(formData) : null;
+  const breakReason = onBreak ? String(formData?.get("reason") ?? "").trim() || null : null;
+
+  await prisma.$transaction(
+    ringIds.map((ringId) => prisma.ring.update({ where: { id: ringId }, data: { onBreak, breakUntil, breakReason } })),
+  );
+
+  revalidateLive(eventId);
+  return { ok: true };
+}
+
+export async function postAnnouncement(eventId: string, formData: FormData): Promise<ActionResult> {
+  const denied = await gateLive(eventId);
+  if (denied) return denied;
+
+  const message = String(formData.get("message") ?? "").trim();
+  if (!message) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Announcement text is required." };
+
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
+
+  const followerIds = await getFollowerUserIds(eventId);
+  await notifyMany(followerIds, "EVENT_ANNOUNCEMENT", `${event.name}: ${message}`, event.slug ? `/e/${event.slug}` : undefined);
 
   revalidateLive(eventId);
   return { ok: true };

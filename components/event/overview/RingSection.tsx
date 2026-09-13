@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { WatchArea } from "@/components/live/WatchArea";
 import { StickyLiveBar } from "./StickyLiveBar";
+import { formatTime } from "@/lib/format";
 import type { Projection } from "@/lib/projection";
 import type { EventCardData } from "@/lib/event-query";
 
@@ -40,7 +41,12 @@ export function RingSection({
             {pillText}
           </Badge>
         </div>
-        {projection.now ? (
+        {projection.nowLabel === "BREAK" ? (
+          <p className="text-sm text-mute mt-2">
+            {ring.breakUntil ? `Resuming at ${formatTime(ring.breakUntil)}` : "Resuming shortly"}
+            {ring.breakReason ? ` · ${ring.breakReason}` : ""}
+          </p>
+        ) : projection.now ? (
           <>
             <p className="text-xs text-mute mt-2">{projection.now.weightClass}</p>
             <p className="text-lg font-semibold mt-0.5">

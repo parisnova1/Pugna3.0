@@ -4,90 +4,119 @@ import { cancelEvent } from "@/lib/actions/event";
 import { formatEventDate } from "@/lib/format";
 import { QrCodeSheet } from "@/components/event/QrCodeSheet";
 
-const STEPS = [
-  { href: "build", label: "Skeleton", desc: "Name, date, venue" },
-  { href: "structure", label: "Structure", desc: "Sport, rings, days" },
-  { href: "entries", label: "Entries", desc: "Boxers and clubs" },
-  { href: "pair", label: "Pair", desc: "Match bouts" },
+const MANAGEMENT_STEPS = [
+  { href: "pair", label: "Pair Fighters", desc: "Match bouts" },
+  { href: "checkin", label: "Check-In", desc: "Roster arrivals" },
+  { href: "entries", label: "Boxers", desc: "Nominations and clubs" },
+  { href: "structure", label: "Rings", desc: "Sport, rings, days" },
   { href: "schedule", label: "Schedule", desc: "Times and order" },
   { href: "media", label: "Media", desc: "Cover, gallery, sponsors" },
-  { href: "review", label: "Review & publish", desc: "Blockers, warnings" },
+  { href: "review", label: "Settings", desc: "Blockers, warnings, publish" },
 ];
 
 export default async function HostEventDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { event } = await requireHostEvent(id, `/host/events/${id}`);
+  const isLive = event.status === "PUBLISHED" || event.status === "LIVE" || event.status === "INTERMISSION";
 
   return (
     <div className="space-y-6 pt-2">
       <div>
-        <span className="text-[11px] font-semibold text-mute border border-white/10 rounded-pill px-2 py-0.5">
-          {event.status}
+        <span
+          className={`text-[11px] font-semibold rounded-pill px-2 py-0.5 border ${
+            event.status === "LIVE" || event.status === "INTERMISSION"
+              ? "text-live border-live/40"
+              : "text-mute border-white/10"
+          }`}
+        >
+          {event.status === "LIVE" ? "🟢 LIVE" : event.status}
         </span>
         <h1 className="text-2xl font-semibold mt-2">{event.name}</h1>
         <p className="text-mute text-sm mt-1">{formatEventDate(event.date)} · {event.venue ?? event.city ?? "TBD"}</p>
       </div>
 
-      {(event.status === "PUBLISHED" || event.status === "LIVE" || event.status === "INTERMISSION") && (
+      {isLive && (
         <Link
           href={`/host/events/${event.id}/live`}
-          className="block rounded-pill bg-signal text-onsignal font-semibold text-center py-3"
+          className="block rounded-pill bg-signal text-onsignal font-bold text-center py-3.5"
         >
-          Open live console
+          Open Event Control →
         </Link>
       )}
 
-      {event.slug && (
-        <Link
-          href={`/e/${event.slug}`}
-          className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-3 text-sm"
-        >
-          View public event card
-        </Link>
-      )}
-
-      {event.code && (
-        <QrCodeSheet
-          path={`/go/${event.code}`}
-          label="Event QR"
-          buttonLabel="Show event QR"
-          caption={`Scan to open ${event.name}, or share the code: ${event.code}`}
-        />
-      )}
-
-      {(event.status === "PUBLISHED" || event.status === "LIVE" || event.status === "INTERMISSION") && (
-        <Link
-          href={`/host/events/${event.id}/checkin`}
-          className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-3 text-sm"
-        >
-          Check-in
-        </Link>
-      )}
-
-      {!event.slug && event.ringCount === 1 && event.dayCount === 1 && (
-        <Link
-          href={`/host/events/${event.id}/preview`}
-          className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-3 text-sm"
-        >
-          Preview public event card
-        </Link>
-      )}
-
-      <div className="space-y-2">
-        {STEPS.map((step) => (
+      <div className="grid grid-cols-2 gap-2">
+        {event.slug && (
           <Link
-            key={step.href}
-            href={`/host/events/${event.id}/${step.href}`}
-            className="flex items-center justify-between rounded-card bg-panel border border-white/10 px-4 py-3"
+            href={`/e/${event.slug}`}
+            className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-2.5 text-sm"
           >
-            <div>
-              <p className="text-sm font-medium">{step.label}</p>
-              <p className="text-xs text-mute mt-0.5">{step.desc}</p>
-            </div>
-            <span className="text-mute">›</span>
+            Public view
           </Link>
-        ))}
+        )}
+        {event.code && (
+          <QrCodeSheet
+            path={`/go/${event.code}`}
+            label="Event QR"
+            buttonLabel="Show event QR"
+            caption={`Scan to open ${event.name}, or share the code: ${event.code}`}
+          />
+        )}
+        {!event.slug && event.ringCount === 1 && event.dayCount === 1 && (
+          <Link
+            href={`/host/events/${event.id}/preview`}
+            className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-2.5 text-sm"
+          >
+            Preview public card
+          </Link>
+        )}
       </div>
+
+      <section className="space-y-2">
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Quick update</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Link href={`/host/events/${event.id}/build`} className="rounded-card bg-panel border border-white/10 p-3 text-sm font-semibold text-center">
+            Update Event Info
+          </Link>
+          <Link href={`/host/events/${event.id}/schedule`} className="rounded-card bg-panel border border-white/10 p-3 text-sm font-semibold text-center">
+            Change Schedule
+          </Link>
+          <Link href={`/host/events/${event.id}/pair`} className="rounded-card bg-panel border border-white/10 p-3 text-sm font-semibold text-center">
+            Add / Remove Bout
+          </Link>
+          <Link href={`/host/events/${event.id}/structure`} className="rounded-card bg-panel border border-white/10 p-3 text-sm font-semibold text-center">
+            Change Ring
+          </Link>
+          {isLive && (
+            <>
+              <Link href={`/host/events/${event.id}/live`} className="rounded-card bg-panel border border-white/10 p-3 text-sm font-semibold text-center">
+                Add Break
+              </Link>
+              <Link href={`/host/events/${event.id}/live`} className="rounded-card bg-panel border border-white/10 p-3 text-sm font-semibold text-center">
+                Announcement
+              </Link>
+            </>
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Event management</p>
+        <div className="space-y-2">
+          {MANAGEMENT_STEPS.map((step) => (
+            <Link
+              key={step.href}
+              href={`/host/events/${event.id}/${step.href}`}
+              className="flex items-center justify-between rounded-card bg-panel border border-white/10 px-4 py-3"
+            >
+              <div>
+                <p className="text-sm font-medium">{step.label}</p>
+                <p className="text-xs text-mute mt-0.5">{step.desc}</p>
+              </div>
+              <span className="text-mute">›</span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {event.status !== "CANCELLED" && event.status !== "ARCHIVED" && (
         <details className="rounded-card border border-white/10 p-4">

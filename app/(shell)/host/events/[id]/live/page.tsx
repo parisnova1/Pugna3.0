@@ -43,6 +43,7 @@ export default async function LiveConsolePage({ params }: { params: Promise<{ id
         intermissionUntil={event.intermissionUntil}
         rings={rings}
         bouts={bouts}
+        slug={event.slug}
       />
     </div>
   );

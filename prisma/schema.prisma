@@ -116,6 +116,7 @@ enum NotificationType {
   SPARRING_NOMINATION_RESPONDED
   STREAM_LINK_ADDED
   FIGHTER_NEXT_BOUT_LIVE
+  EVENT_ANNOUNCEMENT
 }
 
 enum CheckInAttachedType {
@@ -414,6 +415,7 @@ model Ring {
   name       String?
   onBreak    Boolean   @default(false)
   breakUntil DateTime?
+  breakReason String?
   createdAt  DateTime  @default(now())
 
   event Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
