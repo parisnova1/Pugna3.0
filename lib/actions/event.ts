@@ -22,7 +22,7 @@ export async function createEvent(): Promise<{ ok: true; eventId: string } | { o
       date: new Date(),
       createdByUserId: actor!.userId,
       status: "DRAFT",
-      hostMembers: { create: [{ userId: actor!.userId }] },
+      hostMembers: { create: [{ userId: actor!.userId, role: "EVENT_OWNER" }] },
       rings: { create: [{ number: 1 }] },
     },
   });
@@ -49,7 +49,7 @@ export async function createEventFromClub(clubId: string): Promise<ActionResult 
       createdByUserId: actor!.userId,
       organizingClubId: clubId,
       status: "DRAFT",
-      hostMembers: { create: [{ userId: actor!.userId }] },
+      hostMembers: { create: [{ userId: actor!.userId, role: "EVENT_OWNER" }] },
       rings: { create: [{ number: 1 }] },
     },
   });

@@ -29,14 +29,22 @@ function timeStringToDate(timeStr: string | null, now: Date = new Date()): Date 
   return target;
 }
 
-async function gateLive(eventId: string): Promise<ActionResult | null> {
+/** Gates `live.act`. Event-wide actions (no `scope`) are Owner/Admin only —
+ * a Ring Official has no ringIds to satisfy them. Bout-scoped actions look up
+ * the bout's ring; ring-scoped actions pass it directly. */
+async function gateLive(eventId: string, scope?: { boutId?: string; ringId?: string; ringIds?: string[] }): Promise<ActionResult | null> {
   const actor = await getActor();
-  const gate = can(actor, "live.act", { eventId });
+  let ringIds = scope?.ringIds ?? (scope?.ringId ? [scope.ringId] : undefined);
+  if (!ringIds && scope?.boutId) {
+    const bout = await prisma.bout.findUnique({ where: { id: scope.boutId }, select: { ringId: true } });
+    if (bout) ringIds = [bout.ringId];
+  }
+  const gate = can(actor, "live.act", { eventId, ringIds });
   return gate.allowed ? null : { ok: false, code: gate.code, reason: gate.reason };
 }
 
 export async function startBout(boutId: string, eventId: string): Promise<ActionResult> {
-  const denied = await gateLive(eventId);
+  const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
   const event = await prisma.event.findUnique({ where: { id: eventId } });
@@ -115,7 +123,7 @@ export async function startBout(boutId: string, eventId: string): Promise<Action
  * transition (round/rest is advisory, never auto-advances on its own; the
  * host taps this, same as every other Live Console action). */
 export async function startRest(boutId: string, eventId: string): Promise<ActionResult> {
-  const denied = await gateLive(eventId);
+  const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
   const bout = await prisma.bout.findUnique({ where: { id: boutId } });
@@ -133,7 +141,7 @@ export async function startRest(boutId: string, eventId: string): Promise<Action
 
 /** Starts the next round after a rest period. */
 export async function startRound(boutId: string, eventId: string): Promise<ActionResult> {
-  const denied = await gateLive(eventId);
+  const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
   const bout = await prisma.bout.findUnique({ where: { id: boutId } });
@@ -156,7 +164,7 @@ export async function startRound(boutId: string, eventId: string): Promise<Actio
 }
 
 export async function finishBout(boutId: string, eventId: string, formData: FormData): Promise<ActionResult> {
-  const denied = await gateLive(eventId);
+  const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
   const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true, event: true } });
@@ -193,7 +201,7 @@ export async function finishBout(boutId: string, eventId: string, formData: Form
 }
 
 export async function delayBout(boutId: string, eventId: string, formData: FormData): Promise<ActionResult> {
-  const denied = await gateLive(eventId);
+  const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
   const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true, event: true } });
@@ -223,7 +231,7 @@ export async function delayBout(boutId: string, eventId: string, formData: FormD
 }
 
 export async function scratchBout(boutId: string, eventId: string, formData: FormData): Promise<ActionResult> {
-  const denied = await gateLive(eventId);
+  const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
   const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true, event: true } });
@@ -246,7 +254,7 @@ export async function scratchBout(boutId: string, eventId: string, formData: For
 }
 
 export async function noShowBout(boutId: string, eventId: string): Promise<ActionResult> {
-  const denied = await gateLive(eventId);
+  const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
   const bout = await prisma.bout.findUnique({ where: { id: boutId } });
@@ -319,7 +327,7 @@ function resolveBreakUntil(formData?: FormData): Date | null {
 }
 
 export async function setRingBreak(ringId: string, eventId: string, onBreak: boolean, formData?: FormData): Promise<ActionResult> {
-  const denied = await gateLive(eventId);
+  const denied = await gateLive(eventId, { ringId });
   if (denied) return denied;
 
   const ring = await prisma.ring.findUnique({ where: { id: ringId } });
@@ -338,7 +346,7 @@ export async function setRingBreak(ringId: string, eventId: string, onBreak: boo
  * sheet's "Affected Rings" checkboxes) — one atomic transaction instead of N
  * separate taps/round trips. */
 export async function setRingsBreak(eventId: string, ringIds: string[], onBreak: boolean, formData?: FormData): Promise<ActionResult> {
-  const denied = await gateLive(eventId);
+  const denied = await gateLive(eventId, { ringIds });
   if (denied) return denied;
   if (ringIds.length === 0) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Select at least one ring." };
 

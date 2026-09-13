@@ -19,7 +19,7 @@ export async function createClub(formData: FormData): Promise<ActionResult> {
   const club = await prisma.club.create({
     data: { name, city, latitude: coords?.lat ?? null, longitude: coords?.lng ?? null },
   });
-  await prisma.clubAdmin.create({ data: { clubId: club.id, userId: actor.userId } });
+  await prisma.clubAdmin.create({ data: { clubId: club.id, userId: actor.userId, role: "CLUB_OWNER" } });
 
   revalidatePath("/", "layout");
   return { ok: true };
@@ -73,7 +73,7 @@ export async function claimClub(clubId: string): Promise<ActionResult> {
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
   if (!club) return { ok: false, code: "NOT_FOUND", reason: "Club not found." };
 
-  await prisma.clubAdmin.create({ data: { clubId, userId: actor!.userId } });
+  await prisma.clubAdmin.create({ data: { clubId, userId: actor!.userId, role: "CLUB_OWNER" } });
 
   revalidatePath("/", "layout");
   return { ok: true };

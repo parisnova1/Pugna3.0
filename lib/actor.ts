@@ -11,5 +11,7 @@ export async function getActor(): Promise<Actor> {
     clubIds: session.user.clubIds,
     isOrganizer: session.user.isOrganizer,
     hostEventIds: session.user.hostEventIds,
+    hostRoles: session.user.hostRoles ?? {},
+    clubRoles: session.user.clubRoles ?? {},
   };
 }

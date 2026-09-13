@@ -117,6 +117,8 @@ enum NotificationType {
   STREAM_LINK_ADDED
   FIGHTER_NEXT_BOUT_LIVE
   EVENT_ANNOUNCEMENT
+  CLUB_EVENT_INVITED
+  CLUB_EVENT_REQUEST_RESPONDED
 }
 
 enum CheckInAttachedType {
@@ -160,6 +162,28 @@ enum SparringAccessMode {
 }
 
 enum SparringClubStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+// Per-scope roles (blueprint: User -> Role -> Scope -> Permissions). A user's
+// power always comes from an explicit EventHostMember/ClubAdmin row's role,
+// never a global flag — see lib/rbac.ts.
+enum EventRole {
+  EVENT_OWNER
+  EVENT_ADMIN
+  RING_OFFICIAL
+  EVENT_STAFF
+}
+
+enum ClubRole {
+  CLUB_OWNER
+  CLUB_ADMIN
+  COACH
+}
+
+enum ClubEventStatus {
   PENDING
   ACCEPTED
   DECLINED
@@ -211,14 +235,14 @@ model User {
   // Events this user may host-manage (creator + club admins at event creation)
   hostEvents EventHostMember[]
 
-  createdEvents Event[]        @relation("EventCreatedBy")
-  follows       Follow[]
-  clubFollows   ClubFollow[]
-  fighterFollows FighterFollow[]
+  createdEvents         Event[]                @relation("EventCreatedBy")
+  follows               Follow[]
+  clubFollows           ClubFollow[]
+  fighterFollows        FighterFollow[]
   fighterNextBoutAlerts FighterNextBoutAlert[]
-  savedBouts    SavedBout[]
-  notifications Notification[]
-  uploadedMedia Media[]
+  savedBouts            SavedBout[]
+  notifications         Notification[]
+  uploadedMedia         Media[]
 
   eventCheckIns  EventCheckIn[]
   scanEvents     ScanEvent[]
@@ -246,12 +270,15 @@ model Club {
   coaches                 Coach[]
   requests                EventRequest[]
   nominations             Nomination[]
-  organizedEvents         Event[]               @relation("EventOrganizingClub")
+  organizedEvents         Event[]                  @relation("EventOrganizingClub")
   sparringSessions        SparringSession[]
   sparringInvitesReceived SparringClubInvite[]
   sparringRequestsSent    SparringClubRequest[]
   sparringNominationsSent SparringNomination[]
   followers               ClubFollow[]
+  eventInvitesReceived    ClubEventInvite[]
+  eventRequestsSent       ClubEventRequest[]
+  eventParticipations     ClubEventParticipation[]
 }
 
 // Casual "keep me posted" follow for a club — parallel to `Follow` (events),
@@ -322,13 +349,61 @@ model Coach {
 }
 
 model ClubAdmin {
-  id     String @id @default(cuid())
+  id     String   @id @default(cuid())
   clubId String
   userId String
-  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   ClubRole @default(CLUB_ADMIN)
+  club   Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([clubId, userId])
+}
+
+// Organizer <-> Club, event-scoped (blueprint: Find -> View -> Invite/Request
+// -> Accept -> Participate). Two directions mirror SparringClubInvite/Request
+// exactly rather than one unified state enum — see plan's design note.
+// Accepting either auto-creates ClubEventParticipation and nothing else: the
+// club still decides which of its own athletes actually participate.
+model ClubEventInvite {
+  id            String          @id @default(cuid())
+  eventId       String
+  event         Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  invitedClubId String
+  invitedClub   Club            @relation(fields: [invitedClubId], references: [id], onDelete: Cascade)
+  invitedById   String
+  message       String?
+  status        ClubEventStatus @default(PENDING)
+  createdAt     DateTime        @default(now())
+
+  @@unique([eventId, invitedClubId])
+}
+
+model ClubEventRequest {
+  id               String          @id @default(cuid())
+  eventId          String
+  event            Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  requestingClubId String
+  requestingClub   Club            @relation(fields: [requestingClubId], references: [id], onDelete: Cascade)
+  requestedById    String
+  message          String?
+  status           ClubEventStatus @default(PENDING)
+  createdAt        DateTime        @default(now())
+
+  @@unique([eventId, requestingClubId])
+}
+
+// The durable "this club is participating in this event" fact — created once
+// an invite or request is accepted. Which athletes actually compete is still
+// tracked separately via Nomination; this row never implies a full roster.
+model ClubEventParticipation {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, clubId])
 }
 
 model FighterProfile {
@@ -348,8 +423,8 @@ model FighterProfile {
   updatedAt       DateTime  @updatedAt
 
   nominations            Nomination[]
-  boutsAsFighterA        Bout[]                @relation("BoutFighterA")
-  boutsAsFighterB        Bout[]                @relation("BoutFighterB")
+  boutsAsFighterA        Bout[]                 @relation("BoutFighterA")
+  boutsAsFighterB        Bout[]                 @relation("BoutFighterB")
   sparringParticipations SparringParticipant[]
   sparringNominations    SparringNomination[]
   checkIns               CheckIn[]
@@ -394,29 +469,32 @@ model Event {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
-  hostMembers EventHostMember[]
-  requests    EventRequest[]
-  nominations Nomination[]
-  bouts       Bout[]
-  rings       Ring[]
-  follows     Follow[]
-  checkIns    EventCheckIn[]
-  crowdMutes  CrowdMute[]
+  hostMembers           EventHostMember[]
+  requests              EventRequest[]
+  nominations           Nomination[]
+  bouts                 Bout[]
+  rings                 Ring[]
+  follows               Follow[]
+  checkIns              EventCheckIn[]
+  crowdMutes            CrowdMute[]
   fighterNextBoutAlerts FighterNextBoutAlert[]
+  clubInvitesSent       ClubEventInvite[]
+  clubRequestsReceived  ClubEventRequest[]
+  clubParticipations    ClubEventParticipation[]
 }
 
 /**
  * A physical ring/station within an event — nameable, independently live/on-break.
  */
 model Ring {
-  id         String    @id @default(cuid())
-  eventId    String
-  number     Int
-  name       String?
-  onBreak    Boolean   @default(false)
-  breakUntil DateTime?
+  id          String    @id @default(cuid())
+  eventId     String
+  number      Int
+  name        String?
+  onBreak     Boolean   @default(false)
+  breakUntil  DateTime?
   breakReason String?
-  createdAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
 
   event Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   bouts Bout[]
@@ -426,11 +504,15 @@ model Ring {
 
 // hostMemberUserIds[] modeled as a join table
 model EventHostMember {
-  id      String @id @default(cuid())
+  id      String    @id @default(cuid())
   eventId String
   userId  String
-  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role    EventRole @default(EVENT_ADMIN)
+  // Only meaningful when role = RING_OFFICIAL; empty means "not yet assigned
+  // to a ring," never "every ring" — see lib/rbac.ts's live.act case.
+  ringIds String[]  @default([])
+  event   Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
 }

@@ -5,6 +5,7 @@ import { getActor } from "@/lib/actor";
 import { haversineDistanceKm } from "@/lib/geo";
 import { ClubCard, type ClubCardData } from "@/components/clubs/ClubCard";
 import { NearbyToggle } from "@/components/clubs/NearbyToggle";
+import { OrganizerClubs } from "@/components/account/OrganizerClubs";
 
 const SPORTS = ["Boxing", "MMA", "Muay Thai", "Kickboxing"];
 
@@ -31,10 +32,17 @@ function buildQuery(
 export default async function ClubsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sport?: string; verified?: string; nearby?: string; lat?: string; lng?: string }>;
+  searchParams: Promise<{ q?: string; sport?: string; verified?: string; nearby?: string; lat?: string; lng?: string; tab?: string }>;
 }) {
-  const { q, sport, verified, nearby, lat, lng } = await searchParams;
+  const params = await searchParams;
+  const { q, sport, verified, nearby, lat, lng } = params;
   const actor = await getActor();
+
+  // The Clubs tab is the Organizer's club-networking command center — find,
+  // invite, and track relationships — not the public directory a fan browses.
+  if (actor?.isOrganizer) {
+    return <OrganizerClubs actor={actor} searchParams={{ tab: params.tab, q }} />;
+  }
 
   const where: Prisma.ClubWhereInput = {
     ...(q

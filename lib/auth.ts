@@ -3,6 +3,10 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import type { EventRole, ClubRole } from "@prisma/client";
+
+const EMPTY_HOST_ROLES: Record<string, { role: EventRole; ringIds: string[] }> = {};
+const EMPTY_CLUB_ROLES: Record<string, ClubRole> = {};
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -48,6 +52,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.isOrganizer = Boolean(dbUser.organizerProfile);
         token.clubIds = dbUser.clubAdminships.map((a) => a.clubId);
         token.hostEventIds = dbUser.hostEvents.map((h) => h.eventId);
+        token.hostRoles = Object.fromEntries(
+          dbUser.hostEvents.map((h) => [h.eventId, { role: h.role, ringIds: h.ringIds }]),
+        );
+        token.clubRoles = Object.fromEntries(dbUser.clubAdminships.map((a) => [a.clubId, a.role]));
       }
       return token;
     },
@@ -58,6 +66,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.isOrganizer = Boolean(token.isOrganizer);
         session.user.clubIds = (token.clubIds as string[]) ?? [];
         session.user.hostEventIds = (token.hostEventIds as string[]) ?? [];
+        session.user.hostRoles = (token.hostRoles ?? EMPTY_HOST_ROLES) as Record<string, { role: EventRole; ringIds: string[] }>;
+        session.user.clubRoles = (token.clubRoles ?? EMPTY_CLUB_ROLES) as Record<string, ClubRole>;
       }
       return session;
     },

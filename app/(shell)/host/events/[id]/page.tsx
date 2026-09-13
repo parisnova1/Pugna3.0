@@ -16,6 +16,9 @@ const MANAGEMENT_STEPS = [
 
 export default async function HostEventDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // requireHostEvent's default gate is Owner/Admin-only (event.edit) — Ring
+  // Officials and Staff never reach this page at all, so no extra role check
+  // is needed here for Cancel event.
   const { event } = await requireHostEvent(id, `/host/events/${id}`);
   const isLive = event.status === "PUBLISHED" || event.status === "LIVE" || event.status === "INTERMISSION";
 

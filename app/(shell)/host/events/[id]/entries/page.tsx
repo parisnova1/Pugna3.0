@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireHostEvent } from "@/lib/host-guard";
 import { addGuestFighter } from "@/lib/actions/event";
 import { requestClub } from "@/lib/actions/request";
@@ -11,11 +12,17 @@ export default async function EntriesStepPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const { event } = await requireHostEvent(id, `/host/events/${id}/entries`);
 
-  const [clubs, requests, nominations] = await Promise.all([
+  const [clubs, requests, nominations, participatingClubs] = await Promise.all([
     prisma.club.findMany({ orderBy: { name: "asc" }, take: 50 }),
     prisma.eventRequest.findMany({ where: { eventId: id }, include: { club: true } }),
     prisma.nomination.findMany({ where: { eventId: id }, include: { fighter: true, club: true } }),
+    prisma.clubEventParticipation.findMany({ where: { eventId: id }, include: { club: true }, orderBy: { createdAt: "asc" } }),
   ]);
+
+  const nominationCountByClub = new Map<string, number>();
+  for (const nom of nominations) {
+    nominationCountByClub.set(nom.clubId, (nominationCountByClub.get(nom.clubId) ?? 0) + 1);
+  }
 
   return (
     <div className="space-y-8 pt-2">
@@ -24,6 +31,28 @@ export default async function EntriesStepPage({ params }: { params: Promise<{ id
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Step 3</p>
         <h1 className="text-2xl font-semibold">Entries</h1>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Participating Clubs</h2>
+        {participatingClubs.length === 0 ? (
+          <p className="text-sm text-mute">No clubs participating yet — invite one from Clubs.</p>
+        ) : (
+          <div className="space-y-2">
+            {participatingClubs.map((p) => (
+              <Link
+                key={p.id}
+                href={`/clubs/${p.clubId}`}
+                className="flex items-center justify-between rounded-card bg-panel border border-white/10 px-4 py-3"
+              >
+                <p className="text-sm font-medium">{p.club.name}</p>
+                <span className="text-xs text-mute">
+                  {nominationCountByClub.get(p.clubId) ?? 0} boxer{(nominationCountByClub.get(p.clubId) ?? 0) === 1 ? "" : "s"} submitted
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Nominations</h2>

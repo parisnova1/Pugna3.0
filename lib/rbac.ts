@@ -1,3 +1,5 @@
+import type { EventRole, ClubRole } from "@prisma/client";
+
 /**
  * Pure RBAC module. Every server action / route handler must call `can()`
  * before mutating or returning gated data. Never rely on the UI hiding a
@@ -8,6 +10,14 @@
  * concept of a switched/active role anywhere in this module — see
  * components/nav/TabBar.tsx, which decides *navigation* purely from the
  * current route, never from these capabilities.
+ *
+ * Permissions are ROLE + SCOPE, never a single global role: a user's power
+ * over a given event or club comes from that specific EventHostMember/
+ * ClubAdmin row's `role`, held in `hostRoles`/`clubRoles` below, keyed by
+ * eventId/clubId — the same user can be EVENT_OWNER of one event and
+ * RING_OFFICIAL (scoped to a subset of `ringIds`) of another. `hostEventIds`/
+ * `clubIds` stay as plain derived arrays (membership only, any role) so
+ * every existing `.includes()` call site keeps working unchanged.
  */
 
 export type DenyCode =
@@ -31,6 +41,8 @@ export type Actor = {
   clubIds: string[];
   isOrganizer: boolean;
   hostEventIds: string[];
+  hostRoles: Record<string, { role: EventRole; ringIds: string[] }>;
+  clubRoles: Record<string, ClubRole>;
 } | null; // null = guest
 
 const allow = (): CanResult => ({ allowed: true });
@@ -43,6 +55,7 @@ export type Action =
   | "event.edit"
   | "event.publish"
   | "event.cancel"
+  | "event.manageClubs"
   | "live.access"
   | "live.act"
   | "club.claim"
@@ -60,6 +73,8 @@ export type Action =
 export type Resource = {
   eventId?: string;
   eventPublished?: boolean;
+  ringId?: string;
+  ringIds?: string[];
   clubId?: string;
   clubClaimed?: boolean;
   sparringAccessMode?: "INVITE" | "OPEN_TO_CLUBS" | "OPEN";
@@ -100,15 +115,40 @@ export function can(actor: Actor, action: Action, resource: Resource = {}): CanR
     case "event.edit":
     case "event.publish":
     case "event.cancel":
-    case "live.access":
-    case "live.act": {
-      // Host membership is the entire authority here — it already covers both
-      // an independent organizer and a club admin whose club is hosting.
+    case "event.manageClubs": {
+      // Full event control — Owner and Admin only. Ring Officials and Staff
+      // never reach these (pairing, publishing, cancelling, club invites).
       if (!actor) return deny("AUTH_REQUIRED", "Sign in required.");
-      if (!resource.eventId || !actor.hostEventIds.includes(resource.eventId)) {
+      const membership = resource.eventId ? actor.hostRoles[resource.eventId] : undefined;
+      if (!membership) return deny("HOST_MEMBERSHIP_MISSING", "You are not a host member of this event.");
+      if (membership.role === "EVENT_OWNER" || membership.role === "EVENT_ADMIN") return allow();
+      return deny("FORBIDDEN", "Only an event owner or admin can do this.");
+    }
+
+    case "live.access": {
+      // Viewing the console — any host membership role, including Ring
+      // Official and Staff (Staff is read-only; enforced by live.act below).
+      if (!actor) return deny("AUTH_REQUIRED", "Sign in required.");
+      if (!resource.eventId || !actor.hostRoles[resource.eventId]) {
         return deny("HOST_MEMBERSHIP_MISSING", "You are not a host member of this event.");
       }
       return allow();
+    }
+
+    case "live.act": {
+      if (!actor) return deny("AUTH_REQUIRED", "Sign in required.");
+      const membership = resource.eventId ? actor.hostRoles[resource.eventId] : undefined;
+      if (!membership) return deny("HOST_MEMBERSHIP_MISSING", "You are not a host member of this event.");
+      if (membership.role === "EVENT_OWNER" || membership.role === "EVENT_ADMIN") return allow();
+      if (membership.role === "RING_OFFICIAL") {
+        const targetRingIds = resource.ringIds ?? (resource.ringId ? [resource.ringId] : []);
+        if (targetRingIds.length === 0) {
+          return deny("FORBIDDEN", "This action isn't scoped to a ring you're assigned to.");
+        }
+        const cleared = targetRingIds.every((id) => membership.ringIds.includes(id));
+        return cleared ? allow() : deny("FORBIDDEN", "You can only act on your assigned ring.");
+      }
+      return deny("FORBIDDEN", "Event staff cannot perform live actions.");
     }
 
     case "club.claim": {
@@ -117,13 +157,20 @@ export function can(actor: Actor, action: Action, resource: Resource = {}): CanR
       return allow();
     }
 
-    case "club.admin":
-    case "club.nominate": {
+    case "club.admin": {
+      // Settings, membership, coaches, transfer — Owner and Admin only.
       if (!actor) return deny("AUTH_REQUIRED", "Sign in required.");
-      if (!resource.clubId || !actor.clubIds.includes(resource.clubId)) {
-        return deny("FORBIDDEN", "You do not administer this club.");
-      }
-      return allow();
+      const role = resource.clubId ? actor.clubRoles[resource.clubId] : undefined;
+      if (role === "CLUB_OWNER" || role === "CLUB_ADMIN") return allow();
+      return deny("FORBIDDEN", "You do not administer this club.");
+    }
+
+    case "club.nominate": {
+      // Submitting/nominating athletes onto an event or session — Coaches too.
+      if (!actor) return deny("AUTH_REQUIRED", "Sign in required.");
+      const role = resource.clubId ? actor.clubRoles[resource.clubId] : undefined;
+      if (role === "CLUB_OWNER" || role === "CLUB_ADMIN" || role === "COACH") return allow();
+      return deny("FORBIDDEN", "You do not administer this club.");
     }
 
     case "nomination.respond": {

@@ -97,6 +97,8 @@ export function LiveConsole({
   rings,
   bouts,
   slug,
+  canAct = true,
+  canManageEvent = true,
 }: {
   eventId: string;
   eventStatus: EventStatus;
@@ -104,6 +106,12 @@ export function LiveConsole({
   rings: ConsoleRing[];
   bouts: ConsoleBout[];
   slug: string | null;
+  /** False for Event Staff — view-only console, no live-action buttons. */
+  canAct?: boolean;
+  /** True only for Owner/Admin — event-wide controls (pause all, announcement,
+   * cancel, finish) are never scoped to a single ring, so Ring Officials
+   * don't get them even though they can act on their own ring. */
+  canManageEvent?: boolean;
 }) {
   const router = useRouter();
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -191,13 +199,15 @@ export function LiveConsole({
             {intermissionUntil ? `Resuming at ${formatTime(intermissionUntil)}.` : "Resuming shortly."} Starting a bout is
             blocked event-wide.
           </p>
-          <button
-            disabled={pending}
-            onClick={() => run(() => endIntermission(eventId))}
-            className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
-          >
-            End intermission
-          </button>
+          {canManageEvent && (
+            <button
+              disabled={pending}
+              onClick={() => run(() => endIntermission(eventId))}
+              className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+            >
+              End intermission
+            </button>
+          )}
         </div>
       ) : activeRing?.onBreak ? (
         <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
@@ -206,13 +216,15 @@ export function LiveConsole({
             {activeRing.breakUntil ? `Resuming at ${formatTime(activeRing.breakUntil)}.` : "Resuming shortly."} Starting a
             bout on this ring is blocked. Other rings are unaffected.
           </p>
-          <button
-            disabled={pending}
-            onClick={() => run(() => setRingBreak(activeRing.id, eventId, false))}
-            className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
-          >
-            Resume {ringLabel(activeRing)}
-          </button>
+          {canAct && (
+            <button
+              disabled={pending}
+              onClick={() => run(() => setRingBreak(activeRing.id, eventId, false))}
+              className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+            >
+              Resume {ringLabel(activeRing)}
+            </button>
+          )}
         </div>
       ) : now ? (
         <div
@@ -257,7 +269,9 @@ export function LiveConsole({
               {now.roundPhase === "REST" ? " · Rest" : ""}
             </p>
           )}
-          {now.status === "IN_PROGRESS" && now.roundPhase === "ROUND" ? (
+          {!canAct ? (
+            <p className="text-xs text-mute text-center py-2">View-only — Event Staff</p>
+          ) : now.status === "IN_PROGRESS" && now.roundPhase === "ROUND" ? (
             <button
               disabled={pending}
               onClick={() => run(() => startRest(now.id, eventId))}
@@ -290,11 +304,13 @@ export function LiveConsole({
               Start
             </button>
           )}
-          <div className="flex gap-2">
-            <SmallButton onClick={() => setSheet({ type: "delay", boutId: now.id })}>Delay</SmallButton>
-            <SmallButton onClick={() => setSheet({ type: "scratch", boutId: now.id })}>Scratch</SmallButton>
-            <SmallButton onClick={() => setSheet({ type: "noshow", boutId: now.id })}>No-show</SmallButton>
-          </div>
+          {canAct && (
+            <div className="flex gap-2">
+              <SmallButton onClick={() => setSheet({ type: "delay", boutId: now.id })}>Delay</SmallButton>
+              <SmallButton onClick={() => setSheet({ type: "scratch", boutId: now.id })}>Scratch</SmallButton>
+              <SmallButton onClick={() => setSheet({ type: "noshow", boutId: now.id })}>No-show</SmallButton>
+            </div>
+          )}
         </div>
       ) : (
         <div className="rounded-card bg-panel border border-white/10 p-5">
@@ -302,7 +318,7 @@ export function LiveConsole({
         </div>
       )}
 
-      {eventStatus !== "INTERMISSION" && !activeRing?.onBreak && now?.status !== "IN_PROGRESS" && activeRing && (
+      {eventStatus !== "INTERMISSION" && !activeRing?.onBreak && now?.status !== "IN_PROGRESS" && activeRing && canAct && (
         <div className="flex gap-2">
           <button
             disabled={pending}
@@ -311,13 +327,15 @@ export function LiveConsole({
           >
             Break {ringLabel(activeRing)}
           </button>
-          <button
-            disabled={pending}
-            onClick={() => setSheet({ type: "intermission" })}
-            className="flex-1 rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm"
-          >
-            Start intermission (all rings)
-          </button>
+          {canManageEvent && (
+            <button
+              disabled={pending}
+              onClick={() => setSheet({ type: "intermission" })}
+              className="flex-1 rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm"
+            >
+              Start intermission (all rings)
+            </button>
+          )}
         </div>
       )}
 
@@ -345,42 +363,44 @@ export function LiveConsole({
         </div>
       )}
 
-      <div className="rounded-card border border-white/10 p-4 space-y-2">
-        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Event control</p>
-        <div className="grid grid-cols-2 gap-2">
-          {eventStatus === "INTERMISSION" ? (
+      {canManageEvent && (
+        <div className="rounded-card border border-white/10 p-4 space-y-2">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Event control</p>
+          <div className="grid grid-cols-2 gap-2">
+            {eventStatus === "INTERMISSION" ? (
+              <button
+                disabled={pending}
+                onClick={() => run(() => endIntermission(eventId))}
+                className="rounded-pill bg-signal text-onsignal font-semibold py-2.5 text-sm disabled:opacity-60"
+              >
+                Resume all rings
+              </button>
+            ) : (
+              <button
+                disabled={pending}
+                onClick={() => setSheet({ type: "intermission" })}
+                className="rounded-pill border border-white/20 text-ink font-semibold py-2.5 text-sm"
+              >
+                Pause all rings
+              </button>
+            )}
             <button
               disabled={pending}
-              onClick={() => run(() => endIntermission(eventId))}
-              className="rounded-pill bg-signal text-onsignal font-semibold py-2.5 text-sm disabled:opacity-60"
-            >
-              Resume all rings
-            </button>
-          ) : (
-            <button
-              disabled={pending}
-              onClick={() => setSheet({ type: "intermission" })}
+              onClick={() => setSheet({ type: "announcement" })}
               className="rounded-pill border border-white/20 text-ink font-semibold py-2.5 text-sm"
             >
-              Pause all rings
+              Announcement
             </button>
-          )}
+          </div>
           <button
             disabled={pending}
-            onClick={() => setSheet({ type: "announcement" })}
-            className="rounded-pill border border-white/20 text-ink font-semibold py-2.5 text-sm"
+            onClick={() => setSheet({ type: "cancel" })}
+            className="w-full rounded-pill border border-error/40 text-error font-semibold py-2.5 text-sm"
           >
-            Announcement
+            Cancel event
           </button>
         </div>
-        <button
-          disabled={pending}
-          onClick={() => setSheet({ type: "cancel" })}
-          className="w-full rounded-pill border border-error/40 text-error font-semibold py-2.5 text-sm"
-        >
-          Cancel event
-        </button>
-      </div>
+      )}
 
       <div className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Full card</p>
@@ -413,7 +433,7 @@ export function LiveConsole({
         })}
       </div>
 
-      {allTerminal && (
+      {allTerminal && canManageEvent && (
         <button
           disabled={pending}
           onClick={() => run(() => finishEvent(eventId))}

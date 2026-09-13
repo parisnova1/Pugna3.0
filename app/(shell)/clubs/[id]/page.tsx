@@ -11,6 +11,7 @@ import { JoinClubButton } from "@/components/clubs/JoinClubButton";
 import { EventPreviewCard } from "@/components/event/EventPreviewCard";
 import { MediaUploader } from "@/components/host/MediaUploader";
 import { BackButton } from "@/components/event/ContextBar";
+import { OrganizerClubActions } from "@/components/clubs/OrganizerClubActions";
 
 export default async function ClubProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,6 +40,32 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ id
 
   const actor = await getActor();
   const canEdit = can(actor, "club.admin", { clubId: club.id }).allowed;
+
+  const manageableEventIds = actor
+    ? Object.entries(actor.hostRoles)
+        .filter(([, m]) => m.role === "EVENT_OWNER" || m.role === "EVENT_ADMIN")
+        .map(([eventId]) => eventId)
+    : [];
+
+  const organizerEvents =
+    actor?.isOrganizer && manageableEventIds.length > 0
+      ? await prisma.event.findMany({
+          where: {
+            id: { in: manageableEventIds },
+            status: { notIn: ["FINISHED", "CANCELLED", "ARCHIVED"] },
+          },
+          orderBy: { date: "asc" },
+        })
+      : [];
+
+  const [existingInvites, existingRequests, existingParticipations] =
+    organizerEvents.length > 0
+      ? await Promise.all([
+          prisma.clubEventInvite.findMany({ where: { invitedClubId: club.id, eventId: { in: organizerEvents.map((e) => e.id) } } }),
+          prisma.clubEventRequest.findMany({ where: { requestingClubId: club.id, eventId: { in: organizerEvents.map((e) => e.id) } } }),
+          prisma.clubEventParticipation.findMany({ where: { clubId: club.id, eventId: { in: organizerEvents.map((e) => e.id) } } }),
+        ])
+      : [[], [], []];
 
   const [cover, following, fighter, recentResults] = await Promise.all([
     prisma.media.findFirst({ where: { attachedType: "CLUB", attachedId: club.id, kind: "CLUB_COVER" }, orderBy: { createdAt: "desc" } }),
@@ -89,6 +116,17 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ id
           <MediaUploader kind="CLUB_COVER" attachedType="CLUB" attachedId={club.id} label={cover ? "Replace cover" : "Add club cover"} />
         )}
       </div>
+
+      {actor?.isOrganizer && organizerEvents.length > 0 && (
+        <OrganizerClubActions
+          clubId={club.id}
+          clubName={club.name}
+          events={organizerEvents.map((e) => ({ id: e.id, name: e.name, date: e.date }))}
+          invites={existingInvites.map((i) => ({ eventId: i.eventId, status: i.status }))}
+          requests={existingRequests.map((r) => ({ eventId: r.eventId, status: r.status }))}
+          participations={existingParticipations.map((p) => ({ eventId: p.eventId }))}
+        />
+      )}
 
       {club.description && (
         <section className="space-y-2">

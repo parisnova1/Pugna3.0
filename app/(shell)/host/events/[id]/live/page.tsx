@@ -3,9 +3,19 @@ import { LiveConsole, type ConsoleBout, type ConsoleRing } from "@/components/li
 
 export default async function LiveConsolePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { event } = await requireHostEvent(id, `/host/events/${id}/live`);
+  const { actor, event } = await requireHostEvent(id, `/host/events/${id}/live`, { minimum: "member" });
 
-  const bouts: ConsoleBout[] = event.bouts.map((b) => ({
+  // requireHostEvent (minimum: "member") already guarantees a membership row exists.
+  const membership = actor!.hostRoles[event.id]!;
+  const isRingOfficial = membership.role === "RING_OFFICIAL";
+  const isStaff = membership.role === "EVENT_STAFF";
+  const canManageEvent = membership.role === "EVENT_OWNER" || membership.role === "EVENT_ADMIN";
+
+  const visibleRingIds = isRingOfficial ? new Set(membership.ringIds) : null;
+  const visibleEventRings = visibleRingIds ? event.rings.filter((r) => visibleRingIds.has(r.id)) : event.rings;
+  const visibleEventBouts = visibleRingIds ? event.bouts.filter((b) => visibleRingIds.has(b.ringId)) : event.bouts;
+
+  const bouts: ConsoleBout[] = visibleEventBouts.map((b) => ({
     id: b.id,
     number: b.number,
     weightClass: b.weightClass,
@@ -27,7 +37,7 @@ export default async function LiveConsolePage({ params }: { params: Promise<{ id
     streamUrl: b.streamUrl,
   }));
 
-  const rings: ConsoleRing[] = event.rings.map((r) => ({
+  const rings: ConsoleRing[] = visibleEventRings.map((r) => ({
     id: r.id,
     number: r.number,
     name: r.name,
@@ -44,6 +54,8 @@ export default async function LiveConsolePage({ params }: { params: Promise<{ id
         rings={rings}
         bouts={bouts}
         slug={event.slug}
+        canAct={!isStaff}
+        canManageEvent={canManageEvent}
       />
     </div>
   );

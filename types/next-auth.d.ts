@@ -1,4 +1,5 @@
 import type { DefaultSession } from "next-auth";
+import type { EventRole, ClubRole } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
@@ -8,6 +9,8 @@ declare module "next-auth" {
       clubIds: string[];
       isOrganizer: boolean;
       hostEventIds: string[];
+      hostRoles: Record<string, { role: EventRole; ringIds: string[] }>;
+      clubRoles: Record<string, ClubRole>;
     } & DefaultSession["user"];
   }
 }
@@ -19,5 +22,7 @@ declare module "next-auth/jwt" {
     clubIds?: string[];
     isOrganizer?: boolean;
     hostEventIds?: string[];
+    hostRoles?: Record<string, { role: EventRole; ringIds: string[] }>;
+    clubRoles?: Record<string, ClubRole>;
   }
 }
