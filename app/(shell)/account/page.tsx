@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { AuthScreen } from "@/components/account/AuthScreen";
-import { OrganizerHome } from "@/components/account/OrganizerHome";
 import { formatEventDate, formatCountdown } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 
@@ -35,15 +34,6 @@ export default async function AccountPage({
 
   if (!actor) {
     return <AuthScreen returnTo={returnTo ?? "/"} subtext={guestMessage(returnTo)} />;
-  }
-
-  // Organizer capability transforms the whole homepage into an event
-  // operations command center instead of the viewer/boxer dashboard below —
-  // one account, one identity, different UI by capability (not a second
-  // account system).
-  if (actor.isOrganizer) {
-    const unreadCount = await prisma.notification.count({ where: { userId: actor.userId, read: false } });
-    return <OrganizerHome actor={actor} unreadCount={unreadCount} />;
   }
 
   const [

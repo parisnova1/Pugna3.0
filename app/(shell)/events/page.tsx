@@ -5,6 +5,7 @@ import { getActor } from "@/lib/actor";
 import { haversineDistanceKm } from "@/lib/geo";
 import { EventPreviewCard } from "@/components/event/EventPreviewCard";
 import { NearbyToggle } from "@/components/clubs/NearbyToggle";
+import { OrganizerHome } from "@/components/account/OrganizerHome";
 
 type Filter = "live" | "today" | "week" | "upcoming" | "finished" | "tournaments" | "fightNights";
 
@@ -50,6 +51,14 @@ export default async function EventsPage({
 }) {
   const { q, filter = "upcoming", nearby, lat, lng, saved } = await searchParams;
   const actor = await getActor();
+
+  // The Events tab is the Organizer's command center — hosting/managing/
+  // controlling events is their reason to open the app, not browsing the
+  // public events list (which stays exactly as-is for everyone else).
+  if (actor?.isOrganizer) {
+    const unreadCount = await prisma.notification.count({ where: { userId: actor.userId, read: false } });
+    return <OrganizerHome actor={actor} unreadCount={unreadCount} />;
+  }
 
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
