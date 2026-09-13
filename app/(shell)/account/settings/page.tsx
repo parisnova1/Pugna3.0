@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { signOut } from "@/lib/auth";
 import { updateName, becomeOrganizer } from "@/lib/actions/profile";
 import { BackButton } from "@/components/event/ContextBar";
+import { ChangePasswordForm } from "@/components/account/ChangePasswordForm";
 
 export default async function AccountSettingsPage() {
   const actor = await getActor();
@@ -68,6 +69,11 @@ export default async function AccountSettingsPage() {
           </button>
         </form>
         <p className="text-sm text-mute px-1">{user?.email}</p>
+      </section>
+
+      <section className="space-y-3">
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide">Password</p>
+        <ChangePasswordForm />
       </section>
 
       <section className="space-y-2">
