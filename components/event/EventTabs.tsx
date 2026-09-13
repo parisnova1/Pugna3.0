@@ -21,9 +21,16 @@ export function EventTabs({ tabs }: { tabs: EventTab[] }) {
 
     const observer = new IntersectionObserver(
       (entries) => {
+        // Largest (least negative) top wins, not smallest — on the `isSimple`
+        // event layout the "card" anchor sits *inside* the "live" one
+        // (LiveEventCard's own full-card list), so both can be simultaneously
+        // "intersecting" while scrolled through the card list. A nested
+        // section's top is always >= its ancestor's, so preferring the
+        // largest top always favors the more specific/nested section without
+        // needing to special-case that layout here.
         const visible = entries
           .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          .sort((a, b) => b.boundingClientRect.top - a.boundingClientRect.top);
         if (visible[0]) setActive(visible[0].target.id);
       },
       { rootMargin: "-108px 0px -70% 0px", threshold: 0 },
