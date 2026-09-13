@@ -92,7 +92,10 @@ export default async function AccountSettingsPage() {
           <div className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4">
             <p className="font-medium text-sm">Organizer</p>
             {actor.isOrganizer ? (
-              <span className="text-success text-sm font-semibold">✓</span>
+              <Link href="/host" className="flex items-center gap-1.5 text-xs">
+                <span className="text-success">✓</span>
+                <span className="text-signal font-semibold">Host dashboard →</span>
+              </Link>
             ) : (
               <form
                 action={async () => {

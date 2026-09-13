@@ -47,6 +47,8 @@ export default async function AccountPage({
     eventFollowCount,
     liveFollowedEvent,
     upcomingFollowedEvent,
+    organizerLiveEventCount,
+    organizerUpcomingEventCount,
   ] = await Promise.all([
     prisma.user.findUnique({ where: { id: actor.userId } }),
     prisma.fighterProfile.findUnique({ where: { userId: actor.userId }, include: { club: true } }),
@@ -64,6 +66,12 @@ export default async function AccountPage({
       where: { follows: { some: { userId: actor.userId } }, status: "PUBLISHED" },
       orderBy: { date: "asc" },
     }),
+    actor.isOrganizer
+      ? prisma.event.count({ where: { hostMembers: { some: { userId: actor.userId } }, status: { in: ["LIVE", "INTERMISSION"] } } })
+      : Promise.resolve(0),
+    actor.isOrganizer
+      ? prisma.event.count({ where: { hostMembers: { some: { userId: actor.userId } }, status: { in: ["DRAFT", "READY", "PUBLISHED"] } } })
+      : Promise.resolve(0),
   ]);
 
   const upNextEvent = liveFollowedEvent ?? upcomingFollowedEvent;
@@ -325,6 +333,25 @@ export default async function AccountPage({
               </Link>
             </div>
           </div>
+        </section>
+      )}
+
+      {actor.isOrganizer && (
+        <section className="space-y-2">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Organizer</p>
+          <Link href="/host" className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4">
+            <div>
+              <p className="font-semibold text-sm">Host dashboard</p>
+              <p className="text-xs text-mute mt-0.5">
+                {organizerLiveEventCount > 0
+                  ? `${organizerLiveEventCount} event${organizerLiveEventCount === 1 ? "" : "s"} live now`
+                  : organizerUpcomingEventCount > 0
+                    ? `${organizerUpcomingEventCount} upcoming event${organizerUpcomingEventCount === 1 ? "" : "s"}`
+                    : "Manage your events"}
+              </p>
+            </div>
+            <span className="text-mute">›</span>
+          </Link>
         </section>
       )}
 
