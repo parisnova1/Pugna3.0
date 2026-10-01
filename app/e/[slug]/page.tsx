@@ -22,6 +22,7 @@ import { ScheduleResultsToggle } from "@/components/event/overview/ScheduleResul
 import { EventStickyNav } from "@/components/event/EventStickyNav";
 import type { EventTab } from "@/components/event/EventTabs";
 import { LiveAudience } from "@/components/event/LiveAudience";
+import { ParticipatingClubs } from "@/components/event/ParticipatingClubs";
 import { Badge } from "@/components/ui/Badge";
 import { LiveDot } from "@/components/ui/LiveDot";
 
@@ -96,6 +97,21 @@ export default async function EventCardPage({
 
   const organizerName = event.organizingClub?.name ?? event.createdBy.organizerProfile?.displayName ?? null;
   const organizerHref = event.organizingClub ? `/clubs/${event.organizingClub.id}` : null;
+
+  const [participations, nominations] = await Promise.all([
+    prisma.clubEventParticipation.findMany({ where: { eventId: event.id }, include: { club: true } }),
+    prisma.nomination.findMany({ where: { eventId: event.id }, select: { clubId: true } }),
+  ]);
+  const nominationCountByClub = new Map<string, number>();
+  for (const nom of nominations) {
+    nominationCountByClub.set(nom.clubId, (nominationCountByClub.get(nom.clubId) ?? 0) + 1);
+  }
+  const participatingClubs = participations.map((p) => ({
+    clubId: p.clubId,
+    clubName: p.club.name,
+    nominatedCount: nominationCountByClub.get(p.clubId) ?? 0,
+  }));
+
   const directionsHref =
     event.latitude != null && event.longitude != null
       ? `https://www.google.com/maps/dir/?api=1&destination=${event.latitude},${event.longitude}`
@@ -264,6 +280,8 @@ export default async function EventCardPage({
                   )}
                 </div>
               )}
+
+              <ParticipatingClubs clubs={participatingClubs} />
             </div>
           </div>
         </div>
@@ -559,6 +577,8 @@ export default async function EventCardPage({
             )}
           </div>
         )}
+
+        <ParticipatingClubs clubs={participatingClubs} />
       </div>
     </div>
   );

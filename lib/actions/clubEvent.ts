@@ -47,6 +47,8 @@ export async function inviteClubToEvent(eventId: string, clubId: string, formDat
 
   revalidatePath(`/clubs/${clubId}`);
   revalidatePath("/clubs");
+  revalidatePath("/club/requests");
+  revalidatePath("/club/events");
   return { ok: true };
 }
 
@@ -103,6 +105,8 @@ export async function respondToClubEventInvite(inviteId: string, accept: boolean
   );
 
   revalidatePath("/club/requests");
+  revalidatePath("/club/events");
+  revalidatePath("/club");
   revalidatePath("/clubs");
   revalidatePath(`/host/events/${invite.eventId}/entries`);
   return { ok: true };
@@ -140,6 +144,7 @@ export async function requestClubForEvent(eventId: string, clubId: string, formD
   );
 
   revalidatePath("/club/requests");
+  revalidatePath("/club/events");
   return { ok: true };
 }
 
@@ -178,6 +183,8 @@ export async function respondToClubEventRequest(requestId: string, accept: boole
   );
 
   revalidatePath("/club/requests");
+  revalidatePath("/club/events");
+  revalidatePath("/club");
   revalidatePath("/clubs");
   revalidatePath(`/host/events/${request.eventId}/entries`);
   return { ok: true };

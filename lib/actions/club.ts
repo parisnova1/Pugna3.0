@@ -98,7 +98,7 @@ export async function addRosterFighter(formData: FormData): Promise<ActionResult
     data: { userId: placeholderUser.id, displayName, weightClass, clubId },
   });
 
-  revalidatePath("/club/roster");
+  revalidatePath("/club/fighters");
   return { ok: true };
 }
 

@@ -1,12 +1,17 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { createClub, claimClub } from "@/lib/actions/club";
 import { createEventFromClub } from "@/lib/actions/event";
+import { getClubRelatedEvents } from "@/lib/club-events";
 import { ActionForm } from "@/components/host/ActionForm";
 import { BellLink } from "@/components/nav/BellLink";
-import { formatEventDate } from "@/lib/format";
+import { ClubNav } from "@/components/club/ClubNav";
+import { ClubEventListItem } from "@/components/club/ClubEventListItem";
+import { NominateFighterFlow } from "@/components/club/NominateFighterFlow";
+import { ClubAvatar } from "@/components/clubs/ClubCard";
+import { Badge } from "@/components/ui/Badge";
+import Link from "next/link";
 
 const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
 
@@ -22,138 +27,82 @@ export default async function ClubHomePage({
   const activeClubId =
     requestedClubId && actor.clubIds.includes(requestedClubId) ? requestedClubId : actor.clubIds[0];
 
-  const myClub = activeClubId
-    ? await prisma.club.findUnique({
-        where: { id: activeClubId },
-        include: {
-          _count: { select: { roster: true, coaches: true } },
-          requests: { where: { status: { in: ["PENDING", "PARTIAL"] } } },
-          organizedEvents: { where: { status: { in: ["PUBLISHED", "LIVE", "INTERMISSION"] } }, orderBy: { date: "asc" }, take: 1 },
-        },
-      })
-    : null;
+  const myClub = activeClubId ? await prisma.club.findUnique({ where: { id: activeClubId } }) : null;
 
   if (myClub) {
-    const unreadCount = await prisma.notification.count({ where: { userId: actor.userId, read: false } });
-    const nextTournament = myClub.organizedEvents[0] ?? null;
-
-    const [upcomingFightCount, upcomingSparringCount] = await Promise.all([
-      prisma.bout.count({
-        where: {
-          OR: [{ fighterA: { clubId: myClub.id } }, { fighterB: { clubId: myClub.id } }],
-          status: { in: ["CONFIRMED", "READY", "DELAYED"] },
-        },
-      }),
-      prisma.sparringParticipant.count({
-        where: { session: { clubId: myClub.id, date: { gte: new Date() } }, status: { in: ["CONFIRMED", "INVITED"] } },
-      }),
+    const [unreadCount, cover, upcomingEvents, relatedEvents, fighters] = await Promise.all([
+      prisma.notification.count({ where: { userId: actor.userId, read: false } }),
+      prisma.media.findFirst({ where: { attachedType: "CLUB", attachedId: myClub.id, kind: "CLUB_COVER" }, orderBy: { createdAt: "desc" } }),
+      getClubRelatedEvents(myClub.id, { upcomingOnly: true, take: 5 }),
+      getClubRelatedEvents(myClub.id),
+      prisma.fighterProfile.findMany({ where: { clubId: myClub.id }, select: { id: true, displayName: true, weightClass: true } }),
     ]);
+
+    const fighterOptions = fighters.map((f) => ({ id: f.id, name: f.displayName, weightClass: f.weightClass }));
 
     return (
       <div className="space-y-6 pt-2">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">{myClub.name}</h1>
-            <p className="text-mute text-sm mt-1">{myClub.city ?? "—"} · {myClub._count.roster} boxers</p>
+          <div className="flex items-center gap-3">
+            <ClubAvatar name={myClub.name} coverUrl={cover?.url ?? null} size={48} />
+            <div>
+              <h1 className="text-xl font-semibold leading-tight">{myClub.name}</h1>
+              {myClub.isVerified && (
+                <div className="mt-1">
+                  <Badge tone="success">✓ PUGNA Verified</Badge>
+                </div>
+              )}
+            </div>
           </div>
           <BellLink unreadCount={unreadCount} />
         </div>
 
-        <div className="grid grid-cols-4 gap-2 text-center">
-          <div className="rounded-card bg-panel border border-white/10 p-3">
-            <p className="text-lg font-semibold tabular">{myClub._count.roster}</p>
-            <p className="text-[10px] text-mute mt-0.5">Fighters</p>
-          </div>
-          <div className="rounded-card bg-panel border border-white/10 p-3">
-            <p className="text-lg font-semibold tabular">{myClub._count.coaches}</p>
-            <p className="text-[10px] text-mute mt-0.5">Coaches</p>
-          </div>
-          <div className="rounded-card bg-panel border border-white/10 p-3">
-            <p className="text-lg font-semibold tabular">{upcomingSparringCount}</p>
-            <p className="text-[10px] text-mute mt-0.5">Sparring</p>
-          </div>
-          <div className="rounded-card bg-panel border border-white/10 p-3">
-            <p className="text-lg font-semibold tabular">{upcomingFightCount}</p>
-            <p className="text-[10px] text-mute mt-0.5">Fights</p>
-          </div>
-        </div>
+        <ClubNav active="home" />
 
-        {nextTournament && (
-          <div className="rounded-card bg-panel border border-white/10 p-4">
-            <p className="text-xs font-semibold text-mute uppercase tracking-wide">Next tournament</p>
-            <p className="font-semibold mt-1">{nextTournament.name}</p>
-            <p className="text-sm text-mute mt-0.5">{formatEventDate(nextTournament.date)}</p>
-          </div>
-        )}
+        <form
+          action={async () => {
+            "use server";
+            await createEventFromClub(myClub.id);
+          }}
+        >
+          <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3.5">
+            + Create Event
+          </button>
+        </form>
 
-        {myClub.requests.length > 0 && (
-          <div className="rounded-card bg-panel border border-signal/30 p-4 flex items-center justify-between gap-3">
-            <p className="text-sm font-medium">{myClub.requests.length} open request{myClub.requests.length > 1 ? "s" : ""}</p>
-            <Link
-              href="/club/requests"
-              className="shrink-0 rounded-pill bg-signal text-onsignal px-3 py-1.5 text-xs font-semibold"
-            >
-              Review
-            </Link>
-          </div>
-        )}
+        <section className="space-y-2">
+          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Upcoming Events</p>
+          {upcomingEvents.length === 0 ? (
+            <p className="text-sm text-mute">No upcoming events yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {upcomingEvents.map((event) => (
+                <ClubEventListItem key={event.id} event={event} />
+              ))}
+            </div>
+          )}
+        </section>
 
-        <div className="space-y-2">
+        <section className="space-y-2">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Quick actions</p>
           <div className="grid grid-cols-2 gap-2">
-            <form
-              action={async () => {
-                "use server";
-                await createEventFromClub(myClub.id);
-              }}
-            >
-              <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 text-sm">
-                Create Event
-              </button>
-            </form>
-            <Link
-              href="/sparring/host/new"
-              className="flex items-center justify-center rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm"
-            >
-              Open Sparring
+            <NominateFighterFlow
+              clubId={myClub.id}
+              events={relatedEvents}
+              fighters={fighterOptions}
+              triggerClassName="w-full rounded-card bg-panel border border-white/10 p-3 text-center text-sm font-semibold"
+            />
+            <Link href="/club/events?tab=discover" className="rounded-card bg-panel border border-white/10 p-3 text-center text-sm font-semibold">
+              Find Event
             </Link>
-            <Link
-              href="/club/roster"
-              className="flex items-center justify-center rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm"
-            >
-              Add Fighter
+            <Link href="/sparring/host/new" className="rounded-card bg-panel border border-white/10 p-3 text-center text-sm font-semibold">
+              Create Sparring
             </Link>
-            <Link
-              href="/sparring/host"
-              className="flex items-center justify-center rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm"
-            >
-              Match Sparring
+            <Link href="/club/requests" className="rounded-card bg-panel border border-white/10 p-3 text-center text-sm font-semibold">
+              View Requests
             </Link>
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/club/roster" className="rounded-card bg-panel border border-white/10 p-4">
-            <p className="font-semibold text-sm">Roster</p>
-            <p className="text-xs text-mute mt-1">Fighters &amp; coaches</p>
-          </Link>
-          <Link href="/club/requests" className="rounded-card bg-panel border border-white/10 p-4">
-            <p className="font-semibold text-sm">Requests</p>
-            <p className="text-xs text-mute mt-1">Nominate boxers</p>
-          </Link>
-          <Link href="/club/tournaments" className="rounded-card bg-panel border border-white/10 p-4">
-            <p className="font-semibold text-sm">Tournaments</p>
-            <p className="text-xs text-mute mt-1">Hosting</p>
-          </Link>
-          <Link href="/sparring/host" className="rounded-card bg-panel border border-white/10 p-4">
-            <p className="font-semibold text-sm">Sparring</p>
-            <p className="text-xs text-mute mt-1">Host &amp; manage</p>
-          </Link>
-          <Link href="/club/analytics" className="rounded-card bg-panel border border-white/10 p-4 col-span-2">
-            <p className="font-semibold text-sm">Analytics</p>
-            <p className="text-xs text-mute mt-1">Attendance, activity, results</p>
-          </Link>
-        </div>
+        </section>
       </div>
     );
   }

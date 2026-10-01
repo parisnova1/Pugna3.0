@@ -1,14 +1,11 @@
 import { redirect } from "next/navigation";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
-import { nominateFighter } from "@/lib/actions/request";
-import { requestClubForEvent, respondToClubEventInvite } from "@/lib/actions/clubEvent";
-import { ActionForm } from "@/components/host/ActionForm";
+import { respondToClubEventInvite } from "@/lib/actions/clubEvent";
+import { respondToParticipant } from "@/lib/actions/sparring";
+import { respondToNomination, respondToClubRequest, respondToClubInvite } from "@/lib/actions/sparringClub";
+import { ClubNav } from "@/components/club/ClubNav";
 import { formatEventDate } from "@/lib/format";
-import type { Requirement } from "@/lib/actions/request";
-import type { ActionResult } from "@/lib/actions/types";
-
-const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
 
 export default async function ClubRequestsPage({
   searchParams,
@@ -22,37 +19,49 @@ export default async function ClubRequestsPage({
   const clubId = requestedClubId && actor.clubIds.includes(requestedClubId) ? requestedClubId : actor.clubIds[0];
   if (!clubId) redirect("/club");
 
-  const [requests, roster, eventInvites, sentRequests, participations] = await Promise.all([
-    prisma.eventRequest.findMany({
-      where: { clubId, status: { in: ["PENDING", "PARTIAL"] } },
-      include: { event: true },
-    }),
-    prisma.fighterProfile.findMany({ where: { clubId } }),
-    prisma.clubEventInvite.findMany({ where: { invitedClubId: clubId, status: "PENDING" }, include: { event: true } }),
-    prisma.clubEventRequest.findMany({ where: { requestingClubId: clubId }, include: { event: true } }),
-    prisma.clubEventParticipation.findMany({ where: { clubId } }),
-  ]);
+  const [eventInvites, sparringJoinRequests, hostNominations, sparringClubRequests, sparringClubInvites, organizesAnyEvent] =
+    await Promise.all([
+      prisma.clubEventInvite.findMany({ where: { invitedClubId: clubId, status: "PENDING" }, include: { event: true } }),
+      prisma.sparringParticipant.findMany({
+        where: { session: { clubId }, status: "REQUESTED" },
+        include: { fighter: true, session: true },
+      }),
+      prisma.sparringNomination.findMany({
+        where: { session: { clubId }, status: "PENDING" },
+        include: { fighter: true, nominatingClub: true, session: true },
+      }),
+      prisma.sparringClubRequest.findMany({
+        where: { session: { clubId }, status: "PENDING" },
+        include: { requestingClub: true, session: true },
+      }),
+      prisma.sparringClubInvite.findMany({
+        where: { invitedClubId: clubId, status: "PENDING" },
+        include: { session: true },
+      }),
+      prisma.event.count({ where: { organizingClubId: clubId } }),
+    ]);
 
-  const relatedEventIds = new Set([
-    ...eventInvites.map((i) => i.eventId),
-    ...sentRequests.map((r) => r.eventId),
-    ...participations.map((p) => p.eventId),
-  ]);
-  const invitableEvents = await prisma.event.findMany({
-    where: { status: { in: ["PUBLISHED", "READY"] }, id: { notIn: [...relatedEventIds] } },
-    orderBy: { date: "asc" },
-    take: 30,
-  });
+  const eventClubRequests = organizesAnyEvent > 0
+    ? await prisma.clubEventRequest.findMany({
+        where: { event: { organizingClubId: clubId }, status: "PENDING" },
+        include: { event: true, requestingClub: true },
+      })
+    : [];
 
-  async function requestClubForEventAction(formData: FormData): Promise<ActionResult> {
-    "use server";
-    const eventId = String(formData.get("eventId") ?? "");
-    return requestClubForEvent(eventId, clubId!, formData);
-  }
+  const nothingPending =
+    eventInvites.length === 0 &&
+    sparringJoinRequests.length === 0 &&
+    hostNominations.length === 0 &&
+    sparringClubRequests.length === 0 &&
+    sparringClubInvites.length === 0 &&
+    eventClubRequests.length === 0;
 
   return (
     <div className="space-y-6 pt-2">
       <h1 className="text-2xl font-semibold">Requests</h1>
+      <ClubNav active="requests" />
+
+      {nothingPending && <p className="text-sm text-mute">Nothing pending.</p>}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Event Invitations</h2>
@@ -61,98 +70,150 @@ export default async function ClubRequestsPage({
         ) : (
           <div className="space-y-2">
             {eventInvites.map((invite) => (
-              <div key={invite.id} className="rounded-card bg-panel border border-white/10 p-4 space-y-2">
-                <div>
-                  <p className="text-sm font-medium">{invite.event.name}</p>
-                  <p className="text-xs text-mute mt-0.5">{formatEventDate(invite.event.date)}</p>
-                  {invite.message && <p className="text-xs text-mute mt-1 italic">&ldquo;{invite.message}&rdquo;</p>}
-                </div>
-                <div className="flex gap-2">
-                  <form
-                    action={async () => {
-                      "use server";
-                      await respondToClubEventInvite(invite.id, true);
-                    }}
-                  >
-                    <button type="submit" className="rounded-pill bg-signal text-onsignal text-xs font-semibold px-4 py-2">
-                      Accept
-                    </button>
-                  </form>
-                  <form
-                    action={async () => {
-                      "use server";
-                      await respondToClubEventInvite(invite.id, false);
-                    }}
-                  >
-                    <button type="submit" className="rounded-pill border border-white/20 text-xs font-semibold px-4 py-2">
-                      Decline
-                    </button>
-                  </form>
-                </div>
-              </div>
+              <RequestCard
+                key={invite.id}
+                title={invite.event.name}
+                subtitle={formatEventDate(invite.event.date)}
+                note={invite.message}
+                onAccept={async () => {
+                  "use server";
+                  await respondToClubEventInvite(invite.id, true);
+                }}
+                onDecline={async () => {
+                  "use server";
+                  await respondToClubEventInvite(invite.id, false);
+                }}
+              />
             ))}
           </div>
         )}
       </section>
 
-      {invitableEvents.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Request to Join an Event</h2>
-          <ActionForm action={requestClubForEventAction} submitLabel="Send request" className="space-y-3">
-            <select name="eventId" required className={inputClass}>
-              <option value="">Select event</option>
-              {invitableEvents.map((event) => (
-                <option key={event.id} value={event.id}>
-                  {event.name} — {formatEventDate(event.date)}
-                </option>
-              ))}
-            </select>
-            <textarea name="message" rows={2} placeholder="Message (optional)" className={`${inputClass} resize-none`} />
-          </ActionForm>
-        </section>
-      )}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Fighter Requests</h2>
+        {sparringJoinRequests.length === 0 && hostNominations.length === 0 ? (
+          <p className="text-sm text-mute">No pending fighter requests.</p>
+        ) : (
+          <div className="space-y-2">
+            {sparringJoinRequests.map((p) => (
+              <RequestCard
+                key={p.id}
+                title={p.fighter.displayName}
+                subtitle={`Wants to join sparring at ${p.session.gym}`}
+                onAccept={async () => {
+                  "use server";
+                  await respondToParticipant(p.id, true);
+                }}
+                onDecline={async () => {
+                  "use server";
+                  await respondToParticipant(p.id, false);
+                }}
+              />
+            ))}
+            {hostNominations.map((n) => (
+              <RequestCard
+                key={n.id}
+                title={n.fighter.displayName}
+                subtitle={`Nominated by ${n.nominatingClub.name} for sparring at ${n.session.gym}`}
+                onAccept={async () => {
+                  "use server";
+                  await respondToNomination(n.id, true);
+                }}
+                onDecline={async () => {
+                  "use server";
+                  await respondToNomination(n.id, false);
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
-      {requests.length === 0 ? (
-        <p className="text-sm text-mute">No requests.</p>
-      ) : (
-        <div className="space-y-3">
-          {requests.map((req) => {
-            const reqs = (req.requirements as Requirement[]) ?? [];
-            return (
-              <div key={req.id} className="rounded-card bg-panel border border-white/10 p-4 space-y-3">
-                <div>
-                  <p className="text-sm font-medium">{req.event.name}</p>
-                  <p className="text-xs text-mute">{formatEventDate(req.event.date)}</p>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {reqs.map((r, i) => (
-                    <span key={i} className="text-[11px] rounded-pill border border-white/10 px-2 py-0.5 text-mute">
-                      {r.weightClass} × {r.need}
-                    </span>
-                  ))}
-                </div>
-                {roster.length > 0 ? (
-                  <ActionForm action={nominateFighter} submitLabel="Nominate" className="space-y-2">
-                    <input type="hidden" name="eventId" value={req.eventId} />
-                    <input type="hidden" name="clubId" value={clubId} />
-                    <select name="fighterId" required className={inputClass}>
-                      <option value="">Select boxer</option>
-                      {roster.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.displayName}
-                        </option>
-                      ))}
-                    </select>
-                    <input name="weightClass" placeholder="Weight class" required className={inputClass} />
-                  </ActionForm>
-                ) : (
-                  <p className="text-xs text-mute">Add boxers to your roster first.</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Sparring Requests</h2>
+        {sparringClubRequests.length === 0 ? (
+          <p className="text-sm text-mute">No pending sparring requests.</p>
+        ) : (
+          <div className="space-y-2">
+            {sparringClubRequests.map((req) => (
+              <RequestCard
+                key={req.id}
+                title={req.requestingClub.name}
+                subtitle={`Wants to join sparring at ${req.session.gym}`}
+                onAccept={async () => {
+                  "use server";
+                  await respondToClubRequest(req.id, true);
+                }}
+                onDecline={async () => {
+                  "use server";
+                  await respondToClubRequest(req.id, false);
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Club Requests</h2>
+        {sparringClubInvites.length === 0 && eventClubRequests.length === 0 ? (
+          <p className="text-sm text-mute">No pending club requests.</p>
+        ) : (
+          <div className="space-y-2">
+            {sparringClubInvites.map((invite) => (
+              <RequestCard
+                key={invite.id}
+                title={`Invited to spar at ${invite.session.gym}`}
+                subtitle={formatEventDate(invite.session.date)}
+                onAccept={async () => {
+                  "use server";
+                  await respondToClubInvite(invite.id, true);
+                }}
+                onDecline={async () => {
+                  "use server";
+                  await respondToClubInvite(invite.id, false);
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function RequestCard({
+  title,
+  subtitle,
+  note,
+  onAccept,
+  onDecline,
+}: {
+  title: string;
+  subtitle: string;
+  note?: string | null;
+  onAccept: () => Promise<void>;
+  onDecline: () => Promise<void>;
+}) {
+  return (
+    <div className="rounded-card bg-panel border border-white/10 p-4 space-y-2">
+      <div>
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-xs text-mute mt-0.5">{subtitle}</p>
+        {note && <p className="text-xs text-mute mt-1 italic">&ldquo;{note}&rdquo;</p>}
+      </div>
+      <div className="flex gap-2">
+        <form action={onAccept}>
+          <button type="submit" className="rounded-pill bg-signal text-onsignal text-xs font-semibold px-4 py-2">
+            Accept
+          </button>
+        </form>
+        <form action={onDecline}>
+          <button type="submit" className="rounded-pill border border-white/20 text-xs font-semibold px-4 py-2">
+            Decline
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
