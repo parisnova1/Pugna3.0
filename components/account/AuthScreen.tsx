@@ -4,8 +4,16 @@ import { useState } from "react";
 import { AuthForm } from "@/components/account/AuthForm";
 import { signInAction, registerAction } from "@/lib/actions/auth";
 
-export function AuthScreen({ returnTo, subtext }: { returnTo: string; subtext?: string }) {
-  const [mode, setMode] = useState<"signin" | "register">("signin");
+export function AuthScreen({
+  returnTo,
+  subtext,
+  initialMode = "signin",
+}: {
+  returnTo: string;
+  subtext?: string;
+  initialMode?: "signin" | "register";
+}) {
+  const [mode, setMode] = useState<"signin" | "register">(initialMode);
   const isSignIn = mode === "signin";
 
   return (

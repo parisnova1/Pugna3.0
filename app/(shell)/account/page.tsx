@@ -27,13 +27,19 @@ function guestMessage(returnTo: string | undefined): string | undefined {
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string }>;
+  searchParams: Promise<{ returnTo?: string; mode?: string }>;
 }) {
-  const { returnTo } = await searchParams;
+  const { returnTo, mode } = await searchParams;
   const actor = await getActor();
 
   if (!actor) {
-    return <AuthScreen returnTo={returnTo ?? "/"} subtext={guestMessage(returnTo)} />;
+    return (
+      <AuthScreen
+        returnTo={returnTo ?? "/"}
+        subtext={guestMessage(returnTo)}
+        initialMode={mode === "register" ? "register" : "signin"}
+      />
+    );
   }
 
   const [
