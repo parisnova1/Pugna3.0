@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { requireHostEvent } from "@/lib/host-guard";
 import { addGuestFighter } from "@/lib/actions/event";
-import { requestClub } from "@/lib/actions/request";
+import { inviteClubToEvent } from "@/lib/actions/clubEvent";
 import { prisma } from "@/lib/prisma";
 import { ActionForm } from "@/components/host/ActionForm";
 import { BackButton } from "@/components/event/ContextBar";
+import type { ActionResult } from "@/lib/actions/types";
 
 const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
 
@@ -12,12 +13,22 @@ export default async function EntriesStepPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const { event } = await requireHostEvent(id, `/host/events/${id}/entries`);
 
-  const [clubs, requests, nominations, participatingClubs] = await Promise.all([
+  const [clubs, invites, nominations, participatingClubs] = await Promise.all([
     prisma.club.findMany({ orderBy: { name: "asc" }, take: 50 }),
-    prisma.eventRequest.findMany({ where: { eventId: id }, include: { club: true } }),
+    prisma.clubEventInvite.findMany({ where: { eventId: id }, include: { invitedClub: true }, orderBy: { createdAt: "desc" } }),
     prisma.nomination.findMany({ where: { eventId: id }, include: { fighter: true, club: true } }),
     prisma.clubEventParticipation.findMany({ where: { eventId: id }, include: { club: true }, orderBy: { createdAt: "asc" } }),
   ]);
+
+  const invitableClubs = clubs.filter(
+    (club) => !invites.some((i) => i.invitedClubId === club.id) && !participatingClubs.some((p) => p.clubId === club.id),
+  );
+
+  async function inviteClubAction(formData: FormData): Promise<ActionResult> {
+    "use server";
+    const clubId = String(formData.get("clubId") ?? "");
+    return inviteClubToEvent(id, clubId, formData);
+  }
 
   const nominationCountByClub = new Map<string, number>();
   for (const nom of nominations) {
@@ -74,33 +85,33 @@ export default async function EntriesStepPage({ params }: { params: Promise<{ id
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Request a club</h2>
-        {requests.length > 0 && (
+        <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Invite a club</h2>
+        {invites.length > 0 && (
           <div className="space-y-1 mb-2">
-            {requests.map((req) => (
-              <p key={req.id} className="text-xs text-mute">
-                {req.club.name} — {req.status}
+            {invites.map((invite) => (
+              <p key={invite.id} className="text-xs text-mute">
+                {invite.invitedClub.name} — {invite.status}
               </p>
             ))}
           </div>
         )}
-        {clubs.length === 0 ? (
-          <p className="text-sm text-mute">No clubs on Pugna yet — add a guest boxer below instead.</p>
+        {invitableClubs.length === 0 ? (
+          <p className="text-sm text-mute">
+            {clubs.length === 0
+              ? "No clubs on Pugna yet — add a guest boxer below instead."
+              : "Every club has already been invited or is participating."}
+          </p>
         ) : (
-          <ActionForm action={requestClub} submitLabel="Send request" className="space-y-3">
-            <input type="hidden" name="eventId" value={event.id} />
+          <ActionForm action={inviteClubAction} submitLabel="Send invitation" className="space-y-3">
             <select name="clubId" required className={inputClass}>
               <option value="">Select club</option>
-              {clubs.map((club) => (
+              {invitableClubs.map((club) => (
                 <option key={club.id} value={club.id}>
                   {club.name}
                 </option>
               ))}
             </select>
-            <div className="grid grid-cols-2 gap-3">
-              <input name="weightClass" placeholder="Weight class" required className={inputClass} />
-              <input name="need" type="number" min={1} defaultValue={1} className={inputClass} />
-            </div>
+            <textarea name="message" rows={2} placeholder="Message (optional)" className={`${inputClass} resize-none`} />
           </ActionForm>
         )}
       </section>

@@ -5,38 +5,13 @@ import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/types";
-import type { Prisma } from "@prisma/client";
 import { notify, notifyMany } from "@/lib/actions/notify";
 
-export type Requirement = { weightClass: string; need: number };
-
-export async function requestClub(formData: FormData): Promise<ActionResult> {
-  const actor = await getActor();
-  const eventId = String(formData.get("eventId") ?? "");
-  const gate = can(actor, "event.edit", { eventId });
-  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
-
-  const clubId = String(formData.get("clubId") ?? "");
-  const weightClass = String(formData.get("weightClass") ?? "").trim();
-  const need = Math.max(1, Number(formData.get("need") ?? 1));
-
-  if (!clubId || !weightClass) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Club and weight class are required." };
-
-  const existing = await prisma.eventRequest.findUnique({ where: { eventId_clubId: { eventId, clubId } } });
-
-  if (existing) {
-    const requirements = (existing.requirements as Requirement[]) ?? [];
-    requirements.push({ weightClass, need });
-    await prisma.eventRequest.update({ where: { id: existing.id }, data: { requirements: requirements as unknown as Prisma.InputJsonValue, status: "PENDING" } });
-  } else {
-    await prisma.eventRequest.create({
-      data: { eventId, clubId, requirements: [{ weightClass, need }] as unknown as Prisma.InputJsonValue, status: "PENDING" },
-    });
-  }
-
-  revalidatePath(`/host/events/${eventId}/entries`);
-  return { ok: true };
-}
+// requestClub() + the legacy EventRequest-based "requirements" flow was
+// retired in favor of lib/actions/clubEvent.ts's inviteClubToEvent/
+// ClubEventInvite -- the canonical club<->event registration system (see
+// PUGNA_PHASE0_AUDIT.md section 13). The EventRequest/RequestStatus schema
+// is left in place, unused, rather than a destructive migration.
 
 export async function nominateFighter(formData: FormData): Promise<ActionResult> {
   const actor = await getActor();
