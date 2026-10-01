@@ -8,7 +8,15 @@ export const metadata = { title: "Welcome to PUGNA" };
  * presentation: both buttons hand off to the existing /account auth flow
  * (AuthScreen), which already does all the real sign-in/register work.
  */
-export default function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string }>;
+}) {
+  const { returnTo } = await searchParams;
+  const safeReturnTo = returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
+  const authQuery = safeReturnTo !== "/" ? `&returnTo=${encodeURIComponent(safeReturnTo)}` : "";
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-void">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -35,20 +43,20 @@ export default function OnboardingPage() {
 
         <div className="flex gap-3">
           <Link
-            href="/account?mode=signin"
+            href={`/account?mode=signin${authQuery}`}
             className="flex-1 text-center rounded-pill bg-signal text-onsignal font-bold py-3.5"
           >
             Sign In
           </Link>
           <Link
-            href="/account?mode=register"
+            href={`/account?mode=register${authQuery}`}
             className="flex-1 text-center rounded-pill bg-panel border border-white/20 text-ink font-bold py-3.5"
           >
             Register
           </Link>
         </div>
 
-        <Link href="/" className="block text-center text-sm text-mute mt-5 underline underline-offset-2">
+        <Link href={safeReturnTo} className="block text-center text-sm text-mute mt-5 underline underline-offset-2">
           Continue browsing without an account
         </Link>
       </div>
