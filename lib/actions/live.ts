@@ -10,7 +10,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/types";
 import type { ScratchReason } from "@prisma/client";
 import { notifyMany } from "@/lib/actions/notify";
-import { getFollowerUserIds } from "@/lib/actions/event";
+import { getFollowerUserIds } from "@/lib/recipients";
 
 function boutFighterUserIds(bout: { fighterA: { userId: string } | null; fighterB: { userId: string } | null }): string[] {
   return [bout.fighterA?.userId, bout.fighterB?.userId].filter((id): id is string => Boolean(id));

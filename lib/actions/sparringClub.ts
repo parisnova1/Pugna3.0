@@ -6,7 +6,7 @@ import { can } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/types";
 import { notify, notifyMany } from "@/lib/actions/notify";
-import { clubAdminUserIds } from "@/lib/actions/sparring";
+import { clubAdminUserIds } from "@/lib/recipients";
 
 export async function inviteClub(sessionId: string, formData: FormData): Promise<ActionResult> {
   const actor = await getActor();

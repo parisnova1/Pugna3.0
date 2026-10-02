@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AuthForm } from "@/components/account/AuthForm";
 import { signInAction, registerAction } from "@/lib/actions/auth";
 
@@ -37,6 +38,14 @@ export function AuthScreen({
         <AuthForm key="signin" action={signInAction} returnTo={returnTo} submitLabel="Sign in" />
       ) : (
         <AuthForm key="register" action={registerAction} returnTo={returnTo} submitLabel="Create account" showName />
+      )}
+
+      {isSignIn && (
+        <p className="text-center text-sm">
+          <Link href="/account/forgot" className="text-mute underline underline-offset-2">
+            Forgot your password?
+          </Link>
+        </p>
       )}
 
       <p className="text-center text-sm text-mute">

@@ -10,11 +10,16 @@ import { redirect } from "next/navigation";
 import type { ActionResult } from "@/lib/actions/types";
 import { notifyMany } from "@/lib/actions/notify";
 import { geocodeVenue } from "@/lib/geocode";
+import { getBoutFighterUserIds, getFollowerUserIds } from "@/lib/recipients";
+import { VERIFY_NEEDED_URL } from "@/lib/security/routes";
 
 export async function createEvent(): Promise<{ ok: true; eventId: string } | { ok: false; code: string; reason: string }> {
   const actor = await getActor();
   const result = can(actor, "event.create");
-  if (!result.allowed) return { ok: false, code: result.code, reason: result.reason };
+  if (!result.allowed) {
+    if (result.code === "EMAIL_UNVERIFIED") redirect(VERIFY_NEEDED_URL);
+    return { ok: false, code: result.code, reason: result.reason };
+  }
 
   const event = await prisma.event.create({
     data: {
@@ -41,6 +46,13 @@ export async function createEventFromClub(clubId: string): Promise<ActionResult 
   const actor = await getActor();
   const gate = can(actor, "club.admin", { clubId });
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+
+  // Same confirmed-email requirement as an independent organizer creating an event.
+  const mayCreate = can(actor, "event.create");
+  if (!mayCreate.allowed) {
+    if (mayCreate.code === "EMAIL_UNVERIFIED") redirect(VERIFY_NEEDED_URL);
+    return { ok: false, code: mayCreate.code, reason: mayCreate.reason };
+  }
 
   const event = await prisma.event.create({
     data: {
@@ -345,20 +357,6 @@ export async function publishEvent(eventId: string): Promise<ActionResult> {
   revalidatePath(`/host/events/${eventId}`);
   revalidatePath("/events");
   redirect(`/host/events/${eventId}`);
-}
-
-export async function getBoutFighterUserIds(eventId: string): Promise<string[]> {
-  const bouts = await prisma.bout.findMany({
-    where: { eventId },
-    include: { fighterA: true, fighterB: true },
-  });
-  const ids = bouts.flatMap((b) => [b.fighterA?.userId, b.fighterB?.userId]).filter((id): id is string => Boolean(id));
-  return [...new Set(ids)];
-}
-
-export async function getFollowerUserIds(eventId: string): Promise<string[]> {
-  const follows = await prisma.follow.findMany({ where: { eventId }, select: { userId: true } });
-  return follows.map((f) => f.userId);
 }
 
 export async function cancelEvent(eventId: string, formData: FormData): Promise<ActionResult> {

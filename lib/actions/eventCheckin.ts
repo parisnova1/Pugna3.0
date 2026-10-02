@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { logScan } from "@/lib/actions/scanHistory";
+import { POLICIES } from "@/lib/security/policies";
+import { rateLimit } from "@/lib/security/rate-limit-db";
 import type { CheckInSource } from "@prisma/client";
 
 export type CheckInAttempt =
@@ -11,7 +13,8 @@ export type CheckInAttempt =
   | { status: "NOT_PUBLISHED"; eventName: string; eventSlug: string | null }
   | { status: "NOT_LIVE_YET"; eventName: string; eventSlug: string | null }
   | { status: "CLOSED"; eventName: string; eventSlug: string | null }
-  | { status: "AUTH_REQUIRED" };
+  | { status: "AUTH_REQUIRED" }
+  | { status: "RATE_LIMITED" };
 
 /**
  * Resolves an event (by id or by its public /go/:code) and attempts to check
@@ -32,6 +35,10 @@ export async function checkInViewer({
 }): Promise<CheckInAttempt> {
   const actor = await getActor();
   if (!actor) return { status: "AUTH_REQUIRED" };
+
+  // Check-in codes can be guessed; cap how fast one account can try them.
+  const limit = await rateLimit([{ policy: POLICIES.checkInUser, subject: actor.userId }]);
+  if (!limit.ok) return { status: "RATE_LIMITED" };
 
   const event = eventId
     ? await prisma.event.findUnique({ where: { id: eventId } })

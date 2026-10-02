@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 
 type Action = (prev: AuthActionResult | null, formData: FormData) => Promise<AuthActionResult>;
 
-const INPUT_CLASS = "w-full rounded-card bg-panel border border-white/10 px-4 py-3.5 text-ink placeholder:text-mute";
+export const AUTH_INPUT_CLASS = "w-full rounded-card bg-panel border border-white/10 px-4 py-3.5 text-ink placeholder:text-mute";
 
 export function AuthForm({
   action,
@@ -26,11 +26,11 @@ export function AuthForm({
       <input type="hidden" name="returnTo" value={returnTo} />
       {showName && (
         <Field label="Name">
-          <input name="name" type="text" placeholder="Your name (optional)" className={INPUT_CLASS} />
+          <input name="name" type="text" placeholder="Your name (optional)" className={AUTH_INPUT_CLASS} />
         </Field>
       )}
       <Field label="Email">
-        <input name="email" type="email" placeholder="name@example.com" required className={INPUT_CLASS} />
+        <input name="email" type="email" placeholder="name@example.com" required className={AUTH_INPUT_CLASS} />
       </Field>
       <Field label="Password">
         <input
@@ -39,7 +39,7 @@ export function AuthForm({
           placeholder={showName ? "8+ characters" : "Password"}
           required
           minLength={showName ? 8 : undefined}
-          className={INPUT_CLASS}
+          className={AUTH_INPUT_CLASS}
         />
       </Field>
       {state && !state.ok && <p className="text-signal text-sm">{state.error}</p>}
@@ -54,7 +54,7 @@ export function AuthForm({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-1.5">
       <span className="text-sm font-medium text-ink">{label}</span>

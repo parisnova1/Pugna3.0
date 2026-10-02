@@ -1,6 +1,7 @@
 import { TabBar } from "@/components/nav/TabBar";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
+import { VerifyEmailBanner } from "@/components/account/AccountSecurityForms";
 
 export default async function ShellLayout({ children }: { children: React.ReactNode }) {
   const actor = await getActor();
@@ -18,6 +19,7 @@ export default async function ShellLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen pb-24">
+      {actor && !actor.emailVerified && <VerifyEmailBanner />}
       <main className="mx-auto w-full max-w-md px-4 pt-6">{children}</main>
       <TabBar isOrganizer={actor?.isOrganizer ?? false} liveEventId={liveEvent?.id ?? null} />
     </div>

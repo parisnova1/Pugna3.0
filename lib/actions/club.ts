@@ -4,12 +4,18 @@ import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { VERIFY_NEEDED_URL } from "@/lib/security/routes";
 import type { ActionResult } from "@/lib/actions/types";
 import { geocodeAddress } from "@/lib/geocode";
 
 export async function createClub(formData: FormData): Promise<ActionResult> {
   const actor = await getActor();
-  if (!actor) return { ok: false, code: "AUTH_REQUIRED", reason: "Sign in required." };
+  const gate = can(actor, "club.claim", { clubClaimed: false });
+  if (!gate.allowed) {
+    if (gate.code === "EMAIL_UNVERIFIED") redirect(VERIFY_NEEDED_URL);
+    return { ok: false, code: gate.code, reason: gate.reason };
+  }
 
   const name = String(formData.get("name") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim() || null;
@@ -19,7 +25,7 @@ export async function createClub(formData: FormData): Promise<ActionResult> {
   const club = await prisma.club.create({
     data: { name, city, latitude: coords?.lat ?? null, longitude: coords?.lng ?? null },
   });
-  await prisma.clubAdmin.create({ data: { clubId: club.id, userId: actor.userId, role: "CLUB_OWNER" } });
+  await prisma.clubAdmin.create({ data: { clubId: club.id, userId: actor!.userId, role: "CLUB_OWNER" } });
 
   revalidatePath("/", "layout");
   return { ok: true };
@@ -70,7 +76,10 @@ export async function claimClub(clubId: string): Promise<ActionResult> {
   const actor = await getActor();
   const club = await prisma.club.findUnique({ where: { id: clubId }, include: { admins: true } });
   const gate = can(actor, "club.claim", { clubClaimed: (club?.admins.length ?? 0) > 0 });
-  if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
+  if (!gate.allowed) {
+    if (gate.code === "EMAIL_UNVERIFIED") redirect(VERIFY_NEEDED_URL);
+    return { ok: false, code: gate.code, reason: gate.reason };
+  }
   if (!club) return { ok: false, code: "NOT_FOUND", reason: "Club not found." };
 
   await prisma.clubAdmin.create({ data: { clubId, userId: actor!.userId, role: "CLUB_OWNER" } });

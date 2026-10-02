@@ -67,11 +67,12 @@ describe("robots.txt", () => {
 describe("X-Robots-Tag on private routes", () => {
   it("is configured for private paths and never for public ones", async () => {
     const entries = (await nextConfig.headers?.()) ?? [];
-    const sources = entries.map((e) => e.source);
+    const robotsEntries = entries.filter((e) => e.source !== "/:path*");
+    const sources = robotsEntries.map((e) => e.source);
     for (const expected of ["/account/:path*", "/host/:path*", "/club/:path*", "/you/:path*", "/sparring/:path+"]) {
       expect(sources).toContain(expected);
     }
-    for (const entry of entries) {
+    for (const entry of robotsEntries) {
       expect(entry.headers).toContainEqual({ key: "X-Robots-Tag", value: "noindex, nofollow" });
     }
     for (const pub of ["/clubs/:path*", "/events/:path*", "/fighters/:path*", "/sparring"]) {

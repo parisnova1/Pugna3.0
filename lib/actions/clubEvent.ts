@@ -6,7 +6,7 @@ import { can } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/types";
 import { notifyMany } from "@/lib/actions/notify";
-import { clubAdminUserIds } from "@/lib/actions/sparring";
+import { clubAdminUserIds } from "@/lib/recipients";
 
 /**
  * Organizer <-> Club, event-scoped — mirrors lib/actions/sparringClub.ts's

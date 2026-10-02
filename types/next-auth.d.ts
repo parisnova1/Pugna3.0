@@ -8,6 +8,8 @@ declare module "next-auth" {
       isBoxer: boolean;
       clubIds: string[];
       isOrganizer: boolean;
+      emailConfirmed: boolean;
+      authAt?: number;
       hostEventIds: string[];
       hostRoles: Record<string, { role: EventRole; ringIds: string[] }>;
       clubRoles: Record<string, ClubRole>;
@@ -21,6 +23,9 @@ declare module "next-auth/jwt" {
     isBoxer?: boolean;
     clubIds?: string[];
     isOrganizer?: boolean;
+    emailConfirmed?: boolean;
+    /** ms epoch of sign-in; sessions older than User.passwordChangedAt are revoked. */
+    authAt?: number;
     hostEventIds?: string[];
     hostRoles?: Record<string, { role: EventRole; ringIds: string[] }>;
     clubRoles?: Record<string, ClubRole>;

@@ -8,14 +8,10 @@ import { redirect } from "next/navigation";
 import type { ActionResult } from "@/lib/actions/types";
 import { notify, notifyMany } from "@/lib/actions/notify";
 import { geocodeVenue } from "@/lib/geocode";
+import { clubAdminUserIds } from "@/lib/recipients";
 
 async function getOwnFighter(userId: string) {
   return prisma.fighterProfile.findUnique({ where: { userId } });
-}
-
-export async function clubAdminUserIds(clubId: string): Promise<string[]> {
-  const admins = await prisma.clubAdmin.findMany({ where: { clubId }, select: { userId: true } });
-  return admins.map((a) => a.userId);
 }
 
 export async function createSparringSession(formData: FormData): Promise<ActionResult> {

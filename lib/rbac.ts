@@ -29,7 +29,8 @@ export type DenyCode =
   | "VALIDATION_BLOCKED"
   | "CLUB_CLAIMED"
   | "HOST_MEMBERSHIP_MISSING"
-  | "CONTEXT_REQUIRED";
+  | "CONTEXT_REQUIRED"
+  | "EMAIL_UNVERIFIED";
 
 export type CanResult =
   | { allowed: true }
@@ -40,6 +41,8 @@ export type Actor = {
   isBoxer: boolean;
   clubIds: string[];
   isOrganizer: boolean;
+  /** True once the address is confirmed (or when no email provider is configured, so nobody is locked out). */
+  emailVerified: boolean;
   hostEventIds: string[];
   hostRoles: Record<string, { role: EventRole; ringIds: string[] }>;
   clubRoles: Record<string, ClubRole>;
@@ -86,7 +89,13 @@ export type Resource = {
   alreadyInAClub?: boolean;
 };
 
+/** Actions that create public, abusable things -- an unconfirmed address can't do them. */
+const REQUIRES_VERIFIED_EMAIL: ReadonlySet<Action> = new Set<Action>(["event.create", "club.claim"]);
+
 export function can(actor: Actor, action: Action, resource: Resource = {}): CanResult {
+  if (actor && REQUIRES_VERIFIED_EMAIL.has(action) && !actor.emailVerified) {
+    return deny("EMAIL_UNVERIFIED", "Confirm your email address first -- check your inbox for the link.");
+  }
   switch (action) {
     case "event.view": {
       // Guests may view published+ events. Unpublished (DRAFT/READY) is host-only.

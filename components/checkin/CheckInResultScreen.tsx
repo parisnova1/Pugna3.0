@@ -13,6 +13,14 @@ export function CheckInResultScreen({ result }: { result: CheckInAttempt }) {
     );
   }
 
+  if (result.status === "RATE_LIMITED") {
+    return (
+      <Screen title="Check-in">
+        <p className="text-mute text-sm">Too many attempts. Try again in a few minutes.</p>
+      </Screen>
+    );
+  }
+
   if (result.status === "INVALID_CODE") {
     return (
       <Screen title="Check-in">

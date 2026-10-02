@@ -225,6 +225,14 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Null until the address is proven (verification link or password reset).
+  emailVerifiedAt DateTime?
+  // Sessions issued before this instant are revoked (see jwt callback in lib/auth.ts).
+  passwordChangedAt DateTime?
+  // The one session (its sign-in time) that survives a voluntary password change; null after a reset.
+  trustedSessionAt DateTime?
+  authTokens        AuthToken[]
+
   // Contexts (existence-based, never exclusive — see components/nav/TabBar.tsx):
   fighterProfile   FighterProfile? // "Boxer" context
   organizerProfile OrganizerProfile? // "Organizer" context (independent, no club needed)
@@ -854,4 +862,41 @@ model CrowdMute {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
+}
+
+enum AuthTokenType {
+  PASSWORD_RESET
+  EMAIL_VERIFY
+}
+
+/**
+ * One-time links emailed to a user. Only a SHA-256 of the token is stored, so
+ * a database leak can't be replayed; `usedAt` makes each link single-use and
+ * `expiresAt` makes it short-lived.
+ */
+model AuthToken {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      AuthTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@index([userId, type])
+}
+
+/**
+ * Fixed-window counters behind lib/security/rate-limit.ts. Lives in Postgres
+ * (not process memory) because serverless instances don't share memory, so an
+ * in-memory limiter would let an attacker spread attempts across instances.
+ * `key` is a hash, never a raw email or IP.
+ */
+model RateLimitBucket {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
 }
