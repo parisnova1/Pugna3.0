@@ -18,12 +18,29 @@ const TABLES = [
   "fighterProfile",
   "notification",
   "savedBout",
+  "club",
+  "clubEventInvite",
+  "clubEventRequest",
+  "clubEventParticipation",
+  "eventHostMember",
 ] as const;
 type Table = (typeof TABLES)[number];
+
+/** Column defaults the real schema applies on create. */
+const DEFAULTS: Partial<Record<Table, Row>> = { clubEventInvite: { status: "PENDING" }, clubEventRequest: { status: "PENDING" } };
+
+/** Relations the fake can resolve from `include`: table -> relation name -> [target table, foreign key on this row]. */
+const RELATIONS: Partial<Record<Table, Record<string, [Table, string]>>> = {
+  clubEventInvite: { event: ["event", "eventId"], invitedClub: ["club", "invitedClubId"] },
+  clubEventParticipation: { event: ["event", "eventId"], club: ["club", "clubId"] },
+};
 
 function matches(row: Row, where: Record<string, unknown> | undefined): boolean {
   return Object.entries(where ?? {}).every(([key, expected]) => {
     const actual = row[key];
+    if (actual === undefined && expected && typeof expected === "object" && !(expected instanceof Date) && key.includes("_")) {
+      return matches(row, expected as Record<string, unknown>);
+    }
     if (expected && typeof expected === "object" && !(expected instanceof Date)) {
       const filter = expected as Record<string, unknown>;
       if ("in" in filter) return (filter.in as unknown[]).includes(actual);
@@ -40,14 +57,23 @@ export function createFakeDb() {
 
   const model = (name: Table) => {
     // Reads return snapshots (as real Prisma does), so a later update can't rewrite a row the caller already holds.
-    const find = async ({ where }: { where?: Record<string, unknown> } = {}) => {
+    const withIncludes = (row: Row, include?: Record<string, unknown>): Row => {
+      const copy = structuredClone(row);
+      for (const rel of Object.keys(include ?? {})) {
+        const link = RELATIONS[name]?.[rel];
+        if (link) copy[rel] = structuredClone(tables[link[0]].find((t) => t.id === row[link[1]]) ?? null);
+      }
+      return copy;
+    };
+    const find = async ({ where, include }: { where?: Record<string, unknown>; include?: Record<string, unknown> } = {}) => {
       const row = tables[name].find((r) => matches(r, where));
-      return row ? structuredClone(row) : null;
+      return row ? withIncludes(row, include) : null;
     };
     return {
       findUnique: find,
       findFirst: find,
-      findMany: async ({ where }: { where?: Record<string, unknown> } = {}) => tables[name].filter((r) => matches(r, where)).map((r) => structuredClone(r)),
+      findMany: async ({ where, include }: { where?: Record<string, unknown>; include?: Record<string, unknown> } = {}) =>
+        tables[name].filter((r) => matches(r, where)).map((r) => withIncludes(r, include)),
       count: async ({ where }: { where?: Record<string, unknown> } = {}) => tables[name].filter((r) => matches(r, where)).length,
       update: async ({ where, data }: { where: Record<string, unknown>; data: Row }) => {
         mutations.push(`${name}.update`);
@@ -62,9 +88,27 @@ export function createFakeDb() {
         rows.forEach((r) => Object.assign(r, data));
         return { count: rows.length };
       },
+      upsert: async ({ where, update, create }: { where: Record<string, unknown>; update: Row; create: Row }) => {
+        const row = tables[name].find((r) => matches(r, where));
+        if (row) {
+          Object.assign(row, update);
+          mutations.push(`${name}.update`);
+          return structuredClone(row);
+        }
+        mutations.push(`${name}.create`);
+        const made = { id: `${name}-${tables[name].length + 1}`, ...create };
+        tables[name].push(made);
+        return structuredClone(made);
+      },
+      delete: async ({ where }: { where: Record<string, unknown> }) => {
+        mutations.push(`${name}.delete`);
+        const i = tables[name].findIndex((r) => matches(r, where));
+        if (i < 0) throw new Error(`${name}.delete: no row`);
+        return tables[name].splice(i, 1)[0];
+      },
       create: async ({ data }: { data: Row }) => {
         mutations.push(`${name}.create`);
-        const row = { id: `${name}-${tables[name].length + 1}`, ...data };
+        const row = { id: `${name}-${tables[name].length + 1}`, ...(DEFAULTS[name] ?? {}), ...data };
         tables[name].push(row);
         return row;
       },
