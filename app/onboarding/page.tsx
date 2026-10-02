@@ -46,18 +46,21 @@ export default async function OnboardingPage({
             href={`/account?mode=signin${authQuery}`}
             className="flex-1 text-center rounded-pill bg-signal text-onsignal font-bold py-3.5"
           >
-            Sign In
+            Log In
           </Link>
           <Link
             href={`/account?mode=register${authQuery}`}
             className="flex-1 text-center rounded-pill bg-panel border border-white/20 text-ink font-bold py-3.5"
           >
-            Register
+            Sign Up
           </Link>
         </div>
 
-        <Link href={safeReturnTo} className="block text-center text-sm text-mute mt-5 underline underline-offset-2">
-          Continue browsing without an account
+        <Link
+          href={safeReturnTo}
+          className="block text-center rounded-pill border border-white/15 text-ink/80 font-semibold py-3 mt-3"
+        >
+          Discover
         </Link>
       </div>
     </div>
