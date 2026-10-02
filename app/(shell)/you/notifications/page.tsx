@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { markAllNotificationsRead } from "@/lib/actions/notifications-read";
 import { BackButton } from "@/components/event/ContextBar";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { NotificationItem } from "@/components/notifications/NotificationItem";
 
 function timeAgo(date: Date): string {
   const ms = Date.now() - date.getTime();
@@ -47,17 +47,14 @@ export default async function NotificationsPage() {
       ) : (
         <div className="space-y-2">
           {notifications.map((n) => (
-            <Link
+            <NotificationItem
               key={n.id}
+              id={n.id}
               href={n.link ?? "/you/notifications"}
-              className={[
-                "block rounded-card border px-4 py-3",
-                n.read ? "border-white/10 bg-panel" : "border-signal/30 bg-signal/5",
-              ].join(" ")}
-            >
-              <p className="text-sm">{n.message}</p>
-              <p className="text-xs text-mute mt-1">{timeAgo(n.createdAt)}</p>
-            </Link>
+              read={n.read}
+              message={n.message}
+              ago={timeAgo(n.createdAt)}
+            />
           ))}
         </div>
       )}

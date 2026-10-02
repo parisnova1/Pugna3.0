@@ -15,6 +15,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { inputClass } from "@/components/ui/inputClass";
+import { getUnreadCount } from "@/lib/notifications-query";
 
 export default async function ClubHomePage({
   searchParams,
@@ -32,7 +33,7 @@ export default async function ClubHomePage({
 
   if (myClub) {
     const [unreadCount, cover, upcomingEvents, relatedEvents, fighters] = await Promise.all([
-      prisma.notification.count({ where: { userId: actor.userId, read: false } }),
+      getUnreadCount(actor.userId),
       prisma.media.findFirst({ where: { attachedType: "CLUB", attachedId: myClub.id, kind: "CLUB_COVER" }, orderBy: { createdAt: "desc" } }),
       getClubRelatedEvents(myClub.id, { upcomingOnly: true, take: 5 }),
       getClubRelatedEvents(myClub.id),

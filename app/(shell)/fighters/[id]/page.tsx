@@ -14,6 +14,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { getFighterMeta } from "@/lib/seo-queries";
 import { buildMetadata, fighterJsonLd, privateMetadata } from "@/lib/seo";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 const UPCOMING_STATUSES = ["TBD", "CONFIRMED", "READY", "DELAYED", "IN_PROGRESS"];
 
@@ -86,7 +87,7 @@ export default async function FighterProfilePage({
       ringName: b.ring.name ?? `Ring ${b.ring.number}`,
     })),
   ]
-    .filter((b) => b.event.status !== "DRAFT" && b.event.status !== "READY")
+    .filter((b) => isPublishedEventStatus(b.event.status))
     .sort((a, b) => b.event.date.getTime() - a.event.date.getTime());
 
   const finished = bouts.filter((b) => b.status === "FINAL");
@@ -112,6 +113,10 @@ export default async function FighterProfilePage({
       : false;
 
   const isOwnProfile = actor?.userId === fighter.userId;
+  // Sessions the fighter actually took part in: confirmed or checked in, on a session that has run.
+  const sparringCount = await prisma.sparringParticipant.count({
+    where: { fighterId: fighter.id, status: { in: ["CONFIRMED", "CHECKED_IN"] }, session: { status: "COMPLETED" } },
+  });
   const fighterMedia = await prisma.media.findMany({
     where: { attachedType: "FIGHTER", attachedId: fighter.id },
     orderBy: { createdAt: "desc" },
@@ -181,7 +186,7 @@ export default async function FighterProfilePage({
             <p className="text-[11px] text-mute mt-0.5">Opponents</p>
           </div>
           <div className="rounded-card bg-panel border border-white/10 p-3 text-center">
-            <p className="text-lg font-semibold tabular">—</p>
+            <p className="text-lg font-semibold tabular">{sparringCount}</p>
             <p className="text-[11px] text-mute mt-0.5">Sparring</p>
           </div>
         </div>

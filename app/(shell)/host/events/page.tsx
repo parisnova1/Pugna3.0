@@ -4,6 +4,7 @@ import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { formatEventDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 export default async function HostEventsPage() {
   const actor = await getActor();
@@ -24,7 +25,7 @@ export default async function HostEventsPage() {
           {events.map((event) => (
             <Link
               key={event.id}
-              href={event.status === "DRAFT" || event.status === "READY" ? `/host/events/${event.id}/build` : `/host/events/${event.id}`}
+              href={!isPublishedEventStatus(event.status) ? `/host/events/${event.id}/build` : `/host/events/${event.id}`}
               className="flex items-center justify-between rounded-card bg-panel border border-white/10 px-4 py-3"
             >
               <div>

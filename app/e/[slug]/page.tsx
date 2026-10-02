@@ -8,8 +8,6 @@ import { prisma } from "@/lib/prisma";
 import { computeRingProjections, isEventLive } from "@/lib/projection";
 import { formatEventDate, formatTime, formatDateRange, currentDayNumber } from "@/lib/format";
 import { BackButton } from "@/components/event/ContextBar";
-import { FollowButton } from "@/components/event/FollowButton";
-import { ShareSheet } from "@/components/event/ShareSheet";
 import { LiveEventCard, type BoutView } from "@/components/event/LiveEventCard";
 import { eventStatusPillFor } from "@/lib/bout-status";
 import { BracketDiagram, isValidBracket, roundLabelForSize, type BracketRound } from "@/components/event/BracketDiagram";
@@ -24,12 +22,12 @@ import { EventStickyNav } from "@/components/event/EventStickyNav";
 import type { EventTab } from "@/components/event/EventTabs";
 import { LiveAudience } from "@/components/event/LiveAudience";
 import { ParticipatingClubs } from "@/components/event/ParticipatingClubs";
-import { Badge } from "@/components/ui/Badge";
 import { LiveDot } from "@/components/ui/LiveDot";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { EventHeader, EventInfoCard, OrganizerCard } from "@/components/event/overview/EventBlocks";
 import { getEventMeta } from "@/lib/seo-queries";
-import { absoluteUrl, buildMetadata, isPublishedEventStatus, privateMetadata, sportsEventJsonLd } from "@/lib/seo";
-import { buttonClass } from "@/components/ui/Button";
+import { absoluteUrl, buildMetadata, privateMetadata, sportsEventJsonLd } from "@/lib/seo";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -78,7 +76,7 @@ export default async function EventCardPage({
 
   const { event, projection } = data;
   const actor = await getActor();
-  const published = event.status !== "DRAFT" && event.status !== "READY";
+  const published = isPublishedEventStatus(event.status);
 
   const view = can(actor, "event.view", { eventId: event.id, eventPublished: published });
   if (!view.allowed) {
@@ -205,44 +203,20 @@ export default async function EventCardPage({
     return (
       <div className="mx-auto w-full max-w-md lg:max-w-5xl px-4 pt-4 pb-10">
         {eventJsonLd && <JsonLd data={eventJsonLd} />}
-        <div id="overview" className="scroll-mt-24">
-          {coverUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card mb-4" />
-          )}
-
-          <div className="space-y-1.5 mb-4">
-            {pill && (
-              <div className="flex items-center gap-2">
-                <Badge live={pill.live} tone={pill.live ? "live" : "neutral"}>
-                  {pill.text}
-                </Badge>
-                {event._count.follows > 0 && (
-                  <span className="text-[11px] text-mute tabular">
-                    {new Intl.NumberFormat("en-US").format(event._count.follows)} watching
-                  </span>
-                )}
-              </div>
-            )}
-            <h1 className="text-2xl font-semibold">{event.name}</h1>
-            <p className="text-mute text-sm">{venueLabel}</p>
-            <p className="text-mute text-sm">{dateLabel}</p>
-          </div>
-
-          <div className="flex items-center gap-2 mb-6">
-            <FollowButton eventId={event.id} slug={slug} isGuest={!actor} following={following} />
-            <ShareSheet code={event.code} name={event.name} />
-            <Link href="/account" aria-label="Account" className="rounded-full border border-white/15 p-2.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
-              </svg>
-            </Link>
-            {event.status === "CANCELLED" && event.cancelReason && (
-              <p className="text-sm text-error">Cancelled: {event.cancelReason}</p>
-            )}
-          </div>
-        </div>
+        <EventHeader
+          coverUrl={coverUrl}
+          pill={pill}
+          followCount={event._count.follows}
+          name={event.name}
+          venueLabel={venueLabel}
+          dateText={dateLabel}
+          eventId={event.id}
+          slug={slug}
+          code={event.code}
+          isGuest={!actor}
+          following={following}
+          cancelReason={event.status === "CANCELLED" ? event.cancelReason : null}
+        />
 
         {/* Sibling of #overview, not a child of it — its sticky containing block needs to span the
             whole page (this outer div), not just the hero, or it would stop sticking as soon as
@@ -284,48 +258,15 @@ export default async function EventCardPage({
             />
 
             <div id="info" className="scroll-mt-24 space-y-4">
-              <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
-                <p className="text-xs font-semibold text-mute uppercase tracking-wide">Event Info</p>
-                {(event.venue || event.city) && (
-                  <div>
-                    <p className="text-xs text-mute">Venue</p>
-                    <p className="text-sm font-medium">{venueLabel}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs text-mute">Date</p>
-                  <p className="text-sm font-medium">{formatEventDate(event.date)}</p>
-                </div>
-                {event.startTime && (
-                  <div>
-                    <p className="text-xs text-mute">Start</p>
-                    <p className="text-sm font-medium">{formatTime(event.startTime)}</p>
-                  </div>
-                )}
-                {directionsHref && (
-                  <a
-                    href={directionsHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={buttonClass({ variant: "outline", size: "xs", text: "sm", weight: "medium", className: "inline-block px-4" })}
-                  >
-                    Directions
-                  </a>
-                )}
-              </div>
+              <EventInfoCard
+                hasVenue={Boolean(event.venue || event.city)}
+                venueLabel={venueLabel}
+                dateText={formatEventDate(event.date)}
+                startTime={event.startTime}
+                directionsHref={directionsHref}
+              />
 
-              {organizerName && (
-                <div className="rounded-card bg-panel border border-white/10 p-5 space-y-2">
-                  <p className="text-xs font-semibold text-mute uppercase tracking-wide">Organized by</p>
-                  {organizerHref ? (
-                    <Link href={organizerHref} className="text-sm font-semibold text-signal">
-                      {organizerName} →
-                    </Link>
-                  ) : (
-                    <p className="text-sm font-semibold">{organizerName}</p>
-                  )}
-                </div>
-              )}
+              {organizerName && <OrganizerCard name={organizerName} href={organizerHref} />}
 
               <ParticipatingClubs clubs={participatingClubs} />
             </div>
@@ -439,50 +380,21 @@ export default async function EventCardPage({
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10">
       {eventJsonLd && <JsonLd data={eventJsonLd} />}
-      <div id="overview" className="scroll-mt-24">
-        {coverUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded-card mb-4" />
-        )}
-
-        <div className="space-y-1.5 mb-4">
-          {pill && (
-            <div className="flex items-center gap-2">
-              <Badge live={pill.live} tone={pill.live ? "live" : "neutral"}>
-                {pill.text}
-              </Badge>
-              {event._count.follows > 0 && (
-                <span className="text-[11px] text-mute tabular">
-                  {new Intl.NumberFormat("en-US").format(event._count.follows)} watching
-                </span>
-              )}
-            </div>
-          )}
-          <h1 className="text-2xl font-semibold">{event.name}</h1>
-          <p className="text-mute text-sm flex items-center gap-1.5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
-              <path d="M12 22s7-7.58 7-12.5A7 7 0 0 0 5 9.5C5 14.42 12 22 12 22z" />
-              <circle cx="12" cy="9.5" r="2.5" />
-            </svg>
-            {venueLabel}
-          </p>
-          <p className="text-mute text-sm">{formatDateRange(event.date, event.dayCount)}</p>
-        </div>
-
-        <div className="flex items-center gap-2 mb-6">
-          <FollowButton eventId={event.id} slug={slug} isGuest={!actor} following={following} />
-          <ShareSheet code={event.code} name={event.name} />
-          <Link href="/account" aria-label="Account" className="rounded-full border border-white/15 p-2.5">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
-            </svg>
-          </Link>
-          {event.status === "CANCELLED" && event.cancelReason && (
-            <p className="text-sm text-error">Cancelled: {event.cancelReason}</p>
-          )}
-        </div>
-      </div>
+      <EventHeader
+        coverUrl={coverUrl}
+        pill={pill}
+        followCount={event._count.follows}
+        name={event.name}
+        venueLabel={venueLabel}
+        dateText={formatDateRange(event.date, event.dayCount)}
+        showPin
+        eventId={event.id}
+        slug={slug}
+        code={event.code}
+        isGuest={!actor}
+        following={following}
+        cancelReason={event.status === "CANCELLED" ? event.cancelReason : null}
+      />
 
       {/* Sibling of #overview, not a child of it — see isSimple branch above for why. */}
       <EventStickyNav eventName={event.name} isLive={isLive} fallbackHref="/events" tabs={tabs} />
@@ -582,48 +494,15 @@ export default async function EventCardPage({
       </div>
 
       <div id="info" className="mt-8 space-y-4 scroll-mt-24">
-        <div className="rounded-card bg-panel border border-white/10 p-5 space-y-3">
-          <p className="text-xs font-semibold text-mute uppercase tracking-wide">Event Info</p>
-          {(event.venue || event.city) && (
-            <div>
-              <p className="text-xs text-mute">Venue</p>
-              <p className="text-sm font-medium">{venueLabel}</p>
-            </div>
-          )}
-          <div>
-            <p className="text-xs text-mute">Date</p>
-            <p className="text-sm font-medium">{formatDateRange(event.date, event.dayCount)}</p>
-          </div>
-          {event.startTime && (
-            <div>
-              <p className="text-xs text-mute">Start</p>
-              <p className="text-sm font-medium">{formatTime(event.startTime)}</p>
-            </div>
-          )}
-          {directionsHref && (
-            <a
-              href={directionsHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonClass({ variant: "outline", size: "xs", text: "sm", weight: "medium", className: "inline-block px-4" })}
-            >
-              Directions
-            </a>
-          )}
-        </div>
+        <EventInfoCard
+          hasVenue={Boolean(event.venue || event.city)}
+          venueLabel={venueLabel}
+          dateText={formatDateRange(event.date, event.dayCount)}
+          startTime={event.startTime}
+          directionsHref={directionsHref}
+        />
 
-        {organizerName && (
-          <div className="rounded-card bg-panel border border-white/10 p-5 space-y-2">
-            <p className="text-xs font-semibold text-mute uppercase tracking-wide">Organized by</p>
-            {organizerHref ? (
-              <Link href={organizerHref} className="text-sm font-semibold text-signal">
-                {organizerName} →
-              </Link>
-            ) : (
-              <p className="text-sm font-semibold">{organizerName}</p>
-            )}
-          </div>
-        )}
+        {organizerName && <OrganizerCard name={organizerName} href={organizerHref} />}
 
         <ParticipatingClubs clubs={participatingClubs} />
       </div>

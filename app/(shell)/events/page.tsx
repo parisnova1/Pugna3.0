@@ -9,6 +9,7 @@ import { OrganizerHome } from "@/components/account/OrganizerHome";
 import { buildMetadata } from "@/lib/seo";
 import { buttonClass } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { getUnreadCount } from "@/lib/notifications-query";
 
 type Filter = "live" | "today" | "week" | "upcoming" | "finished" | "tournaments" | "fightNights";
 
@@ -65,7 +66,7 @@ export default async function EventsPage({
   // controlling events is their reason to open the app, not browsing the
   // public events list (which stays exactly as-is for everyone else).
   if (actor?.isOrganizer) {
-    const unreadCount = await prisma.notification.count({ where: { userId: actor.userId, read: false } });
+    const unreadCount = await getUnreadCount(actor.userId);
     return <OrganizerHome actor={actor} unreadCount={unreadCount} />;
   }
 

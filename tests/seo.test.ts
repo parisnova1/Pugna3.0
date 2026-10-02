@@ -4,12 +4,12 @@ import {
   buildMetadata,
   clubJsonLd,
   fighterJsonLd,
-  isPublishedEventStatus,
   privateMetadata,
   serializeJsonLd,
   sportsEventJsonLd,
   toDescription,
 } from "@/lib/seo";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 const baseEvent = {
   slug: "fight-night-2026",

@@ -88,7 +88,9 @@ export async function hideShout(shoutId: string, eventId: string): Promise<Actio
   const gate = can(actor, "event.edit", { eventId });
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
 
-  await prisma.crowdShout.update({ where: { id: shoutId }, data: { hidden: true } });
+  // Only shouts on this event's own bouts.
+  const hidden = await prisma.crowdShout.updateMany({ where: { id: shoutId, bout: { eventId } }, data: { hidden: true } });
+  if (hidden.count === 0) return { ok: false, code: "NOT_FOUND", reason: "Message not found." };
   return { ok: true };
 }
 

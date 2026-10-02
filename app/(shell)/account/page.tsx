@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AuthScreen } from "@/components/account/AuthScreen";
 import { formatEventDate, formatCountdown } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
+import { getUnreadCount } from "@/lib/notifications-query";
 
 function greeting(now: Date): string {
   const hour = now.getHours();
@@ -57,7 +58,7 @@ export default async function AccountPage({
     prisma.user.findUnique({ where: { id: actor.userId } }),
     prisma.fighterProfile.findUnique({ where: { userId: actor.userId }, include: { club: true } }),
     prisma.notification.findMany({ where: { userId: actor.userId }, orderBy: { createdAt: "desc" }, take: 5 }),
-    prisma.notification.count({ where: { userId: actor.userId, read: false } }),
+    getUnreadCount(actor.userId),
     prisma.savedBout.count({ where: { userId: actor.userId } }),
     prisma.fighterFollow.count({ where: { userId: actor.userId } }),
     prisma.clubFollow.count({ where: { userId: actor.userId } }),

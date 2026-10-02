@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getEventCardData } from "@/lib/event-query";
 import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -10,7 +11,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   if (!data) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 
   const actor = await getActor();
-  const published = data.event.status !== "DRAFT" && data.event.status !== "READY";
+  const published = isPublishedEventStatus(data.event.status);
   const view = can(actor, "event.view", { eventId: data.event.id, eventPublished: published });
   if (!view.allowed) return NextResponse.json({ error: view.code }, { status: 403 });
 

@@ -1,6 +1,6 @@
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
-export type ImageType = "image/jpeg" | "image/png" | "image/gif" | "image/webp" | "image/avif";
+type ImageType = "image/jpeg" | "image/png" | "image/gif" | "image/webp" | "image/avif";
 
 const ascii = (bytes: Uint8Array, start: number, length: number) =>
   String.fromCharCode(...bytes.slice(start, start + length));

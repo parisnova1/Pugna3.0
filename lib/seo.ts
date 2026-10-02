@@ -28,7 +28,7 @@ export function toDescription(text: string, max = 160): string {
   return `${flat.slice(0, max - 1).trimEnd()}…`;
 }
 
-export const NOINDEX: Metadata["robots"] = { index: false, follow: false };
+const NOINDEX: Metadata["robots"] = { index: false, follow: false };
 
 type BuildMetadataInput = {
   title: string;
@@ -219,9 +219,3 @@ export function fighterJsonLd(input: FighterLdInput): JsonLdObject {
   });
 }
 
-/** Events whose pages guests are allowed to see (mirrors the "published" rule in rbac `event.view`). */
-export const UNPUBLISHED_EVENT_STATUSES = ["DRAFT", "READY"] as const;
-
-export function isPublishedEventStatus(status: string): boolean {
-  return !(UNPUBLISHED_EVENT_STATUSES as readonly string[]).includes(status);
-}

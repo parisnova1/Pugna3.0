@@ -16,7 +16,8 @@ import { NextFightPanel } from "@/components/live/NextFightPanel";
 import { FighterFollowButton } from "@/components/fighters/FighterFollowButton";
 import type { BoutStatus } from "@prisma/client";
 import { getBoutMeta } from "@/lib/seo-queries";
-import { buildMetadata, isPublishedEventStatus, privateMetadata } from "@/lib/seo";
+import { buildMetadata, privateMetadata } from "@/lib/seo";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 // A fight is "upcoming" — worth notifying about — before it's live and before it's over.
 const UPCOMING_STATUSES: BoutStatus[] = ["TBD", "CONFIRMED", "READY"];
@@ -69,7 +70,7 @@ export default async function BoutDetailPage({
   if (!bout || bout.event.slug !== slug) notFound();
 
   const actor = await getActor();
-  const published = bout.event.status !== "DRAFT" && bout.event.status !== "READY";
+  const published = isPublishedEventStatus(bout.event.status);
   const view = can(actor, "event.view", { eventId: bout.event.id, eventPublished: published });
   if (!view.allowed) notFound();
 

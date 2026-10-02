@@ -6,6 +6,7 @@ import { logScan } from "@/lib/actions/scanHistory";
 import { POLICIES } from "@/lib/security/policies";
 import { rateLimit } from "@/lib/security/rate-limit-db";
 import type { CheckInSource } from "@prisma/client";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 export type CheckInAttempt =
   | { status: "OK"; eventName: string; eventSlug: string | null; alreadyCheckedIn: boolean; liveBoutId: string | null }
@@ -50,7 +51,7 @@ export async function checkInViewer({
 
   const info = { eventName: event.name, eventSlug: event.slug };
 
-  if (event.status === "DRAFT" || event.status === "READY") return { status: "NOT_PUBLISHED", ...info };
+  if (!isPublishedEventStatus(event.status)) return { status: "NOT_PUBLISHED", ...info };
   if (event.status === "PUBLISHED") return { status: "NOT_LIVE_YET", ...info };
   if (event.status === "FINISHED" || event.status === "CANCELLED" || event.status === "ARCHIVED") {
     return { status: "CLOSED", ...info };

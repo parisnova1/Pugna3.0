@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { can } from "@/lib/rbac";
 import { getCrowdSnapshot, getMyReactions } from "@/lib/crowd-query";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ boutId: string }> }) {
   const { boutId } = await params;
@@ -14,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ boutId:
   if (!bout) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 
   const actor = await getActor();
-  const published = bout.event.status !== "DRAFT" && bout.event.status !== "READY";
+  const published = isPublishedEventStatus(bout.event.status);
   const view = can(actor, "event.view", { eventId: bout.event.id, eventPublished: published });
   if (!view.allowed) return NextResponse.json({ error: view.code }, { status: 403 });
 

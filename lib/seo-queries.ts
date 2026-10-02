@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { UNPUBLISHED_EVENT_STATUSES } from "@/lib/seo";
+import { UNPUBLISHED_EVENT_STATUSES } from "@/lib/event-status";
 
 /**
  * Narrow, cached reads used only for metadata. `select` keeps them to fields

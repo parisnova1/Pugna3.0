@@ -12,6 +12,8 @@ import { notifyMany } from "@/lib/actions/notify";
 import { geocodeVenue } from "@/lib/geocode";
 import { getBoutFighterUserIds, getFollowerUserIds } from "@/lib/recipients";
 import { VERIFY_NEEDED_URL } from "@/lib/security/routes";
+import { isActiveEventStatus } from "@/lib/event-status";
+import { isReschedulable, rescheduleMessage, scheduleChanged } from "@/lib/schedule";
 
 export async function createEvent(): Promise<{ ok: true; eventId: string } | { ok: false; code: string; reason: string }> {
   const actor = await getActor();
@@ -138,7 +140,8 @@ export async function renameRing(ringId: string, eventId: string, formData: Form
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
 
   const name = String(formData.get("name") ?? "").trim() || null;
-  await prisma.ring.update({ where: { id: ringId }, data: { name } });
+  const renamed = await prisma.ring.updateMany({ where: { id: ringId, eventId }, data: { name } });
+  if (renamed.count === 0) return { ok: false, code: "NOT_FOUND", reason: "Ring not found." };
 
   revalidatePath(`/host/events/${eventId}/structure`);
   return { ok: true };
@@ -219,6 +222,9 @@ export async function createBout(formData: FormData): Promise<ActionResult> {
     const firstRing = await prisma.ring.findFirst({ where: { eventId }, orderBy: { number: "asc" } });
     if (!firstRing) return { ok: false, code: "VALIDATION_BLOCKED", reason: "Event has no rings configured." };
     ringId = firstRing.id;
+  } else if (!(await prisma.ring.findFirst({ where: { id: ringId, eventId }, select: { id: true } }))) {
+    // The ring id comes from the form; it must belong to this event.
+    return { ok: false, code: "VALIDATION_BLOCKED", reason: "That ring isn't part of this event." };
   }
 
   const count = await prisma.bout.count({ where: { eventId } });
@@ -238,15 +244,36 @@ export async function setBoutSchedule(boutId: string, eventId: string, formData:
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
 
   const timeStr = String(formData.get("scheduledTime") ?? "");
-  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  const bout = await prisma.bout.findFirst({
+    where: { id: boutId, eventId },
+    include: {
+      fighterA: { select: { userId: true, displayName: true } },
+      fighterB: { select: { userId: true, displayName: true } },
+      event: { select: { name: true, slug: true, status: true } },
+    },
+  });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Bout not found." };
 
   const nextStatus = bout.status === "TBD" ? "TBD" : bout.status === "DRAFT" ? "CONFIRMED" : bout.status;
+  const nextTime = timeStr ? new Date(timeStr) : null;
 
   await prisma.bout.update({
     where: { id: boutId },
-    data: { scheduledTime: timeStr ? new Date(timeStr) : null, status: nextStatus },
+    data: { scheduledTime: nextTime, status: nextStatus },
   });
+
+  // Moving a bout once the event is public affects its fighters and anyone who
+  // saved it; edits made while the event is still being built tell no one.
+  if (isActiveEventStatus(bout.event.status) && isReschedulable(bout.status) && scheduleChanged(bout.scheduledTime, nextTime)) {
+    const fighterUserIds = [bout.fighterA?.userId, bout.fighterB?.userId].filter((id): id is string => Boolean(id));
+    const savedBy = (await prisma.savedBout.findMany({ where: { boutId }, select: { userId: true } }))
+      .map((s) => s.userId)
+      .filter((id) => !fighterUserIds.includes(id));
+    const link = `/e/${bout.event.slug ?? ""}/bout/${boutId}`;
+    const matchup = `${bout.fighterA?.displayName ?? "TBD"} vs ${bout.fighterB?.displayName ?? "TBD"}`;
+    await notifyMany(fighterUserIds, "SCHEDULE_CHANGED", rescheduleMessage({ audience: "fighter", eventName: bout.event.name, when: nextTime }), link);
+    await notifyMany(savedBy, "SCHEDULE_CHANGED", rescheduleMessage({ audience: "watcher", eventName: bout.event.name, when: nextTime, matchup }), link);
+  }
 
   revalidatePath(`/host/events/${eventId}`);
   return { ok: true };
@@ -258,8 +285,8 @@ export async function setBoutStreamUrl(boutId: string, eventId: string, formData
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
 
   const streamUrl = String(formData.get("streamUrl") ?? "").trim() || null;
-  const bout = await prisma.bout.findUnique({
-    where: { id: boutId },
+  const bout = await prisma.bout.findFirst({
+    where: { id: boutId, eventId },
     include: { event: true, fighterA: true, fighterB: true },
   });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Bout not found." };
@@ -296,7 +323,7 @@ export async function markBoutReady(boutId: string, eventId: string): Promise<Ac
   const gate = can(actor, "event.edit", { eventId });
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
 
-  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  const bout = await prisma.bout.findFirst({ where: { id: boutId, eventId } });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Bout not found." };
   if (bout.status !== "CONFIRMED") return { ok: false, code: "CONFLICT", reason: "Bout must be confirmed first." };
 

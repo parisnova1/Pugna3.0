@@ -9,6 +9,7 @@ import type { ActionResult } from "@/lib/actions/types";
 import { notify, notifyMany } from "@/lib/actions/notify";
 import { geocodeVenue } from "@/lib/geocode";
 import { clubAdminUserIds } from "@/lib/recipients";
+import { weightGroupInSession } from "@/lib/scope";
 
 async function getOwnFighter(userId: string) {
   return prisma.fighterProfile.findUnique({ where: { userId } });
@@ -92,6 +93,9 @@ export async function registerForSparring(sessionId: string, formData: FormData)
   if (existing) return { ok: false, code: "CONFLICT", reason: "You're already registered for this session." };
 
   const weightGroupId = String(formData.get("weightGroupId") ?? "") || null;
+  if (weightGroupId && !(await weightGroupInSession(weightGroupId, sessionId))) {
+    return { ok: false, code: "VALIDATION_BLOCKED", reason: "That weight group isn't part of this session." };
+  }
   const note = String(formData.get("note") ?? "").trim() || null;
 
   await prisma.sparringParticipant.create({
@@ -214,6 +218,10 @@ export async function moveWeightGroup(participantId: string, weightGroupId: stri
   const gate = can(actor, "club.admin", { clubId: participant.session.clubId });
   if (!gate.allowed) return { ok: false, code: gate.code, reason: gate.reason };
 
+  if (weightGroupId && !(await weightGroupInSession(weightGroupId, participant.sessionId))) {
+    return { ok: false, code: "VALIDATION_BLOCKED", reason: "That weight group isn't part of this session." };
+  }
+
   await prisma.sparringParticipant.update({ where: { id: participantId }, data: { weightGroupId } });
 
   revalidatePath(`/sparring/${participant.sessionId}`);
@@ -235,8 +243,8 @@ export async function createMatch(sessionId: string, formData: FormData): Promis
   }
 
   const [a, b] = await Promise.all([
-    prisma.sparringParticipant.findUnique({ where: { id: participantAId }, include: { fighter: true } }),
-    prisma.sparringParticipant.findUnique({ where: { id: participantBId }, include: { fighter: true } }),
+    prisma.sparringParticipant.findFirst({ where: { id: participantAId, sessionId }, include: { fighter: true } }),
+    prisma.sparringParticipant.findFirst({ where: { id: participantBId, sessionId }, include: { fighter: true } }),
   ]);
   if (!a || !b) return { ok: false, code: "NOT_FOUND", reason: "Fighter not found." };
 

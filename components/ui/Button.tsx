@@ -2,7 +2,6 @@ import type { ButtonHTMLAttributes } from "react";
 import { buttonClass, type ButtonStyle } from "@/components/ui/buttonClass";
 
 export { buttonClass };
-export type { ButtonStyle, ButtonVariant, ButtonSize, ButtonText, ButtonWeight } from "@/components/ui/buttonClass";
 
 export function Button({
   variant,

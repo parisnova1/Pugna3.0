@@ -1,6 +1,7 @@
 import { requireHostEvent } from "@/lib/host-guard";
 import { publishEvent } from "@/lib/actions/event";
 import { BackButton } from "@/components/event/ContextBar";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 export default async function ReviewStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,7 +17,7 @@ export default async function ReviewStepPage({ params }: { params: Promise<{ id:
     else if (!bout.fighterAId || !bout.fighterBId) warnings.push(`Bout ${bout.number} has a TBD opponent.`);
   }
 
-  const canPublish = blockers.length === 0 && (event.status === "DRAFT" || event.status === "READY");
+  const canPublish = blockers.length === 0 && (!isPublishedEventStatus(event.status));
 
   return (
     <div className="space-y-6 pt-2">

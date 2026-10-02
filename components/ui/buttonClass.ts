@@ -9,7 +9,7 @@
  * Horizontal padding and layout (`px-5`, `inline-block`, `flex-1`,
  * `shrink-0`...) stay with the caller via `className`.
  */
-export type ButtonVariant = "primary" | "outline" | "signalOutline" | "danger" | "dangerOutline";
+export type ButtonVariant = "primary" | "outline" | "signalOutline" | "danger" | "dangerOutline" | "success";
 export type ButtonSize = "lg" | "md" | "sm" | "xs" | "xxs";
 export type ButtonText = "sm" | "xs";
 export type ButtonWeight = "semibold" | "medium" | "bold";
@@ -20,6 +20,7 @@ const VARIANT: Record<ButtonVariant, string> = {
   signalOutline: "border border-signal text-signal",
   danger: "bg-error text-ink",
   dangerOutline: "border border-error/40 text-error",
+  success: "border border-success bg-success text-onsignal",
 };
 
 const SIZE: Record<ButtonSize, string> = {

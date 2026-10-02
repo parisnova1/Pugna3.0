@@ -9,6 +9,7 @@ import { BackButton } from "@/components/event/ContextBar";
 import { FollowButton } from "@/components/event/FollowButton";
 import { ShareSheet } from "@/components/event/ShareSheet";
 import { LiveEventCard, type BoutView } from "@/components/event/LiveEventCard";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 export default async function RingLiveViewPage({
   params,
@@ -21,7 +22,7 @@ export default async function RingLiveViewPage({
 
   const { event, ring, projection, bouts: ringBouts } = data;
   const actor = await getActor();
-  const published = event.status !== "DRAFT" && event.status !== "READY";
+  const published = isPublishedEventStatus(event.status);
 
   const view = can(actor, "event.view", { eventId: event.id, eventPublished: published });
   if (!view.allowed) {

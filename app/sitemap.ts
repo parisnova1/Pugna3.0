@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
-import { absoluteUrl, UNPUBLISHED_EVENT_STATUSES } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/seo";
+import { UNPUBLISHED_EVENT_STATUSES } from "@/lib/event-status";
 
 // Always reflects the current database; crawlers fetch this rarely, and it
 // avoids the build needing a live DB connection.

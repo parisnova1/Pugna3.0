@@ -1,9 +1,9 @@
 import bcrypt from "bcryptjs";
 
 export const BCRYPT_COST = 12;
-export const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MIN_LENGTH = 8;
 /** bcrypt silently ignores everything past 72 bytes, so refuse longer passwords instead of truncating them. */
-export const PASSWORD_MAX_BYTES = 72;
+const PASSWORD_MAX_BYTES = 72;
 
 /** Returns a user-facing reason the password is unacceptable, or null if it's fine. */
 export function validateNewPassword(password: string, email?: string): string | null {

@@ -2,36 +2,6 @@ import type { BoutStatus } from "@prisma/client";
 import { IllegalTransitionError } from "./event";
 
 /**
- * Bout: DRAFT → TBD → CONFIRMED → READY → IN_PROGRESS → FINAL
- * Exceptions (blueprint §5):
- *   CONFIRMED/READY/DELAYED/IN_PROGRESS -> SCRATCHED
- *   READY/DELAYED -> DELAYED
- *   READY/DELAYED -> NO_SHOW
- */
-const TRANSITIONS: Record<BoutStatus, BoutStatus[]> = {
-  DRAFT: ["TBD"],
-  TBD: ["CONFIRMED", "SCRATCHED"],
-  CONFIRMED: ["READY", "SCRATCHED"],
-  READY: ["DELAYED", "IN_PROGRESS", "SCRATCHED", "NO_SHOW"],
-  DELAYED: ["DELAYED", "IN_PROGRESS", "SCRATCHED", "NO_SHOW"],
-  IN_PROGRESS: ["FINAL", "SCRATCHED"],
-  FINAL: [],
-  SCRATCHED: [],
-  NO_SHOW: [],
-};
-
-export function canTransitionBout(from: BoutStatus, to: BoutStatus): boolean {
-  return TRANSITIONS[from]?.includes(to) ?? false;
-}
-
-export function transitionBout(from: BoutStatus, to: BoutStatus): BoutStatus {
-  if (!canTransitionBout(from, to)) {
-    throw new IllegalTransitionError(from, to, "bout");
-  }
-  return to;
-}
-
-/**
  * Legal bout console actions (blueprint §7 table). Each maps a UI action to
  * the statuses it's legal from and the status it produces.
  */
@@ -46,7 +16,7 @@ const LEGAL_FROM: Record<BoutAction, BoutStatus[]> = {
   INTERMISSION_DELAY: ["IN_PROGRESS"], // DELAY on IN_PROGRESS: estimate only, does not exit IN_PROGRESS
 };
 
-export function assertBoutAction(current: BoutStatus, action: BoutAction): void {
+function assertBoutAction(current: BoutStatus, action: BoutAction): void {
   if (!LEGAL_FROM[action].includes(current)) {
     throw new IllegalTransitionError(current, `${action} (rejected)`, "bout");
   }

@@ -36,8 +36,10 @@ async function gateLive(eventId: string, scope?: { boutId?: string; ringId?: str
   const actor = await getActor();
   let ringIds = scope?.ringIds ?? (scope?.ringId ? [scope.ringId] : undefined);
   if (!ringIds && scope?.boutId) {
-    const bout = await prisma.bout.findUnique({ where: { id: scope.boutId }, select: { ringId: true } });
-    if (bout) ringIds = [bout.ringId];
+    // A bout from another event must not be reachable through this event's permissions.
+    const bout = await prisma.bout.findFirst({ where: { id: scope.boutId, eventId }, select: { ringId: true } });
+    if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Bout not found." };
+    ringIds = [bout.ringId];
   }
   const gate = can(actor, "live.act", { eventId, ringIds });
   return gate.allowed ? null : { ok: false, code: gate.code, reason: gate.reason };
@@ -48,8 +50,8 @@ export async function startBout(boutId: string, eventId: string): Promise<Action
   if (denied) return denied;
 
   const event = await prisma.event.findUnique({ where: { id: eventId } });
-  const bout = await prisma.bout.findUnique({
-    where: { id: boutId },
+  const bout = await prisma.bout.findFirst({
+    where: { id: boutId, eventId },
     include: { fighterA: true, fighterB: true, ring: true },
   });
   if (!event || !bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
@@ -126,7 +128,7 @@ export async function startRest(boutId: string, eventId: string): Promise<Action
   const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
-  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  const bout = await prisma.bout.findFirst({ where: { id: boutId, eventId } });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
   if (bout.roundPhase !== "ROUND") return { ok: false, code: "CONFLICT", reason: "No round in progress." };
 
@@ -144,7 +146,7 @@ export async function startRound(boutId: string, eventId: string): Promise<Actio
   const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
-  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  const bout = await prisma.bout.findFirst({ where: { id: boutId, eventId } });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
   if (!bout.totalRounds || bout.currentRound >= bout.totalRounds) {
     return { ok: false, code: "CONFLICT", reason: "No rounds left." };
@@ -167,7 +169,7 @@ export async function finishBout(boutId: string, eventId: string, formData: Form
   const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
-  const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true, event: true } });
+  const bout = await prisma.bout.findFirst({ where: { id: boutId, eventId }, include: { fighterA: true, fighterB: true, event: true } });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
 
   const winnerId = String(formData.get("winnerId") ?? "") || null;
@@ -204,7 +206,7 @@ export async function delayBout(boutId: string, eventId: string, formData: FormD
   const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
-  const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true, event: true } });
+  const bout = await prisma.bout.findFirst({ where: { id: boutId, eventId }, include: { fighterA: true, fighterB: true, event: true } });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
 
   const minutes = Number(formData.get("minutes") ?? 5);
@@ -234,7 +236,7 @@ export async function scratchBout(boutId: string, eventId: string, formData: For
   const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
-  const bout = await prisma.bout.findUnique({ where: { id: boutId }, include: { fighterA: true, fighterB: true, event: true } });
+  const bout = await prisma.bout.findFirst({ where: { id: boutId, eventId }, include: { fighterA: true, fighterB: true, event: true } });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
 
   const reason = String(formData.get("reason") ?? "OTHER") as ScratchReason;
@@ -257,7 +259,7 @@ export async function noShowBout(boutId: string, eventId: string): Promise<Actio
   const denied = await gateLive(eventId, { boutId });
   if (denied) return denied;
 
-  const bout = await prisma.bout.findUnique({ where: { id: boutId } });
+  const bout = await prisma.bout.findFirst({ where: { id: boutId, eventId } });
   if (!bout) return { ok: false, code: "NOT_FOUND", reason: "Not found." };
 
   try {
@@ -330,7 +332,7 @@ export async function setRingBreak(ringId: string, eventId: string, onBreak: boo
   const denied = await gateLive(eventId, { ringId });
   if (denied) return denied;
 
-  const ring = await prisma.ring.findUnique({ where: { id: ringId } });
+  const ring = await prisma.ring.findFirst({ where: { id: ringId, eventId } });
   if (!ring || ring.eventId !== eventId) return { ok: false, code: "NOT_FOUND", reason: "Ring not found." };
 
   const breakUntil = onBreak ? resolveBreakUntil(formData) : null;

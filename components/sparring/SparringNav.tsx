@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PillNav } from "@/components/ui/PillNav";
 
 const TABS = [
   { key: "discover", href: "/sparring", label: "Discover", requiresAuth: false },
@@ -13,23 +13,5 @@ const TABS = [
  * now points at the consolidated Club Requests inbox — sparring requests
  * are one of its categories, not a separate inbox. */
 export function SparringNav({ active, registered }: { active: (typeof TABS)[number]["key"]; registered: boolean }) {
-  return (
-    <nav className="flex gap-2 overflow-x-auto text-sm">
-      {TABS.filter((tab) => registered || !tab.requiresAuth).map((tab) =>
-        tab.key === active ? (
-          <span key={tab.key} className="rounded-pill border border-signal bg-signal/10 px-4 py-2 font-medium whitespace-nowrap">
-            {tab.label}
-          </span>
-        ) : (
-          <Link
-            key={tab.key}
-            href={tab.href}
-            className="rounded-pill border border-white/15 text-mute px-4 py-2 font-medium whitespace-nowrap"
-          >
-            {tab.label}
-          </Link>
-        ),
-      )}
-    </nav>
-  );
+  return <PillNav items={TABS.filter((tab) => registered || !tab.requiresAuth)} active={active} />;
 }

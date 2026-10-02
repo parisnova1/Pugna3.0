@@ -22,7 +22,7 @@ export class IllegalTransitionError extends Error {
   }
 }
 
-export function canTransitionEvent(from: EventStatus, to: EventStatus): boolean {
+function canTransitionEvent(from: EventStatus, to: EventStatus): boolean {
   return TRANSITIONS[from]?.includes(to) ?? false;
 }
 

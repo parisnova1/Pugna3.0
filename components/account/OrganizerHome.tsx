@@ -7,6 +7,7 @@ import { formatEventDate } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import type { Actor } from "@/lib/rbac";
 import { Button, buttonClass } from "@/components/ui/Button";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 function greeting(now: Date): string {
   const hour = now.getHours();
@@ -66,7 +67,7 @@ export async function OrganizerHome({ actor, unreadCount }: { actor: NonNullable
   }
 
   const currentEventHref = currentEvent
-    ? currentEvent.status === "DRAFT" || currentEvent.status === "READY"
+    ? !isPublishedEventStatus(currentEvent.status)
       ? `/host/events/${currentEvent.id}/build`
       : `/host/events/${currentEvent.id}`
     : null;
@@ -159,7 +160,7 @@ export async function OrganizerHome({ actor, unreadCount }: { actor: NonNullable
         {[...upcomingEvents.slice(liveEvent ? 0 : 1), ...pastEvents].map((event) => (
           <Link
             key={event.id}
-            href={event.status === "DRAFT" || event.status === "READY" ? `/host/events/${event.id}/build` : `/host/events/${event.id}`}
+            href={!isPublishedEventStatus(event.status) ? `/host/events/${event.id}/build` : `/host/events/${event.id}`}
             className="flex items-center justify-between rounded-card bg-panel border border-white/10 px-4 py-3"
           >
             <div>

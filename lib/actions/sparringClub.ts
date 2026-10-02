@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/types";
 import { notify, notifyMany } from "@/lib/actions/notify";
 import { clubAdminUserIds } from "@/lib/recipients";
+import { weightGroupInSession } from "@/lib/scope";
 
 export async function inviteClub(sessionId: string, formData: FormData): Promise<ActionResult> {
   const actor = await getActor();
@@ -176,6 +177,9 @@ export async function nominateFighter(sessionId: string, formData: FormData): Pr
 
   const fighterId = String(formData.get("fighterId") ?? "");
   const weightGroupId = String(formData.get("weightGroupId") ?? "") || null;
+  if (weightGroupId && !(await weightGroupInSession(weightGroupId, sessionId))) {
+    return { ok: false, code: "VALIDATION_BLOCKED", reason: "That weight group isn't part of this session." };
+  }
   const fighter = await prisma.fighterProfile.findUnique({ where: { id: fighterId } });
   if (!fighter || fighter.clubId !== clubId) {
     return { ok: false, code: "VALIDATION_BLOCKED", reason: "Choose a fighter from your own roster." };
