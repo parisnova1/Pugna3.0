@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isCrawler } from "@/lib/crawlers";
 
 /**
  * Gates first-time (or long-absent) visitors into /onboarding. Deliberately
@@ -43,6 +44,10 @@ export function middleware(request: NextRequest) {
   if (/\.[a-zA-Z0-9]+$/.test(pathname)) return NextResponse.next();
 
   if (isExempt(pathname)) return NextResponse.next();
+
+  // Crawlers and link-preview bots must see the real page, not the splash
+  // (see lib/crawlers.ts). Humans on the same URL still go through the gate.
+  if (isCrawler(request.headers.get("user-agent"))) return NextResponse.next();
 
   if (SESSION_COOKIES.some((name) => request.cookies.get(name))) {
     return NextResponse.next();

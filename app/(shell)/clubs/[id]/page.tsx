@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +13,24 @@ import { EventPreviewCard } from "@/components/event/EventPreviewCard";
 import { MediaUploader } from "@/components/host/MediaUploader";
 import { BackButton } from "@/components/event/ContextBar";
 import { OrganizerClubActions } from "@/components/clubs/OrganizerClubActions";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { getClubMeta } from "@/lib/seo-queries";
+import { buildMetadata, clubJsonLd, privateMetadata } from "@/lib/seo";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const club = await getClubMeta(id);
+  if (!club) return privateMetadata("Club not found");
+
+  return buildMetadata({
+    title: `${club.name}${club.city ? ` — ${club.sport} club in ${club.city}` : ""}`,
+    description:
+      club.description ??
+      `${club.name} is a ${club.sport.toLowerCase()} club${club.city ? ` in ${club.city}` : ""} on PUGNA. See its fighters, upcoming events and results.`,
+    path: `/clubs/${club.id}`,
+    image: club.coverUrl,
+  });
+}
 
 export default async function ClubProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -82,9 +101,19 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ id
   ]);
 
   const metaLine = [club.city, club.sport].filter(Boolean).join(" · ");
+  const structuredData = clubJsonLd({
+    id: club.id,
+    name: club.name,
+    description: club.description,
+    city: club.city,
+    latitude: club.latitude,
+    longitude: club.longitude,
+    image: cover?.url ?? null,
+  });
 
   return (
     <div className="space-y-8 pb-4">
+      <JsonLd data={structuredData} />
       <BackButton />
 
       <div className="space-y-4">

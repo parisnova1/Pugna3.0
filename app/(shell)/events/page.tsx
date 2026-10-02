@@ -6,6 +6,7 @@ import { haversineDistanceKm } from "@/lib/geo";
 import { EventPreviewCard } from "@/components/event/EventPreviewCard";
 import { NearbyToggle } from "@/components/clubs/NearbyToggle";
 import { OrganizerHome } from "@/components/account/OrganizerHome";
+import { buildMetadata } from "@/lib/seo";
 
 type Filter = "live" | "today" | "week" | "upcoming" | "finished" | "tournaments" | "fightNights";
 
@@ -43,6 +44,12 @@ function buildQuery(
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
+
+export const metadata = buildMetadata({
+  title: "Combat sports events",
+  description: "Upcoming and live boxing and combat sports events. Follow fight cards, schedules and results on PUGNA.",
+  path: "/events",
+});
 
 export default async function EventsPage({
   searchParams,

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const metadata = { title: "Welcome to PUGNA" };
+export const metadata = { title: "Welcome" };
 
 /**
  * Full-bleed splash screen -- deliberately outside the (shell) route group

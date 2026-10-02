@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -9,8 +10,28 @@ import { FighterAvatar } from "@/components/fighters/FighterAvatar";
 import { NextFightPanel } from "@/components/live/NextFightPanel";
 import { MediaUploader } from "@/components/host/MediaUploader";
 import { deleteMedia } from "@/lib/actions/media";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { getFighterMeta } from "@/lib/seo-queries";
+import { buildMetadata, fighterJsonLd, privateMetadata } from "@/lib/seo";
 
 const UPCOMING_STATUSES = ["TBD", "CONFIRMED", "READY", "DELAYED", "IN_PROGRESS"];
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const fighter = await getFighterMeta(id);
+  if (!fighter) return privateMetadata("Fighter not found");
+
+  const clubName = fighter.club?.name;
+  return buildMetadata({
+    title: `${fighter.displayName} — Boxer${clubName ? `, ${clubName}` : ""}`,
+    description: `${fighter.displayName}${clubName ? ` of ${clubName}` : ""}${fighter.weightClass ? `, ${fighter.weightClass}` : ""}. Fight record, upcoming bouts and results on PUGNA.`,
+    path: `/fighters/${fighter.id}`,
+    image: fighter.avatarUrl,
+    type: "profile",
+    // A bare profile with no public bouts is a thin page -- keep it out of search.
+    noindex: fighter.publicBoutCount === 0,
+  });
+}
 
 export default async function FighterProfilePage({
   params,
@@ -96,9 +117,20 @@ export default async function FighterProfilePage({
   });
   const avatarUrl = fighterMedia.find((m) => m.kind === "FIGHTER_AVATAR")?.url ?? null;
   const photos = fighterMedia.filter((m) => m.kind === "FIGHTER_MEDIA");
+  const structuredData =
+    bouts.length > 0
+      ? fighterJsonLd({
+          id: fighter.id,
+          name: fighter.displayName,
+          image: avatarUrl,
+          clubId: fighter.club?.id ?? null,
+          clubName: fighter.club?.name ?? null,
+        })
+      : null;
 
   return (
     <div className="space-y-6 pt-2">
+      {structuredData && <JsonLd data={structuredData} />}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">

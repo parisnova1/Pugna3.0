@@ -8,8 +8,15 @@ import { SeeAllLink } from "@/components/event/SeeAllLink";
 import { HomeTabs } from "@/components/home/HomeTabs";
 import { Badge } from "@/components/ui/Badge";
 import { NearbyToggle } from "@/components/clubs/NearbyToggle";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { buildMetadata, SITE_DESCRIPTION, websiteJsonLd } from "@/lib/seo";
 
 const NEARBY_EVENT_STATUSES: EventStatus[] = ["PUBLISHED", "LIVE", "INTERMISSION"];
+
+export const metadata = {
+  ...buildMetadata({ title: "PUGNA", description: SITE_DESCRIPTION, path: "/" }),
+  title: { absolute: "PUGNA — Combat sports, all in one place" },
+};
 
 export default async function HomePage({
   searchParams,
@@ -151,6 +158,7 @@ export default async function HomePage({
 
   return (
     <div className="space-y-10">
+      <JsonLd data={websiteJsonLd()} />
       <section className="flex items-center justify-between pt-1">
         <div>
           <h1 className="text-2xl font-bold leading-none tracking-tight">

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
@@ -14,9 +15,36 @@ import { BoutSequenceNav } from "@/components/live/BoutSequenceNav";
 import { NextFightPanel } from "@/components/live/NextFightPanel";
 import { FighterFollowButton } from "@/components/fighters/FighterFollowButton";
 import type { BoutStatus } from "@prisma/client";
+import { getBoutMeta } from "@/lib/seo-queries";
+import { buildMetadata, isPublishedEventStatus, privateMetadata } from "@/lib/seo";
 
 // A fight is "upcoming" — worth notifying about — before it's live and before it's over.
 const UPCOMING_STATUSES: BoutStatus[] = ["TBD", "CONFIRMED", "READY"];
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; boutId: string }>;
+}): Promise<Metadata> {
+  const { slug, boutId } = await params;
+  const bout = await getBoutMeta(slug, boutId);
+  if (!bout || !isPublishedEventStatus(bout.event.status)) return privateMetadata("Bout");
+
+  const a = bout.fighterA?.displayName ?? "TBD";
+  const b = bout.fighterB?.displayName ?? "TBD";
+  const winner = bout.result?.winnerId ? (bout.result.winnerId === bout.fighterAId ? a : b) : null;
+  const outcome = bout.result
+    ? winner
+      ? ` ${winner} won${bout.result.method ? ` by ${bout.result.method}` : ""}.`
+      : " Result: draw."
+    : "";
+
+  return buildMetadata({
+    title: `${a} vs ${b} — ${bout.event.name}`,
+    description: `${bout.weightClass} bout (Bout ${bout.number}) at ${bout.event.name}.${outcome} Live updates on PUGNA.`,
+    path: `/e/${slug}/bout/${bout.id}`,
+  });
+}
 
 export default async function BoutDetailPage({
   params,

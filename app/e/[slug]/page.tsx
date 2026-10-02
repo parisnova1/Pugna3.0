@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getEventCardData } from "@/lib/event-query";
 import { getActor } from "@/lib/actor";
@@ -25,6 +26,9 @@ import { LiveAudience } from "@/components/event/LiveAudience";
 import { ParticipatingClubs } from "@/components/event/ParticipatingClubs";
 import { Badge } from "@/components/ui/Badge";
 import { LiveDot } from "@/components/ui/LiveDot";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { getEventMeta } from "@/lib/seo-queries";
+import { absoluteUrl, buildMetadata, isPublishedEventStatus, privateMetadata, sportsEventJsonLd } from "@/lib/seo";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -38,6 +42,25 @@ function buildQuery(current: { day?: string; weight?: string }, changes: { day?:
   if (next.weight) params.set("weight", next.weight);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const event = await getEventMeta(slug);
+  // Unknown or unpublished events get a generic, non-indexed title so a draft's
+  // name and date can never reach a search snippet or link preview.
+  if (!event || !isPublishedEventStatus(event.status)) return privateMetadata("Event");
+
+  const where = event.venue ?? event.city;
+  const when = formatDateRange(event.date, event.dayCount);
+  return buildMetadata({
+    title: `${event.name} — ${when}`,
+    description:
+      event.description ??
+      `${event.sport} event${where ? ` at ${where}` : ""} on ${when}. Live results, fight card and schedule on PUGNA.`,
+    path: `/e/${event.slug}`,
+    image: event.coverUrl,
+  });
 }
 
 export default async function EventCardPage({
@@ -97,6 +120,27 @@ export default async function EventCardPage({
 
   const organizerName = event.organizingClub?.name ?? event.createdBy.organizerProfile?.displayName ?? null;
   const organizerHref = event.organizingClub ? `/clubs/${event.organizingClub.id}` : null;
+
+  const eventJsonLd = published
+    ? sportsEventJsonLd({
+        slug,
+        name: event.name,
+        description: event.description,
+        sport: event.sport,
+        status: event.status,
+        date: event.date,
+        startTime: event.startTime,
+        dayCount: event.dayCount,
+        venue: event.venue,
+        city: event.city,
+        latitude: event.latitude,
+        longitude: event.longitude,
+        image: coverUrl,
+        organizerName,
+        organizerUrl: organizerHref ? absoluteUrl(organizerHref) : null,
+        organizerType: event.organizingClub ? "Organization" : "Person",
+      })
+    : null;
 
   const [participations, nominations] = await Promise.all([
     prisma.clubEventParticipation.findMany({ where: { eventId: event.id }, include: { club: true } }),
@@ -159,6 +203,7 @@ export default async function EventCardPage({
 
     return (
       <div className="mx-auto w-full max-w-md lg:max-w-5xl px-4 pt-4 pb-10">
+        {eventJsonLd && <JsonLd data={eventJsonLd} />}
         <div id="overview" className="scroll-mt-24">
           {coverUrl && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -392,6 +437,7 @@ export default async function EventCardPage({
 
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-4 pb-10">
+      {eventJsonLd && <JsonLd data={eventJsonLd} />}
       <div id="overview" className="scroll-mt-24">
         {coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element

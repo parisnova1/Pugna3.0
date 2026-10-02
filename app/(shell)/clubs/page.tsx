@@ -6,6 +6,7 @@ import { haversineDistanceKm } from "@/lib/geo";
 import { ClubCard, type ClubCardData } from "@/components/clubs/ClubCard";
 import { NearbyToggle } from "@/components/clubs/NearbyToggle";
 import { OrganizerClubs } from "@/components/account/OrganizerClubs";
+import { buildMetadata } from "@/lib/seo";
 
 const SPORTS = ["Boxing", "MMA", "Muay Thai", "Kickboxing"];
 
@@ -28,6 +29,12 @@ function buildQuery(
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
+
+export const metadata = buildMetadata({
+  title: "Boxing and combat sports clubs",
+  description: "Discover boxing and combat sports clubs near you. See their fighters, coaches, events and sparring on PUGNA.",
+  path: "/clubs",
+});
 
 export default async function ClubsPage({
   searchParams,

@@ -10,6 +10,7 @@ import { SparringNav } from "@/components/sparring/SparringNav";
 import { SparringResultsMap } from "@/components/sparring/SparringResultsMap";
 import { SparringFilterPanel } from "@/components/sparring/SparringFilterPanel";
 import type { MapPoint } from "@/components/home/LiveMap";
+import { buildMetadata } from "@/lib/seo";
 
 const SPORTS = ["Boxing", "Kickboxing", "MMA"];
 const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced", "Pro"];
@@ -30,6 +31,12 @@ function buildModeHref(
   const qs = params.toString();
   return `/sparring${qs ? `?${qs}` : ""}`;
 }
+
+export const metadata = buildMetadata({
+  title: "Find sparring",
+  description: "Find open boxing sparring sessions near you and request a spot, with matched weight groups and verified clubs.",
+  path: "/sparring",
+});
 
 export default async function SparringDiscoverPage({
   searchParams,
