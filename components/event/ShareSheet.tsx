@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { THEME } from "@/lib/theme";
+import { Modal } from "@/components/ui/Modal";
 
 export function ShareSheet({ code, name }: { code: string | null; name: string }) {
   const [open, setOpen] = useState(false);
@@ -35,37 +36,27 @@ export function ShareSheet({ code, name }: { code: string | null; name: string }
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
-          <div className="glass relative w-full max-w-md rounded-t-card p-6 space-y-4">
-            <h3 className="font-semibold">Share {name}</h3>
-            {qr && (
-              <div ref={canvasRef} className="flex justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qr} alt="Event QR code" width={200} height={200} />
-              </div>
-            )}
-            <div className="flex items-center gap-2 rounded-card bg-panel border border-white/10 px-3 py-2">
-              <span className="text-xs text-mute truncate flex-1">{dialogUrl}</span>
-              <button
-                onClick={async () => {
-                  await navigator.clipboard.writeText(dialogUrl);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                }}
-                className="text-xs font-semibold text-signal shrink-0"
-              >
-                {copied ? "Copied" : "Copy"}
-              </button>
+        <Modal title={`Share ${name}`} onClose={() => setOpen(false)}>
+          {qr && (
+            <div ref={canvasRef} className="flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qr} alt="Event QR code" width={200} height={200} />
             </div>
+          )}
+          <div className="flex items-center gap-2 rounded-card bg-panel border border-white/10 px-3 py-2">
+            <span className="text-xs text-mute truncate flex-1">{dialogUrl}</span>
             <button
-              onClick={() => setOpen(false)}
-              className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3"
+              onClick={async () => {
+                await navigator.clipboard.writeText(dialogUrl);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+              className="text-xs font-semibold text-signal shrink-0"
             >
-              Close
+              {copied ? "Copied" : "Copy"}
             </button>
           </div>
-        </div>
+        </Modal>
       )}
     </>
   );

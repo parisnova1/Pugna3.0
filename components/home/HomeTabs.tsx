@@ -8,6 +8,7 @@ import { EventPreviewCard, type EventPreview } from "@/components/event/EventPre
 import { SeeAllLink } from "@/components/event/SeeAllLink";
 import { EventCodeBar } from "@/components/event/EventCodeBar";
 import type { MapPoint } from "@/components/home/LiveMap";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const LiveMap = dynamic(() => import("@/components/home/LiveMap").then((m) => m.LiveMap), { ssr: false });
 
@@ -97,7 +98,7 @@ export function HomeTabs({
               </div>
             ) : (
               <>
-                <p className="text-sm text-mute">No events on the map yet.</p>
+                <EmptyState>No events on the map yet.</EmptyState>
                 <EventCodeBar />
               </>
             )}
@@ -120,7 +121,7 @@ export function HomeTabs({
               <SeeAllLink href="/events" />
             </div>
             {upcoming.length === 0 ? (
-              <p className="text-sm text-mute">No events nearby yet.</p>
+              <EmptyState>No events nearby yet.</EmptyState>
             ) : (
               <div className="space-y-3">
                 {upcoming.map((event) => (
@@ -137,7 +138,7 @@ export function HomeTabs({
             {sparringPoints.length > 0 ? (
               <LiveMap points={sparringPoints} />
             ) : (
-              <p className="text-sm text-mute">No open sparring on the map yet.</p>
+              <EmptyState>No open sparring on the map yet.</EmptyState>
             )}
           </section>
 
@@ -147,7 +148,7 @@ export function HomeTabs({
               <SeeAllLink href="/sparring" />
             </div>
             {openSparring.length === 0 ? (
-              <p className="text-sm text-mute">No open sparring sessions right now.</p>
+              <EmptyState>No open sparring sessions right now.</EmptyState>
             ) : (
               <div className="space-y-3">
                 {openSparring.map((session) => (

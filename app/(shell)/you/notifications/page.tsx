@@ -4,6 +4,7 @@ import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { markAllNotificationsRead } from "@/lib/actions/notifications-read";
 import { BackButton } from "@/components/event/ContextBar";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 function timeAgo(date: Date): string {
   const ms = Date.now() - date.getTime();
@@ -42,7 +43,7 @@ export default async function NotificationsPage() {
       </div>
 
       {notifications.length === 0 ? (
-        <p className="text-mute text-sm py-10 text-center">Nothing yet.</p>
+        <EmptyState centered>Nothing yet.</EmptyState>
       ) : (
         <div className="space-y-2">
           {notifications.map((n) => (

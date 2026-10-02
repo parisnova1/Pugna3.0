@@ -4,6 +4,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { CrowdEmoji } from "@prisma/client";
 import { toggleReaction, postShout } from "@/lib/actions/crowd";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const EMOJI: Record<CrowdEmoji, string> = {
   FIRE: "🔥",
@@ -117,16 +120,16 @@ export function CrowdStrip({
               ? "Sign in and check in at the event to join the crowd."
               : "You're watching from home. Check in at the event to join the crowd."}
           </p>
-          <button
+          <Button
             onClick={() =>
               isGuest
                 ? router.push(`/account?returnTo=${encodeURIComponent(`/e/${slug}/check-in`)}`)
                 : router.push(`/e/${slug}/check-in`)
             }
-            className="rounded-pill bg-signal text-onsignal text-xs font-semibold px-4 py-2"
+            size="xs" text="xs" className="px-4"
           >
             Check in
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="space-y-2">
@@ -167,38 +170,28 @@ export function CrowdStrip({
       )}
 
       {viewAll && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setViewAll(false)} />
-          <div className="glass relative w-full max-w-md rounded-t-card p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-            <h3 className="font-semibold">{frozen ? "Fight reaction" : "Live crowd"}</h3>
-            <div className="flex flex-wrap gap-3">
-              {reactionCounts
-                .filter((r) => r.count > 0)
-                .map((r) => (
-                  <span key={r.emoji} className="text-sm font-medium tabular">
-                    {EMOJI[r.emoji]} {r.count}
-                  </span>
-                ))}
-            </div>
-            <div className="space-y-2">
-              {shouts.length === 0 ? (
-                <p className="text-sm text-mute">No shouts yet.</p>
-              ) : (
-                shouts.map((s) => (
-                  <p key={s.id} className="text-sm border-b border-white/5 pb-2">
-                    &ldquo;{s.text}&rdquo;
-                  </p>
-                ))
-              )}
-            </div>
-            <button
-              onClick={() => setViewAll(false)}
-              className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3"
-            >
-              Close
-            </button>
+        <Modal title={frozen ? "Fight reaction" : "Live crowd"} onClose={() => setViewAll(false)} scrollable>
+          <div className="flex flex-wrap gap-3">
+            {reactionCounts
+              .filter((r) => r.count > 0)
+              .map((r) => (
+                <span key={r.emoji} className="text-sm font-medium tabular">
+                  {EMOJI[r.emoji]} {r.count}
+                </span>
+              ))}
           </div>
-        </div>
+          <div className="space-y-2">
+            {shouts.length === 0 ? (
+              <EmptyState>No shouts yet.</EmptyState>
+            ) : (
+              shouts.map((s) => (
+                <p key={s.id} className="text-sm border-b border-white/5 pb-2">
+                  &ldquo;{s.text}&rdquo;
+                </p>
+              ))
+            )}
+          </div>
+        </Modal>
       )}
     </div>
   );

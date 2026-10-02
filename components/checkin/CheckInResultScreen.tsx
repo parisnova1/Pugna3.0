@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CheckInAttempt } from "@/lib/actions/eventCheckin";
+import { buttonClass } from "@/components/ui/Button";
 
 /** Renders the outcome of a checkInViewer() attempt — shared by /in/:code
  * (auto-attempts on load) and /e/:slug/check-in (attempts on a button tap). */
@@ -17,10 +18,10 @@ export function CheckInResultScreen({ result }: { result: CheckInAttempt }) {
       <Screen title="Check-in">
         <p className="text-mute text-sm">This check-in code isn&apos;t valid.</p>
         <div className="flex justify-center gap-2 pt-2">
-          <Link href="/scan" className="rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
+          <Link href="/scan" className={buttonClass({ text: "sm", className: "px-5" })}>
             Scan QR
           </Link>
-          <Link href="/" className="rounded-pill border border-white/20 text-ink font-semibold px-5 py-3 text-sm">
+          <Link href="/" className={buttonClass({ variant: "outline", text: "sm", className: "px-5" })}>
             Discover
           </Link>
         </div>
@@ -64,7 +65,7 @@ export function CheckInResultScreen({ result }: { result: CheckInAttempt }) {
         {result.eventSlug && (
           <Link
             href={result.liveBoutId ? `/e/${result.eventSlug}/bout/${result.liveBoutId}` : `/e/${result.eventSlug}`}
-            className="rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm"
+            className={buttonClass({ text: "sm", className: "px-5" })}
           >
             Join the crowd
           </Link>
@@ -77,7 +78,7 @@ export function CheckInResultScreen({ result }: { result: CheckInAttempt }) {
 
 function OpenEventLink({ slug }: { slug: string }) {
   return (
-    <Link href={`/e/${slug}`} className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
+    <Link href={`/e/${slug}`} className={buttonClass({ text: "sm", className: "inline-block px-5" })}>
       Open event
     </Link>
   );

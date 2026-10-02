@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import jsQR from "jsqr";
 import { logScanOpen } from "@/lib/actions/scanHistory";
 import { formatRelativeTime } from "@/lib/format";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 // Pugna QR codes always encode one of these path shapes — event, fighter,
 // club, competitor check-in, audience check-in — regardless of which origin
@@ -129,15 +130,15 @@ export function ScannerClient({
               placeholder={checkin ? "Enter check-in code" : "Enter fight code"}
               className="w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute text-center"
             />
-            <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+            <Button type="submit" fullWidth>
               Open
-            </button>
+            </Button>
             <Link href="/events" className="block text-sm font-medium text-mute underline">
               Find an event
             </Link>
           </form>
         ) : (
-          <Link href="/sparring" className="block w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+          <Link href="/sparring" className={buttonClass({ fullWidth: true, className: "block" })}>
             Browse sparring sessions
           </Link>
         )}

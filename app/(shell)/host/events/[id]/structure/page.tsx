@@ -3,8 +3,7 @@ import { updateEventStructure, renameRing } from "@/lib/actions/event";
 import { ActionForm } from "@/components/host/ActionForm";
 import { Stepper } from "@/components/host/Stepper";
 import { BackButton } from "@/components/event/ContextBar";
-
-const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
+import { inputClass } from "@/components/ui/inputClass";
 
 export default async function StructureStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

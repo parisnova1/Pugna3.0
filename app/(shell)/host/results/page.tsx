@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { formatEventDate } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function HostResultsPage() {
   const actor = await getActor();
@@ -18,7 +19,7 @@ export default async function HostResultsPage() {
     <div className="space-y-4 pt-2">
       <h1 className="text-2xl font-semibold">Results</h1>
       {finished.length === 0 ? (
-        <p className="text-mute text-sm">No finished events yet.</p>
+        <EmptyState>No finished events yet.</EmptyState>
       ) : (
         <div className="space-y-2">
           {finished.map((event) => (

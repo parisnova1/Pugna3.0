@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toggleClubFollow } from "@/lib/actions/club";
+import { Button } from "@/components/ui/Button";
 
 export function ClubFollowButton({
   clubId,
@@ -18,12 +19,12 @@ export function ClubFollowButton({
 
   if (isGuest) {
     return (
-      <button
+      <Button
         onClick={() => router.push(`/account?returnTo=${encodeURIComponent(`/clubs/${clubId}`)}`)}
-        className="rounded-pill border border-white/20 text-ink text-sm font-medium px-4 py-2.5"
+        variant="outline" size="sm" text="sm" weight="medium" className="px-4"
       >
         Follow
-      </button>
+      </Button>
     );
   }
 

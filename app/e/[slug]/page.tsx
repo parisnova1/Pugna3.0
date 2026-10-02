@@ -29,6 +29,7 @@ import { LiveDot } from "@/components/ui/LiveDot";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { getEventMeta } from "@/lib/seo-queries";
 import { absoluteUrl, buildMetadata, isPublishedEventStatus, privateMetadata, sportsEventJsonLd } from "@/lib/seo";
+import { buttonClass } from "@/components/ui/Button";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -306,7 +307,7 @@ export default async function EventCardPage({
                     href={directionsHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block rounded-pill border border-white/20 text-ink text-sm font-medium px-4 py-2"
+                    className={buttonClass({ variant: "outline", size: "xs", text: "sm", weight: "medium", className: "inline-block px-4" })}
                   >
                     Directions
                   </a>
@@ -604,7 +605,7 @@ export default async function EventCardPage({
               href={directionsHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block rounded-pill border border-white/20 text-ink text-sm font-medium px-4 py-2"
+              className={buttonClass({ variant: "outline", size: "xs", text: "sm", weight: "medium", className: "inline-block px-4" })}
             >
               Directions
             </a>

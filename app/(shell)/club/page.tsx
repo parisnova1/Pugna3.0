@@ -12,8 +12,9 @@ import { NominateFighterFlow } from "@/components/club/NominateFighterFlow";
 import { ClubAvatar } from "@/components/clubs/ClubCard";
 import { Badge } from "@/components/ui/Badge";
 import Link from "next/link";
-
-const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { inputClass } from "@/components/ui/inputClass";
 
 export default async function ClubHomePage({
   searchParams,
@@ -65,15 +66,15 @@ export default async function ClubHomePage({
             await createEventFromClub(myClub.id);
           }}
         >
-          <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3.5">
+          <Button type="submit" size="lg" fullWidth>
             + Create Event
-          </button>
+          </Button>
         </form>
 
         <section className="space-y-2">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Upcoming Events</p>
           {upcomingEvents.length === 0 ? (
-            <p className="text-sm text-mute">No upcoming events yet.</p>
+            <EmptyState>No upcoming events yet.</EmptyState>
           ) : (
             <div className="space-y-2">
               {upcomingEvents.map((event) => (

@@ -2,6 +2,7 @@ import { requireHostEvent } from "@/lib/host-guard";
 import { setBoutSchedule, markBoutReady, setBoutStreamUrl } from "@/lib/actions/event";
 import { BackButton } from "@/components/event/ContextBar";
 import { formatTime } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
 
 export default async function ScheduleStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -86,9 +87,9 @@ export default async function ScheduleStepPage({ params }: { params: Promise<{ i
                         await markBoutReady(bout.id, event.id);
                       }}
                     >
-                      <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-2 text-sm">
+                      <Button type="submit" size="xs" text="sm" fullWidth>
                         Mark ready
-                      </button>
+                      </Button>
                     </form>
                   )}
                 </div>

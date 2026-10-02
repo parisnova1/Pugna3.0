@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { inviteClubToEvent } from "@/lib/actions/clubEvent";
 import { formatEventDate } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type EventOption = { id: string; name: string; date: Date };
 type Relation = { eventId: string; status?: "PENDING" | "ACCEPTED" | "DECLINED" };
@@ -106,17 +108,17 @@ export function OrganizerClubActions({
             className="w-full rounded-card bg-void border border-white/10 px-4 py-3 text-sm resize-none"
           />
           {error && <p className="text-signal text-xs">{error}</p>}
-          <button
+          <Button
             type="button"
             disabled={pending || !selectedEventId}
             onClick={submit}
-            className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 text-sm disabled:opacity-60"
+            text="sm" fullWidth
           >
             Send event invitation
-          </button>
+          </Button>
         </div>
       ) : (
-        relatedEvents.length === 0 && <p className="text-sm text-mute">No events available to invite {clubName} to right now.</p>
+        relatedEvents.length === 0 && <EmptyState>No events available to invite {clubName} to right now.</EmptyState>
       )}
     </section>
   );

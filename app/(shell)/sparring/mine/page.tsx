@@ -6,6 +6,7 @@ import { formatEventDate } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import { SparringNav } from "@/components/sparring/SparringNav";
 import type { SparringParticipantStatus } from "@prisma/client";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_LABEL: Record<SparringParticipantStatus, string> = {
   REQUESTED: "Requested",
@@ -39,9 +40,9 @@ export default async function MySparringPage() {
       <SparringNav active="mine" registered={Boolean(actor)} />
 
       {!fighter ? (
-        <p className="text-sm text-mute text-center py-10">Register as a fighter to join sparring sessions.</p>
+        <EmptyState centered>Register as a fighter to join sparring sessions.</EmptyState>
       ) : participations.length === 0 ? (
-        <p className="text-sm text-mute text-center py-10">You haven&apos;t joined any sparring sessions yet.</p>
+        <EmptyState centered>You haven&apos;t joined any sparring sessions yet.</EmptyState>
       ) : (
         <div className="space-y-2">
           {participations.map((p) => (

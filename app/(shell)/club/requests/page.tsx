@@ -6,6 +6,8 @@ import { respondToParticipant } from "@/lib/actions/sparring";
 import { respondToNomination, respondToClubRequest, respondToClubInvite } from "@/lib/actions/sparringClub";
 import { ClubNav } from "@/components/club/ClubNav";
 import { formatEventDate } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function ClubRequestsPage({
   searchParams,
@@ -61,12 +63,12 @@ export default async function ClubRequestsPage({
       <h1 className="text-2xl font-semibold">Requests</h1>
       <ClubNav active="requests" />
 
-      {nothingPending && <p className="text-sm text-mute">Nothing pending.</p>}
+      {nothingPending && <EmptyState>Nothing pending.</EmptyState>}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Event Invitations</h2>
         {eventInvites.length === 0 ? (
-          <p className="text-sm text-mute">No pending event invitations.</p>
+          <EmptyState>No pending event invitations.</EmptyState>
         ) : (
           <div className="space-y-2">
             {eventInvites.map((invite) => (
@@ -92,7 +94,7 @@ export default async function ClubRequestsPage({
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Fighter Requests</h2>
         {sparringJoinRequests.length === 0 && hostNominations.length === 0 ? (
-          <p className="text-sm text-mute">No pending fighter requests.</p>
+          <EmptyState>No pending fighter requests.</EmptyState>
         ) : (
           <div className="space-y-2">
             {sparringJoinRequests.map((p) => (
@@ -132,7 +134,7 @@ export default async function ClubRequestsPage({
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Sparring Requests</h2>
         {sparringClubRequests.length === 0 ? (
-          <p className="text-sm text-mute">No pending sparring requests.</p>
+          <EmptyState>No pending sparring requests.</EmptyState>
         ) : (
           <div className="space-y-2">
             {sparringClubRequests.map((req) => (
@@ -157,7 +159,7 @@ export default async function ClubRequestsPage({
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Club Requests</h2>
         {sparringClubInvites.length === 0 && eventClubRequests.length === 0 ? (
-          <p className="text-sm text-mute">No pending club requests.</p>
+          <EmptyState>No pending club requests.</EmptyState>
         ) : (
           <div className="space-y-2">
             {sparringClubInvites.map((invite) => (
@@ -204,9 +206,9 @@ function RequestCard({
       </div>
       <div className="flex gap-2">
         <form action={onAccept}>
-          <button type="submit" className="rounded-pill bg-signal text-onsignal text-xs font-semibold px-4 py-2">
+          <Button type="submit" size="xs" text="xs" className="px-4">
             Accept
-          </button>
+          </Button>
         </form>
         <form action={onDecline}>
           <button type="submit" className="rounded-pill border border-white/20 text-xs font-semibold px-4 py-2">

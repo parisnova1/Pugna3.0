@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { checkInViewer } from "@/lib/actions/eventCheckin";
 import { CheckInResultScreen } from "@/components/checkin/CheckInResultScreen";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 export default async function EventCheckInPage({
   params,
@@ -29,7 +30,7 @@ export default async function EventCheckInPage({
         <p className="text-mute text-sm">Check in at the event to join the crowd.</p>
         <Link
           href={`/account?returnTo=${encodeURIComponent(`/e/${slug}/check-in`)}`}
-          className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm"
+          className={buttonClass({ text: "sm", className: "inline-block px-5" })}
         >
           Sign in
         </Link>
@@ -63,9 +64,9 @@ export default async function EventCheckInPage({
           <p className="text-mute text-sm">Check in at the event to join the crowd.</p>
           <form action={`/e/${slug}/check-in`} className="space-y-3">
             <input type="hidden" name="go" value="1" />
-            <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+            <Button type="submit" fullWidth>
               Check in now
-            </button>
+            </Button>
           </form>
         </>
       ) : event.status === "PUBLISHED" ? (
@@ -79,7 +80,7 @@ export default async function EventCheckInPage({
         <div className="flex justify-center gap-2">
           <Link
             href="/scan?intent=checkin"
-            className="rounded-pill border border-white/20 text-ink font-semibold px-5 py-3 text-sm"
+            className={buttonClass({ variant: "outline", text: "sm", className: "px-5" })}
           >
             Scan QR
           </Link>

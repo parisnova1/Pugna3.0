@@ -3,6 +3,7 @@ import { formatTime } from "@/lib/format";
 import { boutStatusLabel } from "@/lib/bout-status";
 import { WatchArea } from "@/components/live/WatchArea";
 import type { EventCardData } from "@/lib/event-query";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type EventBout = EventCardData["event"]["bouts"][number];
 type EventRing = EventCardData["event"]["rings"][number];
@@ -23,7 +24,7 @@ export function ScheduleList({
   eventStreamUrl: string | null;
 }) {
   if (bouts.length === 0) {
-    return <p className="text-sm text-mute py-6 text-center">No bouts scheduled for this day.</p>;
+    return <EmptyState className="py-6 text-center">No bouts scheduled for this day.</EmptyState>;
   }
 
   return (

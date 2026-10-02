@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/Badge";
 import { NearbyToggle } from "@/components/clubs/NearbyToggle";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { buildMetadata, SITE_DESCRIPTION, websiteJsonLd } from "@/lib/seo";
+import { buttonClass } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const NEARBY_EVENT_STATUSES: EventStatus[] = ["PUBLISHED", "LIVE", "INTERMISSION"];
 
@@ -192,7 +194,7 @@ export default async function HomePage({
           <p className="text-sm font-semibold">Going to an event?</p>
           <p className="text-xs text-mute mt-0.5">Scan your PUGNA QR code to check in and follow the action.</p>
         </div>
-        <Link href="/scan" className="shrink-0 rounded-pill bg-signal text-onsignal text-sm font-semibold px-4 py-2">
+        <Link href="/scan" className={buttonClass({ size: "xs", text: "sm", className: "shrink-0 px-4" })}>
           Scan
         </Link>
       </section>
@@ -203,7 +205,7 @@ export default async function HomePage({
           <SeeAllLink href="/clubs" />
         </div>
         {clubs.length === 0 ? (
-          <p className="text-sm text-mute">No clubs yet.</p>
+          <EmptyState>No clubs yet.</EmptyState>
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {clubs.map((club) => (
@@ -232,7 +234,7 @@ export default async function HomePage({
           <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Near you</h2>
           <NearbyToggle active={Boolean(isNearby)} basePath="/" />
         </div>
-        {isNearby && !hasNearYou && <p className="text-sm text-mute">Nothing near you yet.</p>}
+        {isNearby && !hasNearYou && <EmptyState>Nothing near you yet.</EmptyState>}
         {hasNearYou && (
           <div className="space-y-2">
             {nearYou!.events.map((e) => (
@@ -340,7 +342,7 @@ export default async function HomePage({
                 </p>
               </div>
             ) : (
-              <p className="text-sm text-mute">No upcoming fights.</p>
+              <EmptyState>No upcoming fights.</EmptyState>
             )}
             <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs text-mute">
               <Link href="/you/notifications" className="underline">

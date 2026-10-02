@@ -7,6 +7,8 @@ import { getClubRelatedEvents } from "@/lib/club-events";
 import { ClubNav } from "@/components/club/ClubNav";
 import { ClubEventListItem } from "@/components/club/ClubEventListItem";
 import { formatEventDate } from "@/lib/format";
+import { Button, buttonClass } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Tab = "discover" | "mine";
 
@@ -79,7 +81,7 @@ async function DiscoverTab({ clubId }: { clubId: string }) {
   }
 
   if (events.length === 0) {
-    return <p className="text-sm text-mute">No public events right now.</p>;
+    return <EmptyState>No public events right now.</EmptyState>;
   }
 
   return (
@@ -100,7 +102,7 @@ async function DiscoverTab({ clubId }: { clubId: string }) {
             <div className="flex items-center gap-2 pt-1">
               <Link
                 href={event.slug ? `/e/${event.slug}` : "#"}
-                className="rounded-pill border border-white/20 text-ink text-xs font-semibold px-3 py-1.5"
+                className={buttonClass({ variant: "outline", size: "xxs", text: "xs", className: "px-3" })}
               >
                 View Event
               </Link>
@@ -109,9 +111,9 @@ async function DiscoverTab({ clubId }: { clubId: string }) {
               ) : (
                 <form action={requestToJoin}>
                   <input type="hidden" name="eventId" value={event.id} />
-                  <button type="submit" className="rounded-pill bg-signal text-onsignal text-xs font-semibold px-3 py-1.5">
+                  <Button type="submit" size="xxs" text="xs" className="px-3">
                     Request to Join
-                  </button>
+                  </Button>
                 </form>
               )}
             </div>
@@ -147,7 +149,7 @@ async function MyEventsTab({ clubId }: { clubId: string }) {
   const items = [...relatedEvents, ...invitedOnly].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   if (items.length === 0) {
-    return <p className="text-sm text-mute">No events yet — find one under Discover.</p>;
+    return <EmptyState>No events yet — find one under Discover.</EmptyState>;
   }
 
   return (

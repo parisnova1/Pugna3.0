@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { checkInToSparring } from "@/lib/actions/checkin";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 export default async function SparringCheckInPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -28,7 +29,7 @@ export default async function SparringCheckInPage({ params }: { params: Promise<
           <p className="text-mute text-sm">Sign in to check in.</p>
           <Link
             href={`/account?returnTo=${encodeURIComponent(`/checkin/sparring/${id}`)}`}
-            className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm"
+            className={buttonClass({ text: "sm", className: "inline-block px-5" })}
           >
             Sign in
           </Link>
@@ -44,9 +45,9 @@ export default async function SparringCheckInPage({ params }: { params: Promise<
             await checkInToSparring(id);
           }}
         >
-          <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+          <Button type="submit" fullWidth>
             Confirm check-in
-          </button>
+          </Button>
         </form>
       )}
 

@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { formatEventDate } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import { SparringNav } from "@/components/sparring/SparringNav";
+import { buttonClass } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function SparringHostPage() {
   const actor = await getActor();
@@ -13,7 +15,7 @@ export default async function SparringHostPage() {
     return (
       <div className="pt-10 text-center space-y-3">
         <p className="text-mute text-sm">Only club admins can host sparring sessions.</p>
-        <Link href="/clubs" className="inline-block rounded-pill border border-white/20 text-ink font-semibold px-5 py-3 text-sm">
+        <Link href="/clubs" className={buttonClass({ variant: "outline", text: "sm", className: "inline-block px-5" })}>
           Browse clubs
         </Link>
       </div>
@@ -30,7 +32,7 @@ export default async function SparringHostPage() {
     <div className="space-y-6 pt-2">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Host Sparring</h1>
-        <Link href="/sparring/host/new" className="rounded-pill bg-signal text-onsignal font-semibold px-4 py-2 text-sm">
+        <Link href="/sparring/host/new" className={buttonClass({ size: "xs", text: "sm", className: "px-4" })}>
           + Create
         </Link>
       </div>
@@ -38,7 +40,7 @@ export default async function SparringHostPage() {
       <SparringNav active="host" registered={Boolean(actor)} />
 
       {sessions.length === 0 ? (
-        <p className="text-sm text-mute text-center py-10">You haven&apos;t hosted any sparring sessions yet.</p>
+        <EmptyState centered>You haven&apos;t hosted any sparring sessions yet.</EmptyState>
       ) : (
         <>
           <SessionGroup title="Open" sessions={sessions.filter((s) => s.status === "OPEN")} />

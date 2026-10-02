@@ -6,6 +6,8 @@ import { createEventFromClub } from "@/lib/actions/event";
 import { formatEventDate } from "@/lib/format";
 import { ClubNav } from "@/components/club/ClubNav";
 import type { EventStatus } from "@prisma/client";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_LABEL: Record<EventStatus, string> = {
   DRAFT: "Draft",
@@ -51,15 +53,15 @@ export default async function ClubOrganizerPage({
           await createEventFromClub(clubId);
         }}
       >
-        <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3.5">
+        <Button type="submit" size="lg" fullWidth>
           + Host an Event
-        </button>
+        </Button>
       </form>
 
       <section className="space-y-4">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Your Events</p>
         {hosting.length === 0 ? (
-          <p className="text-sm text-mute">Not hosting anything yet.</p>
+          <EmptyState>Not hosting anything yet.</EmptyState>
         ) : (
           STATUS_ORDER.filter((label) => grouped.has(label)).map((label) => (
             <div key={label} className="space-y-2">

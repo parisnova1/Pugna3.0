@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getActor } from "@/lib/actor";
 import { ClubNav } from "@/components/club/ClubNav";
+import { buttonClass } from "@/components/ui/Button";
 
 /** Thin landing into the existing, unmodified sparring pages — no duplicate
  * sparring system here, per the redesign brief's own "keep the existing
@@ -17,7 +18,7 @@ export default async function ClubSparringPage() {
       <ClubNav active="sparring" />
 
       <div className="space-y-2">
-        <Link href="/sparring/host/new" className="block rounded-pill bg-signal text-onsignal font-semibold py-3.5 text-center">
+        <Link href="/sparring/host/new" className={buttonClass({ size: "lg", className: "block text-center" })}>
           + Create Sparring
         </Link>
         <Link href="/sparring" className="block rounded-card bg-panel border border-white/10 p-4">

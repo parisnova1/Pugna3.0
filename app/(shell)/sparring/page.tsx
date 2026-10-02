@@ -11,6 +11,7 @@ import { SparringResultsMap } from "@/components/sparring/SparringResultsMap";
 import { SparringFilterPanel } from "@/components/sparring/SparringFilterPanel";
 import type { MapPoint } from "@/components/home/LiveMap";
 import { buildMetadata } from "@/lib/seo";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const SPORTS = ["Boxing", "Kickboxing", "MMA"];
 const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced", "Pro"];
@@ -192,7 +193,7 @@ export default async function SparringDiscoverPage({
 
       <div className="space-y-3">
         {sessionsInArea.length === 0 ? (
-          <p className="text-sm text-mute text-center py-10">No open sparring sessions match your filters.</p>
+          <EmptyState centered>No open sparring sessions match your filters.</EmptyState>
         ) : (
           sessionsInArea.map((session) => (
             <Link

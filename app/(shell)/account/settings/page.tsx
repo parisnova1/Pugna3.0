@@ -6,6 +6,7 @@ import { signOut } from "@/lib/auth";
 import { updateName, becomeOrganizer } from "@/lib/actions/profile";
 import { BackButton } from "@/components/event/ContextBar";
 import { ChangePasswordForm } from "@/components/account/ChangePasswordForm";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 export default async function AccountSettingsPage() {
   const actor = await getActor();
@@ -151,7 +152,7 @@ export default async function AccountSettingsPage() {
             <span className="text-mute">›</span>
           </Link>
         ))}
-        <Link href="/club" className="block w-full text-center rounded-pill border border-white/20 text-ink font-semibold py-3">
+        <Link href="/club" className={buttonClass({ variant: "outline", fullWidth: true, className: "block text-center" })}>
           Represent a club
         </Link>
       </section>
@@ -170,9 +171,9 @@ export default async function AccountSettingsPage() {
           await signOut({ redirectTo: "/" });
         }}
       >
-        <button type="submit" className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3">
+        <Button type="submit" variant="outline" fullWidth>
           Log out
-        </button>
+        </Button>
       </form>
     </div>
   );

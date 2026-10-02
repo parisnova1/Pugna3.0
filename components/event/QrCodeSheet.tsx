@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { THEME } from "@/lib/theme";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 
 /** Generic QR display sheet — used for event/sparring check-in QR codes shown at the door. */
 export function QrCodeSheet({
@@ -27,33 +29,23 @@ export function QrCodeSheet({
 
   return (
     <>
-      <button
+      <Button
         onClick={() => setOpen(true)}
-        className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm"
+        variant="outline" text="sm" fullWidth
       >
         {buttonLabel}
-      </button>
+      </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
-          <div className="glass relative w-full max-w-md rounded-t-card p-6 space-y-4">
-            <h3 className="font-semibold">{label}</h3>
-            {qr && (
-              <div className="flex justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qr} alt="Check-in QR code" width={200} height={200} />
-              </div>
-            )}
-            <p className="text-xs text-mute text-center">{caption}</p>
-            <button
-              onClick={() => setOpen(false)}
-              className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <Modal title={label} onClose={() => setOpen(false)}>
+          {qr && (
+            <div className="flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qr} alt="Check-in QR code" width={200} height={200} />
+            </div>
+          )}
+          <p className="text-xs text-mute text-center">{caption}</p>
+        </Modal>
       )}
     </>
   );

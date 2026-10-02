@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { formatEventDate } from "@/lib/format";
 import { BackButton } from "@/components/event/ContextBar";
 import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function SavedFightsPage() {
   const actor = await getActor();
@@ -30,7 +31,7 @@ export default async function SavedFightsPage() {
       <h1 className="text-2xl font-semibold">Saved fights</h1>
 
       {sorted.length === 0 ? (
-        <p className="text-mute text-sm py-10 text-center">No saved fights yet.</p>
+        <EmptyState centered>No saved fights yet.</EmptyState>
       ) : (
         <div className="space-y-2">
           {sorted.map(({ bout }) => {

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { setCheckInStatus, notifyCheckInOpen } from "@/lib/actions/checkin";
 import { QrCodeSheet } from "@/components/event/QrCodeSheet";
 import { BackButton } from "@/components/event/ContextBar";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function EventCheckInPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -38,15 +40,15 @@ export default async function EventCheckInPage({ params }: { params: Promise<{ i
             await notifyCheckInOpen("EVENT", event.id);
           }}
         >
-          <button type="submit" className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm">
+          <Button type="submit" variant="outline" text="sm" fullWidth>
             Notify fighters
-          </button>
+          </Button>
         </form>
       </div>
 
       <div className="space-y-2">
         {fighters.length === 0 ? (
-          <p className="text-sm text-mute">No boxers on the card yet.</p>
+          <EmptyState>No boxers on the card yet.</EmptyState>
         ) : (
           fighters.map((f) => {
             const checkIn = checkInFor(f.id);

@@ -4,6 +4,8 @@ import { formatEventDate } from "@/lib/format";
 import { ClubAvatar } from "@/components/clubs/ClubCard";
 import { cancelClubEventInvite, respondToClubEventRequest } from "@/lib/actions/clubEvent";
 import type { Actor } from "@/lib/rbac";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Tab = "discover" | "mine" | "requests";
 
@@ -208,7 +210,7 @@ async function RequestsTab({ eventIds }: { eventIds: string[] }) {
       <section className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Sent</p>
         {sent.length === 0 ? (
-          <p className="text-sm text-mute">No pending invitations.</p>
+          <EmptyState>No pending invitations.</EmptyState>
         ) : (
           <div className="space-y-2">
             {sent.map((invite) => (
@@ -238,7 +240,7 @@ async function RequestsTab({ eventIds }: { eventIds: string[] }) {
       <section className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Received</p>
         {received.length === 0 ? (
-          <p className="text-sm text-mute">No pending requests.</p>
+          <EmptyState>No pending requests.</EmptyState>
         ) : (
           <div className="space-y-2">
             {received.map((req) => (
@@ -257,9 +259,9 @@ async function RequestsTab({ eventIds }: { eventIds: string[] }) {
                       await respondToClubEventRequest(req.id, true);
                     }}
                   >
-                    <button type="submit" className="rounded-pill bg-signal text-onsignal text-xs font-semibold px-4 py-2">
+                    <Button type="submit" size="xs" text="xs" className="px-4">
                       Accept
-                    </button>
+                    </Button>
                   </form>
                   <form
                     action={async () => {

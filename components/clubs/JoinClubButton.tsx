@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { joinClub } from "@/lib/actions/club";
 import { becomeBoxer } from "@/lib/actions/profile";
+import { Button } from "@/components/ui/Button";
 
 export function JoinClubButton({
   clubId,
@@ -23,12 +24,12 @@ export function JoinClubButton({
 
   if (isGuest) {
     return (
-      <button
+      <Button
         onClick={() => router.push(`/account?returnTo=${encodeURIComponent(`/clubs/${clubId}`)}`)}
-        className="rounded-pill bg-signal text-onsignal text-sm font-semibold px-4 py-2.5"
+        size="sm" text="sm" className="px-4"
       >
         Join Club
-      </button>
+      </Button>
     );
   }
 
@@ -53,7 +54,7 @@ export function JoinClubButton({
 
   if (!hasFighterProfile) {
     return (
-      <button
+      <Button
         disabled={pending}
         onClick={() =>
           startTransition(async () => {
@@ -61,15 +62,15 @@ export function JoinClubButton({
             router.refresh();
           })
         }
-        className="rounded-pill border border-white/20 text-ink text-sm font-semibold px-4 py-2.5 disabled:opacity-60"
+        variant="outline" size="sm" text="sm" className="px-4"
       >
         Register to join
-      </button>
+      </Button>
     );
   }
 
   return (
-    <button
+    <Button
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
@@ -77,9 +78,9 @@ export function JoinClubButton({
           router.refresh();
         })
       }
-      className="rounded-pill bg-signal text-onsignal text-sm font-semibold px-4 py-2.5 disabled:opacity-60"
+      size="sm" text="sm" className="px-4"
     >
       Join Club
-    </button>
+    </Button>
   );
 }

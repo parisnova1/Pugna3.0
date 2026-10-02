@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { createBout } from "@/lib/actions/event";
 import { ActionForm } from "@/components/host/ActionForm";
 import { BackButton } from "@/components/event/ContextBar";
-
-const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { inputClass } from "@/components/ui/inputClass";
 
 export default async function PairStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,7 +25,7 @@ export default async function PairStepPage({ params }: { params: Promise<{ id: s
 
       <div className="space-y-2">
         {event.bouts.length === 0 ? (
-          <p className="text-sm text-mute">No bouts yet.</p>
+          <EmptyState>No bouts yet.</EmptyState>
         ) : (
           event.bouts.map((bout) => (
             <div key={bout.id} className="rounded-card bg-panel border border-white/10 px-4 py-3">

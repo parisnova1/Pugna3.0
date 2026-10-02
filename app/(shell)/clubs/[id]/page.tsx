@@ -16,6 +16,7 @@ import { OrganizerClubActions } from "@/components/clubs/OrganizerClubActions";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { getClubMeta } from "@/lib/seo-queries";
 import { buildMetadata, clubJsonLd, privateMetadata } from "@/lib/seo";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -200,7 +201,7 @@ export default async function ClubProfilePage({ params }: { params: Promise<{ id
       <section className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Fighters</p>
         {club.roster.length === 0 ? (
-          <p className="text-sm text-mute">No boxers listed yet.</p>
+          <EmptyState>No boxers listed yet.</EmptyState>
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {club.roster.map((rosterFighter) => (

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getActor } from "@/lib/actor";
 import { becomeBoxer } from "@/lib/actions/profile";
 import { BackButton } from "@/components/event/ContextBar";
+import { Button } from "@/components/ui/Button";
 
 const BENEFITS = [
   "Your Boxer profile",
@@ -35,9 +36,9 @@ export default async function BecomeBoxerPage() {
           redirect("/you");
         }}
       >
-        <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3.5">
+        <Button type="submit" size="lg" fullWidth>
           Create Boxer Profile
-        </button>
+        </Button>
       </form>
 
       <div className="rounded-card bg-panel border border-white/10 p-4 space-y-2.5">

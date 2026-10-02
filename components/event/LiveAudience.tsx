@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonClass } from "@/components/ui/Button";
 
 /** Event-level entry point into the venue check-in / crowd system already
  * built on the Bout page (EventCheckIn model, CrowdStrip composer) — this
@@ -31,7 +32,7 @@ export function LiveAudience({
           {liveBoutId ? (
             <Link
               href={`/e/${slug}/bout/${liveBoutId}`}
-              className="inline-block rounded-pill bg-signal text-onsignal text-sm font-semibold px-4 py-2"
+              className={buttonClass({ size: "xs", text: "sm", className: "inline-block px-4" })}
             >
               Comment
             </Link>
@@ -45,7 +46,7 @@ export function LiveAudience({
           <p className="text-sm text-mute">Check in at the venue to join the live audience.</p>
           <Link
             href={`/e/${slug}/check-in`}
-            className="inline-block rounded-pill border border-white/20 text-ink text-sm font-semibold px-4 py-2"
+            className={buttonClass({ variant: "outline", size: "xs", text: "sm", className: "inline-block px-4" })}
           >
             Check in
           </Link>

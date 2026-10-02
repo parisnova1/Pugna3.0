@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { createEvent } from "@/lib/actions/event";
 import { becomeOrganizer } from "@/lib/actions/profile";
 import { formatEventDate } from "@/lib/format";
+import { Button, buttonClass } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function HostHomePage() {
   const actor = await getActor();
@@ -21,9 +23,9 @@ export default async function HostHomePage() {
             await becomeOrganizer();
           }}
         >
-          <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+          <Button type="submit" fullWidth>
             Become an organizer
-          </button>
+          </Button>
         </form>
         <Link href="/club" className="inline-block text-sm text-mute underline">
           Or go to your club
@@ -57,13 +59,13 @@ export default async function HostHomePage() {
           <div className="flex gap-2 pt-1">
             <Link
               href={`/host/events/${tonight.id}/live`}
-              className="rounded-pill bg-signal text-onsignal font-semibold px-4 py-2 text-sm"
+              className={buttonClass({ size: "xs", text: "sm", className: "px-4" })}
             >
               Live console
             </Link>
             <Link
               href={`/host/events/${tonight.id}`}
-              className="rounded-pill border border-white/20 text-ink font-semibold px-4 py-2 text-sm"
+              className={buttonClass({ variant: "outline", size: "xs", text: "sm", className: "px-4" })}
             >
               Open event
             </Link>
@@ -71,7 +73,7 @@ export default async function HostHomePage() {
         </div>
       ) : (
         <div className="rounded-card bg-panel border border-white/10 p-5 text-center">
-          <p className="text-sm text-mute">No night tonight.</p>
+          <EmptyState>No night tonight.</EmptyState>
         </div>
       )}
 
@@ -82,15 +84,15 @@ export default async function HostHomePage() {
           if (result.ok) redirect(`/host/events/${result.eventId}/build`);
         }}
       >
-        <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+        <Button type="submit" fullWidth>
           + Create event
-        </button>
+        </Button>
       </form>
 
       <section className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Your events</p>
         {events.length === 0 ? (
-          <p className="text-sm text-mute">Nothing yet.</p>
+          <EmptyState>Nothing yet.</EmptyState>
         ) : (
           events.map((event) => (
             <Link

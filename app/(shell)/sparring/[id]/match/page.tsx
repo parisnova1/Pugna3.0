@@ -6,6 +6,8 @@ import { can } from "@/lib/rbac";
 import { suggestMatches, ageFromDob, type MatchCandidate } from "@/lib/matchmaking";
 import { createMatch } from "@/lib/actions/sparring";
 import { BackButton } from "@/components/event/ContextBar";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function SparringMatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -72,7 +74,7 @@ export default async function SparringMatchPage({ params }: { params: Promise<{ 
       <section className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Suggested</p>
         {suggestions.length === 0 ? (
-          <p className="text-sm text-mute">No confirmed fighters left to match.</p>
+          <EmptyState>No confirmed fighters left to match.</EmptyState>
         ) : (
           suggestions.map((pair, i) => (
             <div key={i} className="rounded-card bg-panel border border-white/10 p-4 space-y-3">
@@ -99,9 +101,9 @@ export default async function SparringMatchPage({ params }: { params: Promise<{ 
               >
                 <input type="hidden" name="participantAId" value={pair.a.participantId} />
                 <input type="hidden" name="participantBId" value={pair.b.participantId} />
-                <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-2.5 text-sm">
+                <Button type="submit" size="sm" text="sm" fullWidth>
                   Create Match
-                </button>
+                </Button>
               </form>
             </div>
           ))

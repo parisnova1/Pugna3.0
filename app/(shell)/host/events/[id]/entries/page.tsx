@@ -6,8 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { ActionForm } from "@/components/host/ActionForm";
 import { BackButton } from "@/components/event/ContextBar";
 import type { ActionResult } from "@/lib/actions/types";
-
-const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { inputClass } from "@/components/ui/inputClass";
 
 export default async function EntriesStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -46,7 +46,7 @@ export default async function EntriesStepPage({ params }: { params: Promise<{ id
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Participating Clubs</h2>
         {participatingClubs.length === 0 ? (
-          <p className="text-sm text-mute">No clubs participating yet — invite one from Clubs.</p>
+          <EmptyState>No clubs participating yet — invite one from Clubs.</EmptyState>
         ) : (
           <div className="space-y-2">
             {participatingClubs.map((p) => (
@@ -68,7 +68,7 @@ export default async function EntriesStepPage({ params }: { params: Promise<{ id
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-mute uppercase tracking-wide">Nominations</h2>
         {nominations.length === 0 ? (
-          <p className="text-sm text-mute">No nominations yet.</p>
+          <EmptyState>No nominations yet.</EmptyState>
         ) : (
           <div className="space-y-2">
             {nominations.map((nom) => (
@@ -96,11 +96,11 @@ export default async function EntriesStepPage({ params }: { params: Promise<{ id
           </div>
         )}
         {invitableClubs.length === 0 ? (
-          <p className="text-sm text-mute">
+          <EmptyState>
             {clubs.length === 0
               ? "No clubs on Pugna yet — add a guest boxer below instead."
               : "Every club has already been invited or is participating."}
-          </p>
+          </EmptyState>
         ) : (
           <ActionForm action={inviteClubAction} submitLabel="Send invitation" className="space-y-3">
             <select name="clubId" required className={inputClass}>

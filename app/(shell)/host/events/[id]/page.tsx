@@ -3,6 +3,7 @@ import { requireHostEvent } from "@/lib/host-guard";
 import { cancelEvent } from "@/lib/actions/event";
 import { formatEventDate } from "@/lib/format";
 import { QrCodeSheet } from "@/components/event/QrCodeSheet";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 const MANAGEMENT_STEPS = [
   { href: "pair", label: "Pair Fighters", desc: "Match bouts" },
@@ -41,7 +42,7 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
       {isLive && (
         <Link
           href={`/host/events/${event.id}/live`}
-          className="block rounded-pill bg-signal text-onsignal font-bold text-center py-3.5"
+          className={buttonClass({ size: "lg", weight: "bold", className: "block text-center" })}
         >
           Open Event Control →
         </Link>
@@ -51,7 +52,7 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
         {event.slug && (
           <Link
             href={`/e/${event.slug}`}
-            className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-2.5 text-sm"
+            className={buttonClass({ variant: "outline", size: "sm", text: "sm", className: "block text-center" })}
           >
             Public view
           </Link>
@@ -67,7 +68,7 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
         {!event.slug && event.ringCount === 1 && event.dayCount === 1 && (
           <Link
             href={`/host/events/${event.id}/preview`}
-            className="block rounded-pill border border-white/20 text-ink font-semibold text-center py-2.5 text-sm"
+            className={buttonClass({ variant: "outline", size: "sm", text: "sm", className: "block text-center" })}
           >
             Preview public card
           </Link>
@@ -136,9 +137,9 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
               placeholder="Reason"
               className="w-full rounded-card bg-panel border border-white/10 px-3 py-2 text-sm"
             />
-            <button type="submit" className="w-full rounded-pill border border-signal text-signal font-semibold py-2 text-sm">
+            <Button type="submit" variant="signalOutline" size="xs" text="sm" fullWidth>
               Confirm cancel
-            </button>
+            </Button>
           </form>
         </details>
       )}

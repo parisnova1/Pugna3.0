@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function LiveChooserPage() {
   const actor = await getActor();
@@ -22,7 +23,7 @@ export default async function LiveChooserPage() {
 
   return (
     <div className="pt-10 text-center space-y-4">
-      <p className="text-mute text-sm">No live event right now.</p>
+      <EmptyState>No live event right now.</EmptyState>
       {upcoming.length > 0 && (
         <div className="space-y-2 text-left">
           {upcoming.map((event) => (

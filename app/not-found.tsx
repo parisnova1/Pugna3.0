@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonClass } from "@/components/ui/Button";
 
 export default function NotFound() {
   return (
@@ -6,10 +7,10 @@ export default function NotFound() {
       <h1 className="text-xl font-semibold">Not found</h1>
       <p className="text-mute text-sm">That page doesn&apos;t exist.</p>
       <div className="flex justify-center gap-2 pt-2">
-        <Link href="/scan" className="rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
+        <Link href="/scan" className={buttonClass({ text: "sm", className: "px-5" })}>
           Scan QR
         </Link>
-        <Link href="/" className="rounded-pill border border-white/20 text-ink font-semibold px-5 py-3 text-sm">
+        <Link href="/" className={buttonClass({ variant: "outline", text: "sm", className: "px-5" })}>
           Home
         </Link>
       </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useTransition } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { toggleFighterNextBoutAlert } from "@/lib/actions/fighterNextBoutAlert";
+import { Button } from "@/components/ui/Button";
 
 /**
  * "Notify me when this fighter fights next" — a standing subscription,
@@ -53,12 +54,12 @@ export function NotifyNextFightButton({
 
   if (isGuest) {
     return (
-      <button
+      <Button
         onClick={() => router.push(`/account?returnTo=${encodeURIComponent(returnTo)}`)}
-        className="w-full text-center rounded-pill border border-white/20 text-ink text-sm font-semibold px-4 py-3"
+        variant="outline" text="sm" fullWidth className="text-center px-4"
       >
         🔔 Notify me when {fighterName} fights next
-      </button>
+      </Button>
     );
   }
 

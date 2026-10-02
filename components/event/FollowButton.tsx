@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toggleFollow } from "@/lib/actions/follow";
+import { Button } from "@/components/ui/Button";
 
 export function FollowButton({
   eventId,
@@ -20,12 +21,12 @@ export function FollowButton({
 
   if (isGuest) {
     return (
-      <button
+      <Button
         onClick={() => router.push(`/account?returnTo=${encodeURIComponent(`/e/${slug}`)}`)}
-        className="rounded-pill border border-white/20 text-ink text-sm font-medium px-4 py-2"
+        variant="outline" size="xs" text="sm" weight="medium" className="px-4"
       >
         Follow
-      </button>
+      </Button>
     );
   }
 

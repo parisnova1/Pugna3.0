@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { formatCountdown } from "@/lib/format";
 import { BellLink } from "@/components/nav/BellLink";
 import { becomeBoxer } from "@/lib/actions/profile";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function YouHomePage() {
   const actor = await getActor();
@@ -19,16 +21,16 @@ export default async function YouHomePage() {
         <div className="flex justify-end">
           <BellLink unreadCount={unreadCount} />
         </div>
-        <p className="text-mute text-sm">No boxer profile yet.</p>
+        <EmptyState>No boxer profile yet.</EmptyState>
         <form
           action={async () => {
             "use server";
             await becomeBoxer();
           }}
         >
-          <button type="submit" className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
+          <Button type="submit" text="sm" className="inline-block px-5">
             Register as boxer
-          </button>
+          </Button>
         </form>
       </div>
     );
@@ -102,7 +104,7 @@ export default async function YouHomePage() {
             )}
           </>
         ) : (
-          <p className="text-sm text-mute">No upcoming fights.</p>
+          <EmptyState>No upcoming fights.</EmptyState>
         )}
       </div>
 

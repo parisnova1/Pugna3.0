@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { formatEventDate } from "@/lib/format";
+import { buttonClass } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function YourFightsPage({
   searchParams,
@@ -60,7 +62,7 @@ export default async function YourFightsPage({
       </div>
 
       {shown.length === 0 ? (
-        <p className="text-mute text-sm">{showPast ? "No past fights yet." : "Nothing scheduled."}</p>
+        <EmptyState>{showPast ? "No past fights yet." : "Nothing scheduled."}</EmptyState>
       ) : (
         <div className={showPast ? "space-y-2 opacity-80" : "space-y-2"}>
           {shown.map((b) => {
@@ -80,7 +82,7 @@ export default async function YourFightsPage({
                 {canCheckIn && (
                   <Link
                     href={`/checkin/event/${b.eventId}`}
-                    className="shrink-0 rounded-pill bg-signal text-onsignal font-semibold px-3 py-1.5 text-xs"
+                    className={buttonClass({ size: "xxs", text: "xs", className: "shrink-0 px-3" })}
                   >
                     Check In
                   </Link>

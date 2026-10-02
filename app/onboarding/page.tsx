@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonClass } from "@/components/ui/Button";
 
 export const metadata = { title: "Welcome" };
 
@@ -44,7 +45,7 @@ export default async function OnboardingPage({
         <div className="flex gap-3">
           <Link
             href={`/account?mode=signin${authQuery}`}
-            className="flex-1 text-center rounded-pill bg-signal text-onsignal font-bold py-3.5"
+            className={buttonClass({ size: "lg", weight: "bold", className: "flex-1 text-center" })}
           >
             Log In
           </Link>

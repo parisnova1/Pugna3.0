@@ -6,8 +6,8 @@ import { getClubRelatedEvents } from "@/lib/club-events";
 import { ActionForm } from "@/components/host/ActionForm";
 import { ClubNav } from "@/components/club/ClubNav";
 import { NominateFighterFlow } from "@/components/club/NominateFighterFlow";
-
-const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { inputClass } from "@/components/ui/inputClass";
 
 function ageFromDob(dob: Date | null): number | null {
   if (!dob) return null;
@@ -69,7 +69,7 @@ export default async function ClubFightersPage({
       <NominateFighterFlow clubId={clubId} events={relatedEvents} fighters={fighterOptions} />
 
       {fighters.length === 0 ? (
-        <p className="text-mute text-sm">No boxers yet.</p>
+        <EmptyState>No boxers yet.</EmptyState>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {fighters.map((f) => {

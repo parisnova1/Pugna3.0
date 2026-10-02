@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { buttonClass } from "@/components/ui/Button";
 
 export default async function GoResolverPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -15,10 +16,10 @@ export default async function GoResolverPage({ params }: { params: Promise<{ cod
       <h1 className="text-xl font-semibold">Link not found</h1>
       <p className="text-mute text-sm">This fight link doesn&apos;t match an event.</p>
       <div className="flex justify-center gap-2 pt-2">
-        <Link href="/scan" className="rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
+        <Link href="/scan" className={buttonClass({ text: "sm", className: "px-5" })}>
           Scan QR
         </Link>
-        <Link href="/" className="rounded-pill border border-white/20 text-ink font-semibold px-5 py-3 text-sm">
+        <Link href="/" className={buttonClass({ variant: "outline", text: "sm", className: "px-5" })}>
           Home
         </Link>
       </div>

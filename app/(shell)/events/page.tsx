@@ -7,6 +7,8 @@ import { EventPreviewCard } from "@/components/event/EventPreviewCard";
 import { NearbyToggle } from "@/components/clubs/NearbyToggle";
 import { OrganizerHome } from "@/components/account/OrganizerHome";
 import { buildMetadata } from "@/lib/seo";
+import { buttonClass } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Filter = "live" | "today" | "week" | "upcoming" | "finished" | "tournaments" | "fightNights";
 
@@ -210,8 +212,8 @@ export default async function EventsPage({
 
       {events.length === 0 ? (
         <div className="text-center py-16 space-y-4">
-          <p className="text-mute text-sm">No events nearby yet.</p>
-          <Link href="/scan" className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm">
+          <EmptyState>No events nearby yet.</EmptyState>
+          <Link href="/scan" className={buttonClass({ text: "sm", className: "inline-block px-5" })}>
             Scan QR
           </Link>
         </div>

@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { createSparringSession } from "@/lib/actions/sparring";
 import { ActionForm } from "@/components/host/ActionForm";
 import { BackButton } from "@/components/event/ContextBar";
+import { inputClass } from "@/components/ui/inputClass";
 
-const inputClass = "w-full rounded-card bg-panel border border-white/10 px-4 py-3 text-ink placeholder:text-mute";
 const SPORTS = ["Boxing", "Kickboxing", "MMA"];
 const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced", "Pro", "All levels"];
 

@@ -28,6 +28,8 @@ import { QrCodeSheet } from "@/components/event/QrCodeSheet";
 import { MediaUploader } from "@/components/host/MediaUploader";
 import { deleteMedia } from "@/lib/actions/media";
 import type { SparringParticipantStatus, SparringClubStatus, SparringNominationStatus } from "@prisma/client";
+import { Button, buttonClass } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_LABEL: Record<SparringParticipantStatus, string> = {
   REQUESTED: "Requested",
@@ -255,9 +257,9 @@ export default async function SparringSessionPage({
               ))}
             </select>
           )}
-          <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+          <Button type="submit" fullWidth>
             Join Sparring
-          </button>
+          </Button>
         </form>
       )}
 
@@ -266,7 +268,7 @@ export default async function SparringSessionPage({
           <p className="text-sm text-mute">Sign in or create an account to join this session.</p>
           <Link
             href={`/account?returnTo=${encodeURIComponent(`/sparring/${session.id}`)}`}
-            className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-2.5 text-sm"
+            className={buttonClass({ size: "sm", text: "sm", className: "inline-block px-5" })}
           >
             Sign in
           </Link>
@@ -278,7 +280,7 @@ export default async function SparringSessionPage({
           <p className="text-sm text-mute">Register as a boxer to join this session.</p>
           <Link
             href={`/account?returnTo=${encodeURIComponent(`/sparring/${session.id}`)}`}
-            className="inline-block rounded-pill border border-white/20 text-ink font-semibold px-5 py-2.5 text-sm"
+            className={buttonClass({ variant: "outline", size: "sm", text: "sm", className: "inline-block px-5" })}
           >
             Register as boxer
           </Link>
@@ -291,7 +293,7 @@ export default async function SparringSessionPage({
           <p className="text-sm text-mute">Sign in to see how your club can join this session.</p>
           <Link
             href={`/account?returnTo=${encodeURIComponent(`/sparring/${session.id}`)}`}
-            className="inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-2.5 text-sm"
+            className={buttonClass({ size: "sm", text: "sm", className: "inline-block px-5" })}
           >
             Sign in
           </Link>
@@ -308,7 +310,7 @@ export default async function SparringSessionPage({
             <p className="text-sm text-mute">
               This session only accepts fighters nominated by an accepted club.
             </p>
-            <Link href="/club" className="inline-block rounded-pill border border-white/20 text-ink font-semibold px-5 py-2.5 text-sm">
+            <Link href="/club" className={buttonClass({ variant: "outline", size: "sm", text: "sm", className: "inline-block px-5" })}>
               Represent a club
             </Link>
           </div>
@@ -340,9 +342,9 @@ export default async function SparringSessionPage({
                     }}
                     className="flex-1"
                   >
-                    <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-2 text-xs">
+                    <Button type="submit" size="xs" text="xs" fullWidth>
                       Accept invite
-                    </button>
+                    </Button>
                   </form>
                   <form
                     action={async () => {
@@ -371,9 +373,9 @@ export default async function SparringSessionPage({
                 }}
               >
                 <input type="hidden" name="clubId" value={club!.id} />
-                <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-2.5 text-sm">
+                <Button type="submit" size="sm" text="sm" fullWidth>
                   Request to join
-                </button>
+                </Button>
               </form>
             )}
 
@@ -458,7 +460,7 @@ export default async function SparringSessionPage({
             {ownParticipant.status === "CONFIRMED" && checkInFor(ownParticipant.fighterId)?.status !== "CHECKED_IN" && (
               <Link
                 href={`/checkin/sparring/${session.id}`}
-                className="rounded-pill bg-signal text-onsignal font-semibold px-4 py-2 text-xs"
+                className={buttonClass({ size: "xs", text: "xs", className: "px-4" })}
               >
                 Check In
               </Link>
@@ -484,7 +486,7 @@ export default async function SparringSessionPage({
           Registered fighters ({activeParticipants.length})
         </p>
         {activeParticipants.length === 0 ? (
-          <p className="text-sm text-mute">No fighters registered yet.</p>
+          <EmptyState>No fighters registered yet.</EmptyState>
         ) : (
           <div className="space-y-2">
             {activeParticipants.map((p) => (
@@ -510,9 +512,9 @@ export default async function SparringSessionPage({
                       }}
                       className="flex-1"
                     >
-                      <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-2 text-xs">
+                      <Button type="submit" size="xs" text="xs" fullWidth>
                         Accept
-                      </button>
+                      </Button>
                     </form>
                     <form
                       action={async () => {
@@ -597,7 +599,7 @@ export default async function SparringSessionPage({
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Host actions</p>
           <Link
             href={`/sparring/${session.id}/match`}
-            className="block text-center rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm"
+            className={buttonClass({ variant: "outline", text: "sm", className: "block text-center" })}
           >
             Suggested matches
           </Link>
@@ -609,9 +611,9 @@ export default async function SparringSessionPage({
                 await notifyCheckInOpen("SPARRING_SESSION", session.id);
               }}
             >
-              <button type="submit" className="w-full rounded-pill border border-white/20 text-ink font-semibold py-3 text-sm">
+              <Button type="submit" variant="outline" text="sm" fullWidth>
                 Notify fighters
-              </button>
+              </Button>
             </form>
           </div>
 
@@ -760,9 +762,9 @@ export default async function SparringSessionPage({
                 }}
                 className="mt-3"
               >
-                <button type="submit" className="w-full rounded-pill border border-signal text-signal font-semibold py-2 text-sm">
+                <Button type="submit" variant="signalOutline" size="xs" text="sm" fullWidth>
                   Confirm cancel
-                </button>
+                </Button>
               </form>
             </details>
           )}

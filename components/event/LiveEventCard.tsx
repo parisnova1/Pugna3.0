@@ -10,6 +10,7 @@ import { FreshnessMeter } from "@/components/live/FreshnessMeter";
 import { WatchArea } from "@/components/live/WatchArea";
 import { NotifyButton } from "@/components/event/NotifyButton";
 import { boutStatusLabel, eventStatusPillFor } from "@/lib/bout-status";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export type BoutView = {
   id: string;
@@ -277,9 +278,9 @@ export function LiveEventCard({
         <BoutHero bout={now} slug={slug} label={nowLabel} round={nowRound} eventStreamUrl={streamUrl} />
       ) : (
         <div className="rounded-card bg-panel border border-white/10 p-5">
-          <p className="text-sm text-mute">
+          <EmptyState>
             {status === "FINISHED" ? "Event finished." : "No bout in progress."}
-          </p>
+          </EmptyState>
         </div>
       )}
 

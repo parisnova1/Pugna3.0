@@ -3,6 +3,8 @@ import { getActor } from "@/lib/actor";
 import { prisma } from "@/lib/prisma";
 import { respondToNomination } from "@/lib/actions/request";
 import { formatEventDate } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function NominationsInboxPage() {
   const actor = await getActor();
@@ -25,7 +27,7 @@ export default async function NominationsInboxPage() {
       <h1 className="text-2xl font-semibold">Nominations</h1>
 
       {pending.length === 0 ? (
-        <p className="text-mute text-sm">No nominations.</p>
+        <EmptyState>No nominations.</EmptyState>
       ) : (
         <div className="space-y-3">
           {pending.map((nom) => (
@@ -42,9 +44,9 @@ export default async function NominationsInboxPage() {
                   }}
                   className="flex-1"
                 >
-                  <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-semibold py-2 text-sm">
+                  <Button type="submit" size="xs" text="sm" fullWidth>
                     Accept
-                  </button>
+                  </Button>
                 </form>
                 <form
                   action={async () => {
@@ -53,9 +55,9 @@ export default async function NominationsInboxPage() {
                   }}
                   className="flex-1"
                 >
-                  <button type="submit" className="w-full rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm">
+                  <Button type="submit" variant="outline" size="xs" text="sm" fullWidth>
                     Decline
-                  </button>
+                  </Button>
                 </form>
               </div>
             </div>

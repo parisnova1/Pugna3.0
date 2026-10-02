@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { AuthActionResult } from "@/lib/actions/auth";
+import { Button } from "@/components/ui/Button";
 
 type Action = (prev: AuthActionResult | null, formData: FormData) => Promise<AuthActionResult>;
 
@@ -42,13 +43,13 @@ export function AuthForm({
         />
       </Field>
       {state && !state.ok && <p className="text-signal text-sm">{state.error}</p>}
-      <button
+      <Button
         type="submit"
         disabled={pending}
-        className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3.5 disabled:opacity-60"
+        size="lg" fullWidth
       >
         {pending ? "…" : submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }

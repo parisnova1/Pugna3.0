@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toggleFighterFollow } from "@/lib/actions/fighterFollow";
+import { Button } from "@/components/ui/Button";
 
 export function FighterFollowButton({
   fighterId,
@@ -18,12 +19,12 @@ export function FighterFollowButton({
 
   if (isGuest) {
     return (
-      <button
+      <Button
         onClick={() => router.push(`/account?returnTo=${encodeURIComponent(`/fighters/${fighterId}`)}`)}
-        className="rounded-pill border border-white/20 text-ink text-sm font-medium px-4 py-2"
+        variant="outline" size="xs" text="sm" weight="medium" className="px-4"
       >
         Follow
-      </button>
+      </Button>
     );
   }
 

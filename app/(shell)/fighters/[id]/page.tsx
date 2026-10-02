@@ -13,6 +13,7 @@ import { deleteMedia } from "@/lib/actions/media";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { getFighterMeta } from "@/lib/seo-queries";
 import { buildMetadata, fighterJsonLd, privateMetadata } from "@/lib/seo";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const UPCOMING_STATUSES = ["TBD", "CONFIRMED", "READY", "DELAYED", "IN_PROGRESS"];
 
@@ -257,7 +258,7 @@ export default async function FighterProfilePage({
       <section className="space-y-2">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">Bouts</p>
         {bouts.length === 0 ? (
-          <p className="text-sm text-mute">No bouts yet.</p>
+          <EmptyState>No bouts yet.</EmptyState>
         ) : (
           bouts.map((b) => (
             <Link

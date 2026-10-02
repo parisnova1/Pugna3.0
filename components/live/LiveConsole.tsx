@@ -23,6 +23,8 @@ import {
   finishEvent,
 } from "@/lib/actions/live";
 import { setBoutStreamUrl, cancelEvent } from "@/lib/actions/event";
+import { Modal } from "@/components/ui/Modal";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 export type ConsoleBout = {
   id: string;
@@ -160,7 +162,7 @@ export function LiveConsole({
             href={`/e/${slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 rounded-pill border border-white/20 px-3 py-1.5 text-xs font-semibold text-ink"
+            className={buttonClass({ variant: "outline", size: "xxs", text: "xs", className: "shrink-0 px-3" })}
           >
             Public view →
           </Link>
@@ -200,13 +202,13 @@ export function LiveConsole({
             blocked event-wide.
           </p>
           {canManageEvent && (
-            <button
+            <Button
               disabled={pending}
               onClick={() => run(() => endIntermission(eventId))}
-              className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+              fullWidth
             >
               End intermission
-            </button>
+            </Button>
           )}
         </div>
       ) : activeRing?.onBreak ? (
@@ -217,13 +219,13 @@ export function LiveConsole({
             bout on this ring is blocked. Other rings are unaffected.
           </p>
           {canAct && (
-            <button
+            <Button
               disabled={pending}
               onClick={() => run(() => setRingBreak(activeRing.id, eventId, false))}
-              className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+              fullWidth
             >
               Resume {ringLabel(activeRing)}
-            </button>
+            </Button>
           )}
         </div>
       ) : now ? (
@@ -272,37 +274,37 @@ export function LiveConsole({
           {!canAct ? (
             <p className="text-xs text-mute text-center py-2">View-only — Event Staff</p>
           ) : now.status === "IN_PROGRESS" && now.roundPhase === "ROUND" ? (
-            <button
+            <Button
               disabled={pending}
               onClick={() => run(() => startRest(now.id, eventId))}
-              className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+              fullWidth
             >
               End round
-            </button>
+            </Button>
           ) : now.status === "IN_PROGRESS" && now.roundPhase === "REST" && now.totalRounds && now.currentRound < now.totalRounds ? (
-            <button
+            <Button
               disabled={pending}
               onClick={() => run(() => startRound(now.id, eventId))}
-              className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+              fullWidth
             >
               Start round {now.currentRound + 1}
-            </button>
+            </Button>
           ) : now.status === "IN_PROGRESS" ? (
-            <button
+            <Button
               disabled={pending}
               onClick={() => setSheet({ type: "result", boutId: now.id })}
-              className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+              fullWidth
             >
               Finish
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               disabled={pending}
               onClick={() => run(() => startBout(now.id, eventId))}
-              className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+              fullWidth
             >
               Start
-            </button>
+            </Button>
           )}
           {canAct && (
             <div className="flex gap-2">
@@ -320,21 +322,21 @@ export function LiveConsole({
 
       {eventStatus !== "INTERMISSION" && !activeRing?.onBreak && now?.status !== "IN_PROGRESS" && activeRing && canAct && (
         <div className="flex gap-2">
-          <button
+          <Button
             disabled={pending}
             onClick={() => setSheet({ type: "break", ringId: activeRing.id })}
-            className="flex-1 rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm"
+            variant="outline" size="xs" text="sm" className="flex-1"
           >
             Break {ringLabel(activeRing)}
-          </button>
+          </Button>
           {canManageEvent && (
-            <button
+            <Button
               disabled={pending}
               onClick={() => setSheet({ type: "intermission" })}
-              className="flex-1 rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm"
+              variant="outline" size="xs" text="sm" className="flex-1"
             >
               Start intermission (all rings)
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -368,37 +370,37 @@ export function LiveConsole({
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Event control</p>
           <div className="grid grid-cols-2 gap-2">
             {eventStatus === "INTERMISSION" ? (
-              <button
+              <Button
                 disabled={pending}
                 onClick={() => run(() => endIntermission(eventId))}
-                className="rounded-pill bg-signal text-onsignal font-semibold py-2.5 text-sm disabled:opacity-60"
+                size="sm" text="sm"
               >
                 Resume all rings
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 disabled={pending}
                 onClick={() => setSheet({ type: "intermission" })}
-                className="rounded-pill border border-white/20 text-ink font-semibold py-2.5 text-sm"
+                variant="outline" size="sm" text="sm"
               >
                 Pause all rings
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               disabled={pending}
               onClick={() => setSheet({ type: "announcement" })}
-              className="rounded-pill border border-white/20 text-ink font-semibold py-2.5 text-sm"
+              variant="outline" size="sm" text="sm"
             >
               Announcement
-            </button>
+            </Button>
           </div>
-          <button
+          <Button
             disabled={pending}
             onClick={() => setSheet({ type: "cancel" })}
-            className="w-full rounded-pill border border-error/40 text-error font-semibold py-2.5 text-sm"
+            variant="dangerOutline" size="sm" text="sm" fullWidth
           >
             Cancel event
-          </button>
+          </Button>
         </div>
       )}
 
@@ -434,17 +436,17 @@ export function LiveConsole({
       </div>
 
       {allTerminal && canManageEvent && (
-        <button
+        <Button
           disabled={pending}
           onClick={() => run(() => finishEvent(eventId))}
-          className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+          fullWidth
         >
           Finish event
-        </button>
+        </Button>
       )}
 
       {sheet?.type === "delay" && (
-        <Sheet onClose={() => setSheet(null)} title="Delay">
+        <Modal closeLabel="Cancel" compactClose onClose={() => setSheet(null)} title="Delay">
           <div className="grid grid-cols-3 gap-2">
             {[5, 10, 15].map((m) => (
               <button
@@ -461,11 +463,11 @@ export function LiveConsole({
               </button>
             ))}
           </div>
-        </Sheet>
+        </Modal>
       )}
 
       {sheet?.type === "scratch" && (
-        <Sheet onClose={() => setSheet(null)} title="Scratch">
+        <Modal closeLabel="Cancel" compactClose onClose={() => setSheet(null)} title="Scratch">
           <div className="space-y-2">
             {(["INJURY", "WITHDRAWAL", "NO_OPPONENT", "ORGANIZER_DECISION", "OTHER"] as ScratchReason[]).map((reason) => (
               <button
@@ -482,72 +484,72 @@ export function LiveConsole({
               </button>
             ))}
           </div>
-        </Sheet>
+        </Modal>
       )}
 
       {sheet?.type === "noshow" && (
-        <Sheet onClose={() => setSheet(null)} title="No-show">
-          <button
+        <Modal closeLabel="Cancel" compactClose onClose={() => setSheet(null)} title="No-show">
+          <Button
             disabled={pending}
             onClick={() => run(() => noShowBout(sheet.boutId, eventId))}
-            className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+            fullWidth
           >
             Confirm no-show
-          </button>
-        </Sheet>
+          </Button>
+        </Modal>
       )}
 
       {sheet?.type === "result" && (
-        <Sheet onClose={() => setSheet(null)} title="Result">
+        <Modal closeLabel="Cancel" compactClose onClose={() => setSheet(null)} title="Result">
           <ResultForm
             bout={bouts.find((b) => b.id === sheet.boutId)!}
             pending={pending}
             onSubmit={(fd) => run(() => finishBout(sheet.boutId, eventId, fd))}
           />
-        </Sheet>
+        </Modal>
       )}
 
       {sheet?.type === "intermission" && (
-        <Sheet onClose={() => setSheet(null)} title="Start intermission">
+        <Modal closeLabel="Cancel" compactClose onClose={() => setSheet(null)} title="Start intermission">
           <ResumeTimeForm
             pending={pending}
             submitLabel="Start intermission"
             onSubmit={(fd) => run(() => startIntermission(eventId, fd))}
           />
-        </Sheet>
+        </Modal>
       )}
 
       {sheet?.type === "link" && (
-        <Sheet onClose={() => setSheet(null)} title="Fight link">
+        <Modal closeLabel="Cancel" compactClose onClose={() => setSheet(null)} title="Fight link">
           <LinkForm
             pending={pending}
             defaultValue={bouts.find((b) => b.id === sheet.boutId)?.streamUrl ?? ""}
             onSubmit={(fd) => run(() => setBoutStreamUrl(sheet.boutId, eventId, fd))}
           />
-        </Sheet>
+        </Modal>
       )}
 
       {sheet?.type === "break" && (
-        <Sheet onClose={() => setSheet(null)} title="Start break">
+        <Modal closeLabel="Cancel" compactClose onClose={() => setSheet(null)} title="Start break">
           <BreakForm
             rings={rings}
             defaultRingId={sheet.ringId}
             pending={pending}
             onSubmit={(ringIds, fd) => run(() => setRingsBreak(eventId, ringIds, true, fd))}
           />
-        </Sheet>
+        </Modal>
       )}
 
       {sheet?.type === "announcement" && (
-        <Sheet onClose={() => setSheet(null)} title="Announcement">
+        <Modal closeLabel="Cancel" compactClose onClose={() => setSheet(null)} title="Announcement">
           <AnnouncementForm pending={pending} onSubmit={(fd) => run(() => postAnnouncement(eventId, fd))} />
-        </Sheet>
+        </Modal>
       )}
 
       {sheet?.type === "cancel" && (
-        <Sheet onClose={() => setSheet(null)} title="Cancel event">
+        <Modal closeLabel="Cancel" compactClose onClose={() => setSheet(null)} title="Cancel event">
           <CancelEventForm pending={pending} onSubmit={(fd) => run(() => cancelEvent(eventId, fd))} />
-        </Sheet>
+        </Modal>
       )}
     </div>
   );
@@ -558,21 +560,6 @@ function SmallButton({ onClick, children }: { onClick: () => void; children: Rea
     <button onClick={onClick} className="flex-1 rounded-pill border border-white/15 py-2 text-xs font-medium text-mute">
       {children}
     </button>
-  );
-}
-
-function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="glass relative w-full max-w-md rounded-t-card p-6 space-y-4">
-        <h3 className="font-semibold">{title}</h3>
-        {children}
-        <button onClick={onClose} className="w-full rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm">
-          Cancel
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -595,9 +582,9 @@ function ResumeTimeForm({
           className="w-full mt-1 rounded-card bg-void border border-white/10 px-4 py-3 text-sm"
         />
       </div>
-      <button type="submit" disabled={pending} className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60">
+      <Button type="submit" disabled={pending} fullWidth>
         {submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -624,9 +611,9 @@ function LinkForm({
         />
       </div>
       <p className="text-[11px] text-mute">Until you add a link, viewers see &ldquo;Stream link coming soon.&rdquo;</p>
-      <button type="submit" disabled={pending} className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60">
+      <Button type="submit" disabled={pending} fullWidth>
         Save link
-      </button>
+      </Button>
     </form>
   );
 }
@@ -669,9 +656,9 @@ function ResultForm({
         placeholder="Round (optional)"
         className="w-full rounded-card bg-void border border-white/10 px-4 py-3 text-sm"
       />
-      <button type="submit" disabled={pending} className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3">
+      <Button type="submit" disabled={pending} fullWidth>
         Confirm result
-      </button>
+      </Button>
     </form>
   );
 }
@@ -761,13 +748,13 @@ function BreakForm({
         </div>
       )}
 
-      <button
+      <Button
         type="submit"
         disabled={pending || selectedRingIds.length === 0}
-        className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60"
+        fullWidth
       >
         Start break
-      </button>
+      </Button>
     </form>
   );
 }
@@ -783,9 +770,9 @@ function AnnouncementForm({ pending, onSubmit }: { pending: boolean; onSubmit: (
         className="w-full rounded-card bg-void border border-white/10 px-4 py-3 text-sm resize-none"
       />
       <p className="text-[11px] text-mute">Sent as a notification to everyone following this event.</p>
-      <button type="submit" disabled={pending} className="w-full rounded-pill bg-signal text-onsignal font-semibold py-3 disabled:opacity-60">
+      <Button type="submit" disabled={pending} fullWidth>
         Post announcement
-      </button>
+      </Button>
     </form>
   );
 }
@@ -799,9 +786,9 @@ function CancelEventForm({ pending, onSubmit }: { pending: boolean; onSubmit: (f
         placeholder="Reason"
         className="w-full rounded-card bg-void border border-white/10 px-4 py-3 text-sm"
       />
-      <button type="submit" disabled={pending} className="w-full rounded-pill bg-error text-ink font-semibold py-3 disabled:opacity-60">
+      <Button type="submit" disabled={pending} variant="danger" fullWidth>
         Confirm cancel event
-      </button>
+      </Button>
     </form>
   );
 }
@@ -882,13 +869,13 @@ function CustomTimer() {
       )}
       <div className="flex gap-2">
         {remaining === null ? (
-          <button onClick={start} className="flex-1 rounded-pill bg-signal text-onsignal font-semibold py-2.5 text-sm">
+          <Button onClick={start} size="sm" text="sm" className="flex-1">
             Start
-          </button>
+          </Button>
         ) : (
-          <button onClick={reset} className="flex-1 rounded-pill border border-white/20 text-ink font-semibold py-2.5 text-sm">
+          <Button onClick={reset} variant="outline" size="sm" text="sm" className="flex-1">
             Reset
-          </button>
+          </Button>
         )}
       </div>
     </div>

@@ -6,6 +6,7 @@ import { createEvent } from "@/lib/actions/event";
 import { formatEventDate } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import type { Actor } from "@/lib/rbac";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 function greeting(now: Date): string {
   const hour = now.getHours();
@@ -95,9 +96,9 @@ export async function OrganizerHome({ actor, unreadCount }: { actor: NonNullable
             if (result.ok) redirect(`/host/events/${result.eventId}/build`);
           }}
         >
-          <button type="submit" className="w-full rounded-pill bg-signal text-onsignal font-bold py-3.5">
+          <Button type="submit" size="lg" weight="bold" fullWidth>
             + Host an Event
-          </button>
+          </Button>
         </form>
         <p className="text-xs text-mute">
           Create and manage tournaments, fight nights and other combat-sport events with PUGNA.
@@ -135,7 +136,7 @@ export async function OrganizerHome({ actor, unreadCount }: { actor: NonNullable
             )}
             <Link
               href={`/host/events/${liveEvent.id}/live`}
-              className="block text-center rounded-pill bg-signal text-onsignal font-bold py-3 mt-1"
+              className={buttonClass({ weight: "bold", className: "block text-center mt-1" })}
             >
               Open Event Control →
             </Link>
