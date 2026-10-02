@@ -31,6 +31,7 @@ describe("buttonClass reproduces the hand-rolled buttons it replaced", () => {
     ["w-full rounded-pill bg-error text-ink font-semibold py-3 disabled:opacity-60", { variant: "danger", fullWidth: true }],
     ["w-full rounded-pill border border-error/40 text-error font-semibold py-2.5 text-sm", { variant: "dangerOutline", size: "sm", text: "sm", fullWidth: true }],
     ["w-full rounded-pill bg-signal text-onsignal font-bold py-3.5", { size: "lg", weight: "bold", fullWidth: true }],
+    ["rounded-pill text-sm font-medium px-4 py-2 border bg-success text-onsignal border-success", { variant: "success", size: "xs", text: "sm", weight: "medium", className: "px-4" }],
   ];
 
   it.each(cases)("%s", (original, options) => {

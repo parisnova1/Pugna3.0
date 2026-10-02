@@ -31,3 +31,6 @@ prisma/generated/
 
 .vercel
 .env*
+
+### TypeScript ###
+*.tsbuildinfo
