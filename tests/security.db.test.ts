@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { assertNotProduction } from "./helpers/db-guard";
 
 /**
  * Integration tests against a REAL Postgres. They only run when
@@ -15,6 +16,7 @@ describe.skipIf(!url)("security primitives against real Postgres", () => {
   const userIds: string[] = [];
 
   beforeAll(async () => {
+    assertNotProduction(url!);
     process.env.DATABASE_URL = url;
     db = (await import("@/lib/prisma")).prisma;
     store = (await import("@/lib/security/rate-limit-db")).dbRateLimitStore;
