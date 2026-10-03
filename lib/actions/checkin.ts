@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/types";
 import type { CheckInAttachedType, CheckInStatus } from "@prisma/client";
 import { notifyMany } from "@/lib/actions/notify";
-import { logScan } from "@/lib/actions/scanHistory";
+import { logScan } from "@/lib/scan-log";
 
 async function getOwnFighter(userId: string) {
   return prisma.fighterProfile.findUnique({ where: { userId } });
@@ -100,6 +100,13 @@ export async function setCheckInStatus(
 ): Promise<ActionResult> {
   const denied = await gateCheckInHost(attachedType, attachedId);
   if (denied) return denied;
+
+  // The id comes from the client; it must belong to this event / session.
+  const onTheList =
+    attachedType === "EVENT"
+      ? await prisma.bout.findFirst({ where: { eventId: attachedId, OR: [{ fighterAId: fighterId }, { fighterBId: fighterId }] }, select: { id: true } })
+      : await prisma.sparringParticipant.findFirst({ where: { sessionId: attachedId, fighterId }, select: { id: true } });
+  if (!onTheList) return { ok: false, code: "NOT_FOUND", reason: "That boxer isn't part of this event." };
 
   await prisma.checkIn.upsert({
     where: { attachedType_attachedId_fighterId: { attachedType, attachedId, fighterId } },

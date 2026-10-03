@@ -2,14 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
+import { logScan } from "@/lib/scan-log";
 
-export type ScanKind = "EVENT" | "SPARRING";
-
-/** Records one row of real Scan-hub history — never called speculatively, only after a scan/manual
- * entry actually resolved to something, or a check-in actually succeeded. */
-export async function logScan(params: { userId: string; kind: ScanKind; label: string; detail: string; href: string }): Promise<void> {
-  await prisma.scanEvent.create({ data: params });
-}
 
 const EVENT_PATH = /^\/e\/([^/]+)\/?$/;
 const SPARRING_PATH = /^\/sparring\/([^/]+)\/?$/;

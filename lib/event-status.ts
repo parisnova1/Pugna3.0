@@ -11,6 +11,13 @@ export function isPublishedEventStatus(status: string): boolean {
   return !(UNPUBLISHED_EVENT_STATUSES as readonly string[]).includes(status);
 }
 
+/** Events that can still take club entries and nominations (not yet running, not over). */
+export const ENTRY_OPEN_EVENT_STATUSES = ["DRAFT", "READY", "PUBLISHED"] as const;
+
+export function isEntryOpen(status: string): boolean {
+  return (ENTRY_OPEN_EVENT_STATUSES as readonly string[]).includes(status);
+}
+
 /** Statuses during which the schedule can still change in a way worth telling people about. */
 export const ACTIVE_EVENT_STATUSES = ["PUBLISHED", "LIVE", "INTERMISSION"] as const;
 

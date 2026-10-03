@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
-import { canManageMedia } from "@/lib/actions/media";
+import { canManageMedia } from "@/lib/media-access";
 import { POLICIES } from "@/lib/security/policies";
 import { rateLimit } from "@/lib/security/rate-limit-db";
-import { MAX_UPLOAD_BYTES, safeFileName, sniffImageType } from "@/lib/security/upload";
+import { kindAllowedFor, MAX_UPLOAD_BYTES, safeFileName, sniffImageType } from "@/lib/security/upload";
 import type { MediaAttachedType, MediaKind } from "@prisma/client";
 
 const KINDS: MediaKind[] = [
@@ -53,6 +53,10 @@ export async function POST(req: Request) {
   }
   if (!KINDS.includes(kind as MediaKind) || !ATTACHED_TYPES.includes(attachedType as MediaAttachedType) || !attachedId) {
     return NextResponse.json({ error: "Invalid upload target." }, { status: 400 });
+  }
+
+  if (!kindAllowedFor(attachedType as MediaAttachedType, kind as MediaKind)) {
+    return NextResponse.json({ error: "That kind of media doesn't belong on this target." }, { status: 400 });
   }
 
   // Trust the bytes, not the browser-declared type.

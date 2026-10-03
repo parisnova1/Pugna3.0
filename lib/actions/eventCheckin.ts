@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
-import { logScan } from "@/lib/actions/scanHistory";
+import { logScan } from "@/lib/scan-log";
 import { POLICIES } from "@/lib/security/policies";
 import { rateLimit } from "@/lib/security/rate-limit-db";
 import type { CheckInSource } from "@prisma/client";

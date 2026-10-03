@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/types";
 import { notifyMany } from "@/lib/actions/notify";
 import { clubAdminUserIds } from "@/lib/recipients";
+import { isActiveEventStatus } from "@/lib/event-status";
 
 /**
  * Organizer <-> Club, event-scoped — mirrors lib/actions/sparringClub.ts's
@@ -121,7 +122,7 @@ export async function requestClubForEvent(eventId: string, clubId: string, formD
     prisma.event.findUnique({ where: { id: eventId } }),
     prisma.club.findUnique({ where: { id: clubId } }),
   ]);
-  if (!event) return { ok: false, code: "NOT_FOUND", reason: "Event not found." };
+  if (!event || !isActiveEventStatus(event.status)) return { ok: false, code: "NOT_FOUND", reason: "Event not found." };
   if (!club) return { ok: false, code: "NOT_FOUND", reason: "Club not found." };
 
   const existing = await prisma.clubEventRequest.findUnique({

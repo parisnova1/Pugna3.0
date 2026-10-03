@@ -27,3 +27,16 @@ export function safeFileName(name: string): string {
   const cleaned = name.replace(/[^A-Za-z0-9._-]/g, "_").replace(/\.{2,}/g, ".").slice(-80);
   return cleaned || "upload";
 }
+
+const KINDS_BY_TARGET: Record<string, readonly string[]> = {
+  EVENT: ["EVENT_COVER", "EVENT_GALLERY", "SPONSOR"],
+  BOUT: ["BOUT_MEDIA"],
+  SPARRING_SESSION: ["SPARRING_MEDIA"],
+  CLUB: ["CLUB_COVER"],
+  FIGHTER: ["FIGHTER_AVATAR", "FIGHTER_MEDIA"],
+};
+
+/** A "club cover" can't be attached to an event, and so on -- keeps media rows meaningful. */
+export function kindAllowedFor(attachedType: string, kind: string): boolean {
+  return KINDS_BY_TARGET[attachedType]?.includes(kind) ?? false;
+}

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getActor } from "@/lib/actor";
 import { checkInToEvent } from "@/lib/actions/checkin";
 import { Button, buttonClass } from "@/components/ui/Button";
+import { can } from "@/lib/rbac";
+import { isPublishedEventStatus } from "@/lib/event-status";
 
 export default async function EventCheckInPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
@@ -11,6 +13,8 @@ export default async function EventCheckInPage({ params }: { params: Promise<{ e
   if (!event) notFound();
 
   const actor = await getActor();
+  // Same visibility rule as the public page: drafts are for their hosts only.
+  if (!can(actor, "event.view", { eventId, eventPublished: isPublishedEventStatus(event.status) }).allowed) notFound();
   const fighter = actor ? await prisma.fighterProfile.findUnique({ where: { userId: actor.userId } }) : null;
   const existing = fighter
     ? await prisma.checkIn.findUnique({

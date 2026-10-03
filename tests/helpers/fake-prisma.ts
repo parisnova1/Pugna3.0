@@ -23,6 +23,8 @@ const TABLES = [
   "clubEventRequest",
   "clubEventParticipation",
   "eventHostMember",
+  "nomination",
+  "checkIn",
 ] as const;
 type Table = (typeof TABLES)[number];
 
@@ -33,10 +35,12 @@ const DEFAULTS: Partial<Record<Table, Row>> = { clubEventInvite: { status: "PEND
 const RELATIONS: Partial<Record<Table, Record<string, [Table, string]>>> = {
   clubEventInvite: { event: ["event", "eventId"], invitedClub: ["club", "invitedClubId"] },
   clubEventParticipation: { event: ["event", "eventId"], club: ["club", "clubId"] },
+  nomination: { fighter: ["fighterProfile", "fighterId"], event: ["event", "eventId"] },
 };
 
 function matches(row: Row, where: Record<string, unknown> | undefined): boolean {
   return Object.entries(where ?? {}).every(([key, expected]) => {
+    if (key === "OR") return (expected as Record<string, unknown>[]).some((alt) => matches(row, alt));
     const actual = row[key];
     if (actual === undefined && expected && typeof expected === "object" && !(expected instanceof Date) && key.includes("_")) {
       return matches(row, expected as Record<string, unknown>);
@@ -44,6 +48,7 @@ function matches(row: Row, where: Record<string, unknown> | undefined): boolean 
     if (expected && typeof expected === "object" && !(expected instanceof Date)) {
       const filter = expected as Record<string, unknown>;
       if ("in" in filter) return (filter.in as unknown[]).includes(actual);
+      if ("notIn" in filter) return !(filter.notIn as unknown[]).includes(actual);
       if ("gt" in filter || "lt" in filter || "not" in filter) return true;
       return actual && typeof actual === "object" ? matches(actual as Row, filter) : false;
     }
@@ -106,11 +111,11 @@ export function createFakeDb() {
         if (i < 0) throw new Error(`${name}.delete: no row`);
         return tables[name].splice(i, 1)[0];
       },
-      create: async ({ data }: { data: Row }) => {
+      create: async ({ data, include }: { data: Row; include?: Record<string, unknown> }) => {
         mutations.push(`${name}.create`);
         const row = { id: `${name}-${tables[name].length + 1}`, ...(DEFAULTS[name] ?? {}), ...data };
         tables[name].push(row);
-        return row;
+        return withIncludes(row, include);
       },
       createMany: async ({ data }: { data: Row[] }) => {
         mutations.push(`${name}.createMany`);
