@@ -17,9 +17,9 @@ export type ButtonWeight = "semibold" | "medium" | "bold";
 const VARIANT: Record<ButtonVariant, string> = {
   primary: "bg-signal text-onsignal",
   outline: "border border-white/20 text-ink",
-  signalOutline: "border border-signal text-signal",
+  signalOutline: "border border-signal text-signal-ink",
   danger: "bg-error text-ink",
-  dangerOutline: "border border-error/40 text-error",
+  dangerOutline: "border border-error/40 text-error-ink",
   success: "border border-success bg-success text-onsignal",
 };
 

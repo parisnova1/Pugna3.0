@@ -25,7 +25,7 @@ export function ActionForm({
   return (
     <form action={formAction} className={className}>
       {children}
-      {state && !state.ok && <p className="text-signal text-sm mt-2">{state.reason}</p>}
+      {state && !state.ok && <p className="text-signal-ink text-sm mt-2">{state.reason}</p>}
       <button
         type="submit"
         disabled={pending}

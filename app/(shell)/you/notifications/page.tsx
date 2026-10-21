@@ -35,7 +35,7 @@ export default async function NotificationsPage() {
         <h1 className="text-2xl font-semibold">Notifications</h1>
         {unreadCount > 0 && (
           <form action={markAllNotificationsRead}>
-            <button type="submit" className="text-xs text-signal font-medium">
+            <button type="submit" className="text-xs text-signal-ink font-medium">
               Mark all read
             </button>
           </form>

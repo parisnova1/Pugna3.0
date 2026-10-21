@@ -28,7 +28,7 @@ export function LiveAudience({
 
       {viewerCheckedIn ? (
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-success">✓ You&apos;re checked in</p>
+          <p className="text-sm font-semibold text-success-ink">✓ You&apos;re checked in</p>
           {liveBoutId ? (
             <Link
               href={`/e/${slug}/bout/${liveBoutId}`}

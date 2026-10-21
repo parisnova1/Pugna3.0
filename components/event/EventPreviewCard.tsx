@@ -41,7 +41,7 @@ export function EventPreviewCard({
 
   const checkInBadge =
     checkedInCount && checkedInCount > 0 ? (
-      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-live shrink-0 whitespace-nowrap">
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-live-ink shrink-0 whitespace-nowrap">
         <span className="w-1.5 h-1.5 rounded-full bg-live shrink-0" />
         {checkedInCount} checked in
       </span>

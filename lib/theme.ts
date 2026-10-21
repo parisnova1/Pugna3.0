@@ -7,10 +7,10 @@
  * values via `var(--x)` in app/globals.css. Keep these in sync with :root.
  */
 export const THEME = {
-  void: "#0B0B0C",
-  panel: "#151517",
-  ink: "#F5F3EE",
-  mute: "#A7A5A0",
+  void: "#FFFFFF",
+  panel: "#F4F4F6",
+  ink: "#101012",
+  mute: "#5B5B62",
   signal: "#E85D3F",
   onsignal: "#0B0B0C",
   live: "#E5484D",

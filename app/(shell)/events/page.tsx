@@ -159,7 +159,7 @@ export default async function EventsPage({
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-2xl font-semibold">Events</h1>
         <Link href="/" aria-label="Go to PUGNA home" className="font-bold tracking-tight text-sm shrink-0">
-          PUGNA<span className="text-signal">.</span>
+          PUGNA<span className="text-signal-ink">.</span>
         </Link>
       </div>
 

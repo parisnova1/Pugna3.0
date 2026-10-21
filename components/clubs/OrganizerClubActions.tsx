@@ -107,7 +107,7 @@ export function OrganizerClubActions({
             placeholder="Message (optional)"
             className="w-full rounded-card bg-void border border-white/10 px-4 py-3 text-sm resize-none"
           />
-          {error && <p className="text-signal text-xs">{error}</p>}
+          {error && <p className="text-signal-ink text-xs">{error}</p>}
           <Button
             type="button"
             disabled={pending || !selectedEventId}

@@ -21,8 +21,8 @@ export function ChangePasswordForm() {
       <input name="currentPassword" type="password" placeholder="Current password" required className={inputClass} />
       <input name="newPassword" type="password" placeholder="New password (8+ characters)" required minLength={8} className={inputClass} />
       <input name="confirmPassword" type="password" placeholder="Confirm new password" required minLength={8} className={inputClass} />
-      {state && !state.ok && <p className="text-signal text-sm">{state.reason}</p>}
-      {state && state.ok && <p className="text-success text-sm">Password updated.</p>}
+      {state && !state.ok && <p className="text-signal-ink text-sm">{state.reason}</p>}
+      {state && state.ok && <p className="text-success-ink text-sm">Password updated.</p>}
       <Button
         type="submit"
         disabled={pending}

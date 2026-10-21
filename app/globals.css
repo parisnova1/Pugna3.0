@@ -3,36 +3,48 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+
+  /* Base of every `white/NN` utility (borders, tints). In a light theme those
+     overlays must be dark, so "white" here is near-black. */
+  --white-rgb: 16 16 18;
 
   /* Backgrounds */
-  --void: #0b0b0c;
-  --panel: #151517;
-  --panel-elevated: #1d1d20;
-  --panel-hover: #232326;
+  --void: #ffffff;
+  --panel: #f4f4f6;
+  --panel-elevated: #ebebee;
+  --panel-hover: #e4e4e8;
 
   /* Text */
-  --ink: #f5f3ee;
-  --mute: #a7a5a0;
-  --muted: #77756f;
-  --disabled: #55545a;
+  --ink: #101012;
+  --mute: #5b5b62;
+  --muted: #85858c;
+  --disabled: #b4b4ba;
 
   /* Borders (available for new/updated surfaces; existing border-white/X
      opacity borders are left as-is — see design-token migration plan) */
-  --border: #2a2a2d;
-  --border-subtle: #202023;
-  --border-strong: #38383c;
+  --border: #e2e2e6;
+  --border-subtle: #ececf0;
+  --border-strong: #cfcfd5;
 
   /* PUGNA brand accent — action/CTA/selection, never "live" or "success" */
   --signal: #e85d3f;
-  --signal-hover: #f06a4b;
+  --signal-hover: #d94f31;
   --onsignal: #0b0b0c;
 
   /* Semantic status */
+  /* Fills (badges, buttons) keep these bright values, with dark text on top. */
   --live: #e5484d;
   --success: #35b779;
   --warning: #e6a23c;
   --error: #e05252;
+
+  /* The same hues, darkened to read as TEXT on white or a light card (>= 4.5:1). */
+  --signal-ink: #bd3e1b;
+  --live-ink: #c42b31;
+  --success-ink: #167a45;
+  --warning-ink: #946006;
+  --error-ink: #c53030;
 
   /* Height of the event page's persistent sticky nav (EventStickyNav) — other
      sticky/fixed elements on that page (ScheduleResultsToggle's toggle,
@@ -48,10 +60,11 @@ body {
 }
 
 .glass {
-  background: color-mix(in srgb, var(--panel) 64%, transparent);
+  background: color-mix(in srgb, var(--panel) 97%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(var(--white-rgb) / 0.1);
+  box-shadow: 0 -8px 32px -12px rgb(var(--white-rgb) / 0.25);
 }
 
 .tabular {
@@ -83,8 +96,7 @@ a.bg-signal {
   }
 }
 
-/* Standard OpenStreetMap tiles, dark-inverted to match the app theme — no
-   API key / account needed, unlike CartoDB's now-gated free dark basemap. */
+/* Standard OpenStreetMap tiles, softened slightly so the map sits quietly on a white page. */
 .pugna-map .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.6);
+  filter: saturate(0.75) contrast(0.95);
 }

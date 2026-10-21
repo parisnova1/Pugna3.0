@@ -86,7 +86,7 @@ export function CrowdStrip({
           {frozen ? "Fight reaction" : `Live crowd${crowdSize > 0 ? ` · ${crowdSize}` : ""}`}
         </p>
         {(shouts.length > 0 || topReactions.length > 0) && (
-          <button onClick={() => setViewAll(true)} className="text-xs text-signal font-medium">
+          <button onClick={() => setViewAll(true)} className="text-xs text-signal-ink font-medium">
             View all →
           </button>
         )}
@@ -165,7 +165,7 @@ export function CrowdStrip({
               Send
             </button>
           </form>
-          {error && <p className="text-xs text-signal">{error}</p>}
+          {error && <p className="text-xs text-signal-ink">{error}</p>}
         </div>
       )}
 

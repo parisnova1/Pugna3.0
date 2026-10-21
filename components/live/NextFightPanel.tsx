@@ -48,7 +48,7 @@ export function NextFightPanel({
       />
 
       {nextBout && (
-        <Link href={`/e/${slug}/bout/${nextBout.id}`} className="block text-center text-sm font-semibold text-signal">
+        <Link href={`/e/${slug}/bout/${nextBout.id}`} className="block text-center text-sm font-semibold text-signal-ink">
           View Fight →
         </Link>
       )}

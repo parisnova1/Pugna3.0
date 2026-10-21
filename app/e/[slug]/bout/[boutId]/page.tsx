@@ -276,7 +276,7 @@ export default async function BoutDetailPage({
                       <button
                         type="submit"
                         aria-label="Delete"
-                        className="flex items-center justify-center w-5 h-5 text-xs rounded-full bg-black/70 text-ink"
+                        className="flex items-center justify-center w-5 h-5 text-xs rounded-full bg-black/70 text-[#ffffff]"
                       >
                         ×
                       </button>
@@ -308,7 +308,7 @@ export default async function BoutDetailPage({
                   </form>
                 )}
                 <form action={async () => { "use server"; await muteUser(bout.eventId, s.userId); }}>
-                  <button type="submit" className="text-xs font-medium text-signal underline">
+                  <button type="submit" className="text-xs font-medium text-signal-ink underline">
                     Mute
                   </button>
                 </form>

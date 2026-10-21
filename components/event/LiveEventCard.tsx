@@ -247,13 +247,13 @@ export function LiveEventCard({
               href={streamUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-signal mt-2 font-medium"
+              className="inline-flex items-center gap-1 text-sm text-signal-ink mt-2 font-medium"
             >
               Watch stream ↗
             </a>
           )}
           {status === "CANCELLED" && cancelReason && (
-            <p className="text-sm text-error mt-2">Cancelled: {cancelReason}</p>
+            <p className="text-sm text-error-ink mt-2">Cancelled: {cancelReason}</p>
           )}
         </div>
       )}
@@ -330,11 +330,11 @@ export function LiveEventCard({
               >
                 <div>
                   <p className="text-sm font-medium">
-                    <span className={bout.winnerName && bout.winnerName === bout.fighterAName ? "text-success font-semibold" : ""}>
+                    <span className={bout.winnerName && bout.winnerName === bout.fighterAName ? "text-success-ink font-semibold" : ""}>
                       {bout.fighterAName ?? "TBD"}
                     </span>{" "}
                     <span className="text-mute">vs</span>{" "}
-                    <span className={bout.winnerName && bout.winnerName === bout.fighterBName ? "text-success font-semibold" : ""}>
+                    <span className={bout.winnerName && bout.winnerName === bout.fighterBName ? "text-success-ink font-semibold" : ""}>
                       {bout.fighterBName ?? "TBD"}
                     </span>
                   </p>
@@ -345,11 +345,11 @@ export function LiveEventCard({
                 <span
                   className={`text-xs shrink-0 ml-2 font-medium ${
                     isFinal && bout.winnerName
-                      ? "text-success"
+                      ? "text-success-ink"
                       : bout.id === nowId
-                        ? "text-live"
+                        ? "text-live-ink"
                         : bout.id === nextId
-                          ? "text-signal"
+                          ? "text-signal-ink"
                           : "text-mute"
                   }`}
                 >
@@ -435,7 +435,7 @@ function BoutHero({
             <p
               className={[
                 "text-xs font-semibold uppercase tracking-wide",
-                isLive ? "text-live" : label === "DELAYED" ? "text-warning" : "text-signal",
+                isLive ? "text-live-ink" : label === "DELAYED" ? "text-warning-ink" : "text-signal-ink",
               ].join(" ")}
             >
               {label === "LIVE" ? "Live now" : label === "DELAYED" ? statusLabel(bout) : "Up next"}

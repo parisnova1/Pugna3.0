@@ -139,7 +139,7 @@ export default async function ClubsPage({
           <p className="text-mute text-sm">Discover boxing clubs and combat-sports communities on PUGNA.</p>
         </div>
         <Link href="/" aria-label="Go to PUGNA home" className="font-bold tracking-tight text-sm shrink-0">
-          PUGNA<span className="text-signal">.</span>
+          PUGNA<span className="text-signal-ink">.</span>
         </Link>
       </div>
 

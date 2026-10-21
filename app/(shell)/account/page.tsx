@@ -209,7 +209,7 @@ export default async function AccountPage({
               ) : (
                 <p className="text-sm text-mute">{formatEventDate(upNextEvent.date)}</p>
               )}
-              <p className="inline-flex items-center gap-1 text-sm font-semibold text-signal pt-1">Open Event →</p>
+              <p className="inline-flex items-center gap-1 text-sm font-semibold text-signal-ink pt-1">Open Event →</p>
             </div>
           </Link>
         </section>
@@ -217,7 +217,7 @@ export default async function AccountPage({
 
       {fighter && (nextFight || nextSparring) && (
         <section className="rounded-card bg-panel border border-signal/30 p-4">
-          <p className="text-xs font-semibold text-signal uppercase tracking-wide mb-2">Your next fight</p>
+          <p className="text-xs font-semibold text-signal-ink uppercase tracking-wide mb-2">Your next fight</p>
           {nextIsSparring && nextSparringSession ? (
             <>
               <p className="font-semibold">🥊 Sparring</p>
@@ -239,7 +239,7 @@ export default async function AccountPage({
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Recent activity</p>
-          <Link href="/you/notifications" className="text-xs text-signal">
+          <Link href="/you/notifications" className="text-xs text-signal-ink">
             View all
           </Link>
         </div>
@@ -300,7 +300,7 @@ export default async function AccountPage({
               </p>
               {fighter.club && (
                 <Link href={`/clubs/${fighter.club.id}`} className="flex items-center gap-1.5 text-xs">
-                  <span className="text-success">✓ Member</span>
+                  <span className="text-success-ink">✓ Member</span>
                   <span className="text-mute">{fighter.club.name}</span>
                 </Link>
               )}
@@ -316,7 +316,7 @@ export default async function AccountPage({
 
             {lastResult && (
               <div className="text-sm">
-                <span className={lastResult.outcome === "Win" ? "text-success font-medium" : "text-mute font-medium"}>
+                <span className={lastResult.outcome === "Win" ? "text-success-ink font-medium" : "text-mute font-medium"}>
                   {lastResult.outcome}
                 </span>
                 <span className="text-mute"> vs {lastResult.opponent} · {formatEventDate(lastResult.date)}</span>
@@ -327,7 +327,7 @@ export default async function AccountPage({
               <p className="text-xs text-mute">
                 {followerCount} follower{followerCount === 1 ? "" : "s"}
               </p>
-              <Link href="/you" className="text-xs text-signal font-semibold">
+              <Link href="/you" className="text-xs text-signal-ink font-semibold">
                 View Boxer Profile →
               </Link>
             </div>

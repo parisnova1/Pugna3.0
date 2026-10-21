@@ -222,7 +222,7 @@ export default async function SparringSessionPage({
                       <button
                         type="submit"
                         aria-label="Delete"
-                        className="flex items-center justify-center w-5 h-5 text-xs rounded-full bg-black/70 text-ink"
+                        className="flex items-center justify-center w-5 h-5 text-xs rounded-full bg-black/70 text-[#ffffff]"
                       >
                         ×
                       </button>
@@ -499,7 +499,7 @@ export default async function SparringSessionPage({
                       {p.fighter.weightClass ? ` · ${p.fighter.weightClass}` : ""}
                       {p.fighter.experienceLevel ? ` · ${p.fighter.experienceLevel}` : ""}
                     </p>
-                    {p.weightGroup && <p className="text-xs text-signal mt-0.5">{p.weightGroup.label}</p>}
+                    {p.weightGroup && <p className="text-xs text-signal-ink mt-0.5">{p.weightGroup.label}</p>}
                   </div>
                   <span className="text-xs text-mute shrink-0 ml-2">{STATUS_LABEL[p.status]}</span>
                 </div>
@@ -754,7 +754,7 @@ export default async function SparringSessionPage({
 
           {session.status !== "CANCELLED" && session.status !== "COMPLETED" && (
             <details className="rounded-card border border-white/10 p-4">
-              <summary className="text-sm text-error cursor-pointer">Cancel session</summary>
+              <summary className="text-sm text-error-ink cursor-pointer">Cancel session</summary>
               <form
                 action={async () => {
                   "use server";

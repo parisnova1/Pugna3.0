@@ -27,9 +27,9 @@ describe("buttonClass reproduces the hand-rolled buttons it replaced", () => {
     ["inline-block rounded-pill bg-signal text-onsignal font-semibold px-5 py-3 text-sm", { text: "sm", className: "inline-block px-5" }],
     ["w-full rounded-pill border border-white/20 text-ink font-semibold py-2 text-sm", { variant: "outline", size: "xs", text: "sm", fullWidth: true }],
     ["rounded-pill border border-white/20 text-ink text-sm font-medium px-4 py-2", { variant: "outline", size: "xs", text: "sm", weight: "medium", className: "px-4" }],
-    ["w-full rounded-pill border border-signal text-signal font-semibold py-2 text-sm", { variant: "signalOutline", size: "xs", text: "sm", fullWidth: true }],
+    ["w-full rounded-pill border border-signal text-signal-ink font-semibold py-2 text-sm", { variant: "signalOutline", size: "xs", text: "sm", fullWidth: true }],
     ["w-full rounded-pill bg-error text-ink font-semibold py-3 disabled:opacity-60", { variant: "danger", fullWidth: true }],
-    ["w-full rounded-pill border border-error/40 text-error font-semibold py-2.5 text-sm", { variant: "dangerOutline", size: "sm", text: "sm", fullWidth: true }],
+    ["w-full rounded-pill border border-error/40 text-error-ink font-semibold py-2.5 text-sm", { variant: "dangerOutline", size: "sm", text: "sm", fullWidth: true }],
     ["w-full rounded-pill bg-signal text-onsignal font-bold py-3.5", { size: "lg", weight: "bold", fullWidth: true }],
     ["rounded-pill text-sm font-medium px-4 py-2 border bg-success text-onsignal border-success", { variant: "success", size: "xs", text: "sm", weight: "medium", className: "px-4" }],
   ];

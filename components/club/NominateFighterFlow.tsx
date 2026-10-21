@@ -85,14 +85,14 @@ export function NominateFighterFlow({
               <p className="text-sm text-mute">
                 {selectedFighter?.name} nominated for {selectedEvent?.name} at {weightClass}.
               </p>
-              <p className="text-xs text-success font-semibold">Pending — awaiting the organizer.</p>
+              <p className="text-xs text-success-ink font-semibold">Pending — awaiting the organizer.</p>
               <Button onClick={close} text="sm" fullWidth>
                 Done
               </Button>
             </>
           ) : (
             <>
-              {error && <p className="text-signal text-sm">{error}</p>}
+              {error && <p className="text-signal-ink text-sm">{error}</p>}
 
               {step === "event" && (
                 <div className="space-y-3">

@@ -29,7 +29,7 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
         <span
           className={`text-[11px] font-semibold rounded-pill px-2 py-0.5 border ${
             event.status === "LIVE" || event.status === "INTERMISSION"
-              ? "text-live border-live/40"
+              ? "text-live-ink border-live/40"
               : "text-mute border-white/10"
           }`}
         >
@@ -124,7 +124,7 @@ export default async function HostEventDashboard({ params }: { params: Promise<{
 
       {event.status !== "CANCELLED" && event.status !== "ARCHIVED" && (
         <details className="rounded-card border border-white/10 p-4">
-          <summary className="text-sm text-error cursor-pointer">Cancel event</summary>
+          <summary className="text-sm text-error-ink cursor-pointer">Cancel event</summary>
           <form
             action={async (formData: FormData) => {
               "use server";

@@ -56,7 +56,7 @@ export function ScheduleList({
                         {ring?.name ?? "Ring"}
                         {bout.scheduledTime ? ` · ${formatTime(bout.scheduledTime)}` : ""}
                       </span>
-                      <span className={isLive ? "text-live font-semibold" : label.startsWith("NEXT") ? "text-signal font-semibold" : ""}>
+                      <span className={isLive ? "text-live-ink font-semibold" : label.startsWith("NEXT") ? "text-signal-ink font-semibold" : ""}>
                         {label}
                       </span>
                     </div>

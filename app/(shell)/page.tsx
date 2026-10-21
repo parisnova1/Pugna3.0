@@ -164,7 +164,7 @@ export default async function HomePage({
       <section className="flex items-center justify-between pt-1">
         <div>
           <h1 className="text-2xl font-bold leading-none tracking-tight">
-            PUGNA<span className="text-signal">.</span>
+            PUGNA<span className="text-signal-ink">.</span>
           </h1>
           <p className="text-mute text-xs mt-1">Find your next fight — events, sparring &amp; clubs, all in one place.</p>
         </div>
@@ -286,7 +286,7 @@ export default async function HomePage({
               >
                 <p className="text-xs font-semibold text-mute uppercase tracking-wide">Final</p>
                 <p className="text-sm font-semibold mt-1">
-                  <span className="text-success">
+                  <span className="text-success-ink">
                     {latestResult.result.winnerId === latestResult.fighterAId
                       ? latestResult.fighterA?.displayName
                       : latestResult.fighterB?.displayName}{" "}
@@ -333,7 +333,7 @@ export default async function HomePage({
                     ? yourPugna.nextBout.fighterB?.displayName ?? "TBA"
                     : yourPugna.nextBout.fighterA?.displayName ?? "TBA"}
                 </p>
-                <p className={`text-xs mt-0.5 ${yourPugna.nextBout.status === "IN_PROGRESS" ? "text-live" : "text-signal"}`}>
+                <p className={`text-xs mt-0.5 ${yourPugna.nextBout.status === "IN_PROGRESS" ? "text-live-ink" : "text-signal-ink"}`}>
                   {yourPugna.nextBout.status === "IN_PROGRESS"
                     ? "Live"
                     : yourPugna.nextBout.event.startTime

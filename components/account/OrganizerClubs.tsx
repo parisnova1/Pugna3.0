@@ -33,7 +33,7 @@ export async function OrganizerClubs({
           <p className="text-mute text-sm">Find clubs, invite them to your events, and manage your club connections.</p>
         </div>
         <Link href="/" aria-label="Go to PUGNA home" className="font-bold tracking-tight text-sm shrink-0">
-          PUGNA<span className="text-signal">.</span>
+          PUGNA<span className="text-signal-ink">.</span>
         </Link>
       </div>
 
@@ -182,7 +182,7 @@ async function MyClubsTab({ eventIds }: { eventIds: string[] }) {
               {eventCount} event{eventCount === 1 ? "" : "s"} together
             </p>
           </div>
-          <span className="text-xs text-signal shrink-0">View →</span>
+          <span className="text-xs text-signal-ink shrink-0">View →</span>
         </Link>
       ))}
     </div>

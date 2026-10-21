@@ -33,7 +33,7 @@ export function WatchArea({
         rel="noopener noreferrer"
         className={[
           "inline-flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs font-semibold",
-          isLive ? "border-live/40 bg-live/10 text-live" : "border-signal/40 bg-signal/10 text-signal",
+          isLive ? "border-live/40 bg-live/10 text-live-ink" : "border-signal/40 bg-signal/10 text-signal-ink",
         ].join(" ")}
       >
         <PlayIcon />

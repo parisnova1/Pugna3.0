@@ -32,7 +32,7 @@ export default async function OnboardingPage({
       <div className="relative min-h-screen flex flex-col justify-end px-6 pb-[calc(env(safe-area-inset-bottom)+32px)] pt-12">
         <div className="space-y-1.5 mb-8">
           <h1 className="text-4xl font-bold tracking-tight text-ink">
-            PUGNA<span className="text-signal">.</span>
+            PUGNA<span className="text-signal-ink">.</span>
           </h1>
           <p className="text-lg font-semibold text-ink/90 leading-snug">
             Combat sports.

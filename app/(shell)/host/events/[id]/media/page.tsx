@@ -85,7 +85,7 @@ function DeleteButton({ mediaId, small }: { mediaId: string; small?: boolean }) 
         type="submit"
         aria-label="Delete"
         className={[
-          "flex items-center justify-center rounded-full bg-black/70 text-ink",
+          "flex items-center justify-center rounded-full bg-black/70 text-[#ffffff]",
           small ? "w-5 h-5 text-xs" : "w-7 h-7 text-sm",
         ].join(" ")}
       >

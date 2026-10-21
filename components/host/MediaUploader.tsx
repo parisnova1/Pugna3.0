@@ -61,7 +61,7 @@ export function MediaUploader({
           className="hidden"
         />
       </label>
-      {error && <p className="text-signal text-xs mt-1">{error}</p>}
+      {error && <p className="text-signal-ink text-xs mt-1">{error}</p>}
     </div>
   );
 }

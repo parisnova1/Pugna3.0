@@ -54,7 +54,7 @@ export default async function HostHomePage() {
 
       {tonight ? (
         <div className="rounded-card bg-panel border border-signal/30 p-5 space-y-3">
-          <p className="text-xs font-semibold text-signal uppercase tracking-wide">Tonight</p>
+          <p className="text-xs font-semibold text-signal-ink uppercase tracking-wide">Tonight</p>
           <p className="font-semibold">{tonight.name}</p>
           <p className="text-sm text-mute">{tonight.venue ?? tonight.city}</p>
           <div className="flex gap-2 pt-1">

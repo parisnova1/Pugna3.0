@@ -84,7 +84,7 @@ export function EventHeader({
             <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
           </svg>
         </Link>
-        {cancelReason && <p className="text-sm text-error">Cancelled: {cancelReason}</p>}
+        {cancelReason && <p className="text-sm text-error-ink">Cancelled: {cancelReason}</p>}
       </div>
     </div>
   );
@@ -141,7 +141,7 @@ export function OrganizerCard({ name, href }: { name: string; href: string | nul
     <div className="rounded-card bg-panel border border-white/10 p-5 space-y-2">
       <p className="text-xs font-semibold text-mute uppercase tracking-wide">Organized by</p>
       {href ? (
-        <Link href={href} className="text-sm font-semibold text-signal">
+        <Link href={href} className="text-sm font-semibold text-signal-ink">
           {name} →
         </Link>
       ) : (

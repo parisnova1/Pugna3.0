@@ -36,7 +36,7 @@ export function TabBar({ isOrganizer = false, liveEventId = null }: { isOrganize
   const tabs: Tab[] = isOrganizer ? [HOME, EVENTS, controlTab, CLUBS, ACCOUNT] : VIEWER_TABS;
 
   return (
-    <nav className="glass fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)]">
+    <nav className="glass !bg-panel fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 py-2 pb-[calc(env(safe-area-inset-bottom)+8px)]">
       {tabs.map((tab) => {
         const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
         const isScan = tab.href === "/scan";
@@ -47,7 +47,7 @@ export function TabBar({ isOrganizer = false, liveEventId = null }: { isOrganize
             href={tab.href}
             className={[
               "relative flex flex-col items-center justify-center gap-0.5 rounded-pill px-3 py-1.5 text-[11px] transition-colors",
-              active ? "text-ink" : isScan || tab.live ? "text-signal" : "text-mute",
+              active ? "text-ink" : isScan || tab.live ? "text-signal-ink" : "text-mute",
             ].join(" ")}
           >
             <span className={active ? "rounded-pill bg-signal/10 p-1.5 -m-1.5" : undefined}>

@@ -82,13 +82,13 @@ export default async function AccountSettingsPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4">
             <p className="font-medium text-sm">Viewer</p>
-            <span className="text-success text-sm font-semibold">✓</span>
+            <span className="text-success-ink text-sm font-semibold">✓</span>
           </div>
 
           <div className="flex items-center justify-between rounded-card bg-panel border border-white/10 p-4">
             <p className="font-medium text-sm">Boxer</p>
             {actor.isBoxer ? (
-              <span className="text-success text-sm font-semibold">✓</span>
+              <span className="text-success-ink text-sm font-semibold">✓</span>
             ) : (
               <Link href="/become-boxer" className="rounded-pill border border-white/20 px-3 py-1.5 text-xs font-semibold">
                 Become a Boxer
@@ -100,8 +100,8 @@ export default async function AccountSettingsPage() {
             <p className="font-medium text-sm">Organizer</p>
             {actor.isOrganizer ? (
               <Link href="/host" className="flex items-center gap-1.5 text-xs">
-                <span className="text-success">✓</span>
-                <span className="text-signal font-semibold">Host dashboard →</span>
+                <span className="text-success-ink">✓</span>
+                <span className="text-signal-ink font-semibold">Host dashboard →</span>
               </Link>
             ) : (
               <form

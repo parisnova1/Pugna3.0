@@ -130,7 +130,7 @@ export async function OrganizerHome({ actor, unreadCount }: { actor: NonNullable
                 {ringLines.map((r) => (
                   <div key={r.label} className="flex items-center justify-between text-sm">
                     <span className="text-mute">{r.label}</span>
-                    <span className={r.live ? "text-live font-semibold" : "text-ink"}>{r.text}</span>
+                    <span className={r.live ? "text-live-ink font-semibold" : "text-ink"}>{r.text}</span>
                   </div>
                 ))}
               </div>
@@ -153,7 +153,7 @@ export async function OrganizerHome({ actor, unreadCount }: { actor: NonNullable
             <p className="text-xs text-mute">
               {formatEventDate(nextUpcoming.date)} · Upcoming
             </p>
-            <p className="text-sm font-semibold text-signal pt-1">Manage Event →</p>
+            <p className="text-sm font-semibold text-signal-ink pt-1">Manage Event →</p>
           </Link>
         )}
 

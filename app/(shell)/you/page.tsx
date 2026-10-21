@@ -90,7 +90,7 @@ export default async function YouHomePage() {
             <p className="text-sm text-mute mt-1">
               vs {nextBout.fighterAId === fighter.id ? nextBout.fighterB?.displayName ?? "TBA" : nextBout.fighterA?.displayName ?? "TBA"}
             </p>
-            <p className="text-sm text-signal mt-2">
+            <p className="text-sm text-signal-ink mt-2">
               {nextBout.status === "IN_PROGRESS"
                 ? "Live"
                 : nextBout.event.startTime

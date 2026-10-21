@@ -195,7 +195,7 @@ export default async function FighterProfilePage({
           <div className="rounded-card bg-panel border border-white/10 p-3">
             <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-1">Last result</p>
             <p className="text-sm font-medium">
-              <span className={lastResult.winnerId === fighter.id ? "text-success font-semibold" : ""}>
+              <span className={lastResult.winnerId === fighter.id ? "text-success-ink font-semibold" : ""}>
                 {lastResult.winnerId === fighter.id ? "🏆 Win" : lastResult.winnerId ? "Loss" : "Draw"}
               </span>
               <span className="text-mute">
@@ -247,7 +247,7 @@ export default async function FighterProfilePage({
                       <button
                         type="submit"
                         aria-label="Delete"
-                        className="flex items-center justify-center w-5 h-5 text-xs rounded-full bg-black/70 text-ink"
+                        className="flex items-center justify-center w-5 h-5 text-xs rounded-full bg-black/70 text-[#ffffff]"
                       >
                         ×
                       </button>
@@ -279,7 +279,7 @@ export default async function FighterProfilePage({
               </div>
               <span
                 className={`text-xs shrink-0 ml-2 font-medium ${
-                  b.status === "FINAL" && b.winnerId === fighter.id ? "text-success" : "text-mute"
+                  b.status === "FINAL" && b.winnerId === fighter.id ? "text-success-ink" : "text-mute"
                 }`}
               >
                 {b.status === "FINAL"

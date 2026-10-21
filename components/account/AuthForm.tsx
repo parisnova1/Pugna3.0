@@ -42,7 +42,7 @@ export function AuthForm({
           className={AUTH_INPUT_CLASS}
         />
       </Field>
-      {state && !state.ok && <p className="text-signal text-sm">{state.error}</p>}
+      {state && !state.ok && <p className="text-signal-ink text-sm">{state.error}</p>}
       <Button
         type="submit"
         disabled={pending}

@@ -46,7 +46,7 @@ export function ClubCard({ club, isGuest = true }: { club: ClubCardData; isGuest
         </div>
       </Link>
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
-        <Link href={`/clubs/${club.id}`} className="text-xs font-medium text-signal">
+        <Link href={`/clubs/${club.id}`} className="text-xs font-medium text-signal-ink">
           View Club →
         </Link>
         <ClubFollowButton clubId={club.id} isGuest={isGuest} following={Boolean(club.following)} />
@@ -74,7 +74,7 @@ export function ClubAvatar({ name, coverUrl, size = 56 }: { name: string; coverU
       style={{ width: size, height: size }}
       className="shrink-0 rounded-card bg-signal/10 border border-signal/20 flex items-center justify-center"
     >
-      <span className="font-bold text-signal" style={{ fontSize: size * 0.4 }}>
+      <span className="font-bold text-signal-ink" style={{ fontSize: size * 0.4 }}>
         {initial}
       </span>
     </div>

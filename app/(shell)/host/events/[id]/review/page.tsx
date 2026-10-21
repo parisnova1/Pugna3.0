@@ -29,7 +29,7 @@ export default async function ReviewStepPage({ params }: { params: Promise<{ id:
 
       {blockers.length > 0 && (
         <div className="rounded-card border border-signal/40 bg-signal/5 p-4 space-y-1">
-          <p className="text-xs font-semibold text-signal uppercase tracking-wide">Blockers</p>
+          <p className="text-xs font-semibold text-signal-ink uppercase tracking-wide">Blockers</p>
           {blockers.map((b) => (
             <p key={b} className="text-sm">{b}</p>
           ))}

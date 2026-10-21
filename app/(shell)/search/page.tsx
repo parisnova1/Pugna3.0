@@ -128,7 +128,7 @@ function ResultSection({ title, items, seeAllHref }: { title: string; items: Sea
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">{title}</p>
         {items.length >= 4 && (
-          <Link href={seeAllHref} className="text-xs text-signal font-semibold">
+          <Link href={seeAllHref} className="text-xs text-signal-ink font-semibold">
             See all →
           </Link>
         )}

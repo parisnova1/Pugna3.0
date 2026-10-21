@@ -24,7 +24,7 @@ export function ForgotPasswordForm() {
       <Field label="Email">
         <input name="email" type="email" placeholder="name@example.com" required autoComplete="email" className={AUTH_INPUT_CLASS} />
       </Field>
-      {state && !state.ok && <p className="text-signal text-sm">{state.error}</p>}
+      {state && !state.ok && <p className="text-signal-ink text-sm">{state.error}</p>}
       <Button type="submit" disabled={pending} size="lg" fullWidth>
         {pending ? "…" : "Send reset link"}
       </Button>
@@ -64,7 +64,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <input name="confirm" type="password" required minLength={8} autoComplete="new-password" className={AUTH_INPUT_CLASS} />
       </Field>
       {state && !state.ok && (
-        <p className="text-signal text-sm">
+        <p className="text-signal-ink text-sm">
           {state.error}{" "}
           {state.error.includes("invalid or has expired") && (
             <Link href="/account/forgot" className="underline">
@@ -98,7 +98,7 @@ export function VerifyEmailForm({ token }: { token: string }) {
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="token" value={token} />
-      {state && !state.ok && <p className="text-signal text-sm">{state.error}</p>}
+      {state && !state.ok && <p className="text-signal-ink text-sm">{state.error}</p>}
       <Button type="submit" disabled={pending} size="lg" fullWidth>
         {pending ? "…" : "Confirm email"}
       </Button>
@@ -112,7 +112,7 @@ export function ResendVerificationButton() {
 
   return (
     <div className="space-y-3">
-      {result && <p className={result.ok ? "text-sm text-ink" : "text-sm text-signal"}>{result.ok ? result.message : result.error}</p>}
+      {result && <p className={result.ok ? "text-sm text-ink" : "text-sm text-signal-ink"}>{result.ok ? result.message : result.error}</p>}
       <Button
         size="lg"
         fullWidth

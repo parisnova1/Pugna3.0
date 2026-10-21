@@ -45,7 +45,7 @@ export default async function BecomeBoxerPage() {
         <p className="text-xs font-semibold text-mute uppercase tracking-wide">What you get</p>
         {BENEFITS.map((b) => (
           <p key={b} className="text-sm flex items-center gap-2">
-            <span className="text-signal">✓</span> {b}
+            <span className="text-signal-ink">✓</span> {b}
           </p>
         ))}
       </div>

@@ -14,7 +14,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
       ) : (
         <p className="text-sm text-mute">
           This page needs the link from your email.{" "}
-          <Link href="/account/forgot" className="text-signal font-semibold underline underline-offset-2">
+          <Link href="/account/forgot" className="text-signal-ink font-semibold underline underline-offset-2">
             Request a new one
           </Link>
           .

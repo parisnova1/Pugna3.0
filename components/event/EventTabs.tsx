@@ -52,7 +52,7 @@ export function EventTabs({ tabs }: { tabs: EventTab[] }) {
             active === t.id
               ? "bg-ink text-void border-ink"
               : t.emphasize
-                ? "border-live/40 text-live"
+                ? "border-live/40 text-live-ink"
                 : "border-white/15 text-mute",
           ].join(" ")}
         >

@@ -19,7 +19,7 @@ export function FighterAvatar({ name, avatarUrl, size = 56 }: { name: string; av
       style={{ width: size, height: size }}
       className="shrink-0 rounded-card bg-signal/10 border border-signal/20 flex items-center justify-center"
     >
-      <span className="font-bold text-signal" style={{ fontSize: size * 0.4 }}>
+      <span className="font-bold text-signal-ink" style={{ fontSize: size * 0.4 }}>
         {initial}
       </span>
     </div>

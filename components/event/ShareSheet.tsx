@@ -51,7 +51,7 @@ export function ShareSheet({ code, name }: { code: string | null; name: string }
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               }}
-              className="text-xs font-semibold text-signal shrink-0"
+              className="text-xs font-semibold text-signal-ink shrink-0"
             >
               {copied ? "Copied" : "Copy"}
             </button>

@@ -169,7 +169,7 @@ export function LiveConsole({
         )}
       </div>
 
-      {error && <p className="text-signal text-sm rounded-card border border-signal/40 bg-signal/5 p-3">{error}</p>}
+      {error && <p className="text-signal-ink text-sm rounded-card border border-signal/40 bg-signal/5 p-3">{error}</p>}
 
       <CustomTimer />
 
@@ -418,16 +418,16 @@ export function LiveConsole({
             >
               <span>
                 {b.number}.{" "}
-                <span className={winnerName && winnerName === b.fighterAName ? "text-success font-semibold" : ""}>
+                <span className={winnerName && winnerName === b.fighterAName ? "text-success-ink font-semibold" : ""}>
                   {b.fighterAName ?? "TBD"}
                 </span>{" "}
                 vs{" "}
-                <span className={winnerName && winnerName === b.fighterBName ? "text-success font-semibold" : ""}>
+                <span className={winnerName && winnerName === b.fighterBName ? "text-success-ink font-semibold" : ""}>
                   {b.fighterBName ?? "TBD"}
                 </span>
                 {rings.length > 1 ? <span className="text-mute"> · {findRingLabel(rings, b.ringId)}</span> : null}
               </span>
-              <span className={`text-xs ${isFinal && winnerName ? "text-success font-medium" : "text-mute"}`}>
+              <span className={`text-xs ${isFinal && winnerName ? "text-success-ink font-medium" : "text-mute"}`}>
                 {isFinal && winnerName ? `${winnerName} won` : b.status}
               </span>
             </div>

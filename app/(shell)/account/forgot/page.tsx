@@ -12,7 +12,7 @@ export default function ForgotPasswordPage() {
       </div>
       <ForgotPasswordForm />
       <p className="text-center text-sm text-mute">
-        <Link href="/account?mode=signin" className="text-signal font-semibold underline underline-offset-2">
+        <Link href="/account?mode=signin" className="text-signal-ink font-semibold underline underline-offset-2">
           Back to sign in
         </Link>
       </p>

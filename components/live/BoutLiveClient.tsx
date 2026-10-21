@@ -154,7 +154,7 @@ export function BoutLiveClient({
       {data.status === "FINAL" && data.result && (
         <div className={`rounded-card bg-panel border p-4 ${winnerName ? "border-success/30" : "border-white/10"}`}>
           <p className="text-xs font-semibold text-mute uppercase tracking-wide mb-1">Result</p>
-          <p className={`text-sm font-semibold ${winnerName ? "text-success" : "text-ink"}`}>{winnerName ? `${winnerName} won` : "Draw"}</p>
+          <p className={`text-sm font-semibold ${winnerName ? "text-success-ink" : "text-ink"}`}>{winnerName ? `${winnerName} won` : "Draw"}</p>
           <p className="text-sm text-mute mt-0.5">
             {data.result.method}
             {data.result.round ? ` · Round ${data.result.round}` : ""}
@@ -204,7 +204,7 @@ function FighterRow({ name, club, isWinner }: { name: string; club: string | nul
   return (
     <div className={`text-center rounded-card py-1.5 ${isWinner ? "bg-success/10 border border-success/30" : ""}`}>
       <div className="flex items-center justify-center gap-1.5">
-        <p className={`font-semibold ${isWinner ? "text-success" : ""}`}>{name}</p>
+        <p className={`font-semibold ${isWinner ? "text-success-ink" : ""}`}>{name}</p>
         {isWinner && <Badge tone="success">Winner</Badge>}
       </div>
       <p className="text-xs text-mute mt-0.5">{club ?? "Guest"}</p>

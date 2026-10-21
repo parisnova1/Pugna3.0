@@ -21,7 +21,7 @@ export function AuthScreen({
     <div className="space-y-8 pt-4">
       <div className="text-center space-y-1">
         <h1 className="text-3xl font-bold tracking-tight">
-          PUGNA<span className="text-signal">.</span>
+          PUGNA<span className="text-signal-ink">.</span>
         </h1>
       </div>
 
@@ -52,7 +52,7 @@ export function AuthScreen({
         {isSignIn ? "Don't have an account? " : "Already have an account? "}
         <button
           onClick={() => setMode(isSignIn ? "register" : "signin")}
-          className="text-signal font-semibold underline underline-offset-2"
+          className="text-signal-ink font-semibold underline underline-offset-2"
         >
           {isSignIn ? "Create account" : "Sign in"}
         </button>

@@ -110,7 +110,7 @@ export function BracketDiagram({ slug, rounds }: { slug: string; rounds: Bracket
                   }}
                 >
                   {isLive && (
-                    <span className="absolute top-1 right-2 text-[9px] font-semibold text-live tracking-wide">LIVE</span>
+                    <span className="absolute top-1 right-2 text-[9px] font-semibold text-live-ink tracking-wide">LIVE</span>
                   )}
                   <p className={`truncate ${bout.aWon === false ? "text-mute" : "font-medium"}`}>{bout.fighterAName ?? "TBD"}</p>
                   <p className={`truncate ${bout.aWon === true ? "text-mute" : "font-medium"}`}>{bout.fighterBName ?? "TBD"}</p>

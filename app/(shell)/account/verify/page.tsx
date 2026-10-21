@@ -22,7 +22,7 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
       ) : (
         <p className="text-sm text-mute">
           This page needs the link from your confirmation email.{" "}
-          <Link href="/account" className="text-signal font-semibold underline underline-offset-2">
+          <Link href="/account" className="text-signal-ink font-semibold underline underline-offset-2">
             Go to your account
           </Link>{" "}
           to request a new one.
