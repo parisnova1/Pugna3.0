@@ -12,6 +12,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { buildMetadata, SITE_DESCRIPTION, websiteJsonLd } from "@/lib/seo";
 import { buttonClass } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { LOOKBACK_MS, hasEnded } from "@/lib/event-timing";
 
 const NEARBY_EVENT_STATUSES: EventStatus[] = ["PUBLISHED", "LIVE", "INTERMISSION"];
 
@@ -30,16 +31,20 @@ export default async function HomePage({
   const isNearby = nearby === "1" && lat && lng;
 
   const [live, upcoming, clubs, following, openSparring] = await Promise.all([
-    prisma.event.findMany({
-      where: { status: { in: ["LIVE", "INTERMISSION"] } },
-      orderBy: { date: "asc" },
-      take: 5,
-    }),
-    prisma.event.findMany({
-      where: { status: "PUBLISHED" },
-      orderBy: { date: "asc" },
-      take: 6,
-    }),
+    prisma.event
+      .findMany({
+        where: { status: { in: ["LIVE", "INTERMISSION"] }, date: { gte: new Date(Date.now() - LOOKBACK_MS) } },
+        orderBy: { date: "asc" },
+        take: 20,
+      })
+      .then((rows) => rows.filter((e) => !hasEnded(e)).slice(0, 5)),
+    prisma.event
+      .findMany({
+        where: { status: "PUBLISHED", date: { gte: new Date(Date.now() - LOOKBACK_MS) } },
+        orderBy: { date: "asc" },
+        take: 30,
+      })
+      .then((rows) => rows.filter((e) => !hasEnded(e)).slice(0, 6)),
     prisma.club.findMany({
       orderBy: { createdAt: "desc" },
       take: 4,
@@ -52,8 +57,8 @@ export default async function HomePage({
             status: { in: ["PUBLISHED", "LIVE", "INTERMISSION"] },
           },
           orderBy: { date: "asc" },
-          take: 5,
-        })
+          take: 30,
+        }).then((rows) => rows.filter((e) => !hasEnded(e)).slice(0, 5))
       : Promise.resolve([]),
     prisma.sparringSession.findMany({
       where: { status: "OPEN", date: { gte: new Date() } },
@@ -122,7 +127,9 @@ export default async function HomePage({
             .map((r) => r.row);
 
         const [nearEvents, nearClubs, nearSparring] = await Promise.all([
-          prisma.event.findMany({ where: { status: { in: NEARBY_EVENT_STATUSES }, latitude: { not: null } }, take: 20 }),
+          prisma.event
+            .findMany({ where: { status: { in: NEARBY_EVENT_STATUSES }, latitude: { not: null }, date: { gte: new Date(Date.now() - LOOKBACK_MS) } }, take: 60 })
+            .then((rows) => rows.filter((e) => !hasEnded(e)).slice(0, 20)),
           prisma.club.findMany({ where: { latitude: { not: null } }, take: 20 }),
           prisma.sparringSession.findMany({
             where: { status: "OPEN", date: { gte: new Date() }, latitude: { not: null } },

@@ -35,7 +35,7 @@ export function ClubCard({ club, isGuest = true }: { club: ClubCardData; isGuest
       <Link href={`/clubs/${club.id}`} className="flex gap-3 items-start">
         <ClubAvatar name={club.name} coverUrl={club.coverUrl} />
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-ink truncate">{club.name}</p>
+          <p className="font-semibold text-ink break-words line-clamp-2">{club.name}</p>
           {metaLine && <p className="text-xs text-mute mt-0.5">{metaLine}</p>}
           {club.isVerified && (
             <div className="mt-1.5">
@@ -46,7 +46,7 @@ export function ClubCard({ club, isGuest = true }: { club: ClubCardData; isGuest
         </div>
       </Link>
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
-        <Link href={`/clubs/${club.id}`} className="text-xs font-medium text-signal-ink">
+        <Link href={`/clubs/${club.id}`} aria-label={`View ${club.name}`} className="text-xs font-medium text-signal-ink">
           View Club →
         </Link>
         <ClubFollowButton clubId={club.id} isGuest={isGuest} following={Boolean(club.following)} />

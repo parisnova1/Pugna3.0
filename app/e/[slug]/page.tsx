@@ -28,6 +28,7 @@ import { EventHeader, EventInfoCard, OrganizerCard } from "@/components/event/ov
 import { getEventMeta } from "@/lib/seo-queries";
 import { absoluteUrl, buildMetadata, privateMetadata, sportsEventJsonLd } from "@/lib/seo";
 import { isPublishedEventStatus } from "@/lib/event-status";
+import { pillWithEnded } from "@/lib/event-timing";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -205,7 +206,7 @@ export default async function EventCardPage({
         {eventJsonLd && <JsonLd data={eventJsonLd} />}
         <EventHeader
           coverUrl={coverUrl}
-          pill={pill}
+          pill={pillWithEnded(event, pill)}
           followCount={event._count.follows}
           name={event.name}
           venueLabel={venueLabel}
@@ -382,7 +383,7 @@ export default async function EventCardPage({
       {eventJsonLd && <JsonLd data={eventJsonLd} />}
       <EventHeader
         coverUrl={coverUrl}
-        pill={pill}
+        pill={pillWithEnded(event, pill)}
         followCount={event._count.follows}
         name={event.name}
         venueLabel={venueLabel}

@@ -10,6 +10,7 @@ import { buildMetadata } from "@/lib/seo";
 import { buttonClass } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getUnreadCount } from "@/lib/notifications-query";
+import { DAY_MS, LOOKBACK_MS, hasEnded, liveFirst, spansDay, utcDayStart } from "@/lib/event-timing";
 
 type Filter = "live" | "today" | "week" | "upcoming" | "finished" | "tournaments" | "fightNights";
 
@@ -21,7 +22,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "today", label: "Today" },
   { key: "week", label: "This week" },
   { key: "upcoming", label: "Upcoming" },
-  { key: "finished", label: "Finished" },
+  { key: "finished", label: "Past" },
   { key: "tournaments", label: "Tournaments" },
   { key: "fightNights", label: "Fight Nights" },
 ];
@@ -71,9 +72,8 @@ export default async function EventsPage({
   }
 
   const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
-  const endOfWeek = new Date(startOfDay.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const todayStart = utcDayStart(now);
+  const weekEnd = todayStart + 7 * DAY_MS;
 
   // Tournaments vs Fight Nights is a derived split, not stored data — no `EventType`
   // field exists in the schema. A tournament is any event with more than one day or
@@ -81,20 +81,18 @@ export default async function EventsPage({
   const isTournament: Prisma.EventWhereInput = { OR: [{ dayCount: { gt: 1 } }, { ringCount: { gt: 1 } }] };
   const isFightNight: Prisma.EventWhereInput = { dayCount: { lte: 1 }, ringCount: { lte: 1 } };
 
+  // A tab's meaning depends on the clock, not just the stored status: a host who
+  // never pressed "Finish" leaves an event on PUBLISHED/LIVE indefinitely. The
+  // database narrows by status and a generous date window; the exact "has it
+  // ended / is it today" test below is the single source of truth (lib/event-timing).
   const statusWhere: Prisma.EventWhereInput =
-    filter === "live"
-      ? { status: { in: LIVE_ONLY } }
-      : filter === "today"
-        ? { date: { gte: startOfDay, lt: endOfDay }, status: { in: LIVE_ISH } }
-        : filter === "week"
-          ? { date: { gte: startOfDay, lt: endOfWeek }, status: { in: LIVE_ISH } }
-          : filter === "finished"
-            ? { status: "FINISHED" }
-            : filter === "tournaments"
-              ? { status: { in: LIVE_ISH }, ...isTournament }
-              : filter === "fightNights"
-                ? { status: { in: LIVE_ISH }, ...isFightNight }
-                : { status: { in: LIVE_ISH } };
+    filter === "finished"
+      ? { OR: [{ status: "FINISHED" }, { status: { in: LIVE_ISH }, date: { lt: now } }] }
+      : {
+          status: { in: filter === "live" ? LIVE_ONLY : LIVE_ISH },
+          date: { gte: new Date(now.getTime() - LOOKBACK_MS) },
+          ...(filter === "tournaments" ? isTournament : filter === "fightNights" ? isFightNight : {}),
+        };
 
   const textWhere: Prisma.EventWhereInput | null = q
     ? {
@@ -117,11 +115,21 @@ export default async function EventsPage({
 
   const isNearby = nearby === "1" && lat && lng;
 
-  let events = await prisma.event.findMany({
+  const matchesTab = (e: { status: EventStatus; date: Date; dayCount: number }): boolean => {
+    const ended = hasEnded(e, now);
+    if (filter === "finished") return e.status === "FINISHED" || ended;
+    if (filter === "today") return !ended && spansDay(e, todayStart);
+    if (filter === "week") return !ended && utcDayStart(e.date) < weekEnd;
+    return !ended; // live, upcoming, tournaments, fight nights
+  };
+
+  const candidates = await prisma.event.findMany({
     where,
     orderBy: { date: filter === "finished" ? "desc" : "asc" },
-    take: isNearby ? undefined : 30,
+    take: 150,
   });
+  let events = candidates.filter(matchesTab);
+  if (filter !== "finished") events = liveFirst(events);
 
   if (isNearby) {
     const center = { lat: Number(lat), lng: Number(lng) };
@@ -131,9 +139,9 @@ export default async function EventsPage({
         (a, b) =>
           haversineDistanceKm(center, { lat: a.latitude!, lng: a.longitude! }) -
           haversineDistanceKm(center, { lat: b.latitude!, lng: b.longitude! }),
-      )
-      .slice(0, 30);
+      );
   }
+  events = events.slice(0, 30);
 
   const eventIds = events.map((e) => e.id);
   const [checkIns, covers] =
@@ -154,6 +162,23 @@ export default async function EventsPage({
 
   const currentParams = { q, filter, nearby, lat, lng, saved };
 
+  // Say what is actually true, not "nothing nearby" for every kind of empty list.
+  const emptyCopy = q
+    ? `No events match "${q}".`
+    : isNearby
+      ? "No events with a location near you right now."
+      : isSaved
+        ? "You haven't saved any events yet."
+        : filter === "finished"
+          ? "No past events yet."
+          : filter === "live"
+            ? "Nothing is live right now."
+            : filter === "today"
+              ? "No events today."
+              : filter === "week"
+                ? "No events in the next 7 days."
+                : "No upcoming events right now. Check back soon, or look at past events and clubs.";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pt-2">
@@ -171,6 +196,9 @@ export default async function EventsPage({
         {saved && <input type="hidden" name="saved" value={saved} />}
         <input
           name="q"
+          type="search"
+          aria-label="Search events, clubs and cities"
+          enterKeyHint="search"
           defaultValue={q}
           placeholder="Search events, clubs, cities..."
           className="w-full rounded-card bg-panel border border-white/10 px-4 py-3.5 text-ink placeholder:text-mute"
@@ -181,6 +209,7 @@ export default async function EventsPage({
         {FILTERS.map((f) => (
           <Link
             key={f.key}
+            aria-current={filter === f.key ? "true" : undefined}
             href={`/events${buildQuery(currentParams, { filter: f.key === "upcoming" ? null : f.key })}`}
             className={[
               "shrink-0 rounded-pill px-4 py-2 text-sm font-medium border",
@@ -212,11 +241,21 @@ export default async function EventsPage({
       )}
 
       {events.length === 0 ? (
-        <div className="text-center py-16 space-y-4">
-          <EmptyState>No events nearby yet.</EmptyState>
-          <Link href="/scan" className={buttonClass({ text: "sm", className: "inline-block px-5" })}>
-            Scan QR
-          </Link>
+        <div className="text-center py-14 space-y-4">
+          <EmptyState>{emptyCopy}</EmptyState>
+          <div className="flex flex-wrap justify-center gap-2">
+            {filter !== "finished" && (
+              <Link href="/events?filter=finished" className={buttonClass({ variant: "outline", text: "sm", className: "inline-block px-5" })}>
+                See past events
+              </Link>
+            )}
+            <Link href="/clubs" className={buttonClass({ variant: "outline", text: "sm", className: "inline-block px-5" })}>
+              Explore clubs
+            </Link>
+            <Link href="/sparring" className={buttonClass({ variant: "outline", text: "sm", className: "inline-block px-5" })}>
+              Find sparring
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">

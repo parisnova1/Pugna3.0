@@ -7,6 +7,7 @@ import { ClubCard, type ClubCardData } from "@/components/clubs/ClubCard";
 import { NearbyToggle } from "@/components/clubs/NearbyToggle";
 import { OrganizerClubs } from "@/components/account/OrganizerClubs";
 import { buildMetadata } from "@/lib/seo";
+import { arrangeClubs } from "@/lib/clubs-list";
 
 const SPORTS = ["Boxing", "MMA", "Muay Thai", "Kickboxing"];
 
@@ -128,7 +129,10 @@ export default async function ClubsPage({
       .map((c) => c.club);
   }
 
-  const featuredCards = featured.map(toCardData);
+  // Featured is a curated shelf for the unfiltered directory. Once someone searches or
+  // filters they want one list of matches, and outside that every club appears exactly once.
+  const isFiltered = Boolean(q || sport || verified || isNearby);
+  const { featured: featuredCards, rest: listedClubs } = arrangeClubs(featured.map(toCardData), clubs, isFiltered);
   const currentParams = { q, sport, verified, nearby, lat, lng };
 
   return (
@@ -148,6 +152,9 @@ export default async function ClubsPage({
         {verified && <input type="hidden" name="verified" value={verified} />}
         <input
           name="q"
+          type="search"
+          aria-label="Search clubs, cities or athletes"
+          enterKeyHint="search"
           defaultValue={q}
           placeholder="Search clubs, cities or athletes..."
           className="w-full rounded-card bg-panel border border-white/10 px-4 py-3.5 text-ink placeholder:text-mute"
@@ -191,9 +198,13 @@ export default async function ClubsPage({
       {featuredCards.length > 0 && (
         <section className="space-y-3">
           <p className="text-xs font-semibold text-mute uppercase tracking-wide">Featured Clubs</p>
-          <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 sm:overflow-visible">
+          <div
+            role="region"
+            aria-label="Featured clubs"
+            className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory scroll-px-4"
+          >
             {featuredCards.map((club) => (
-              <div key={club.id} className="w-72 shrink-0 sm:w-auto">
+              <div key={club.id} className="w-[85%] max-w-xs shrink-0 snap-start">
                 <ClubCard club={club} isGuest={!actor} />
               </div>
             ))}
@@ -201,21 +212,25 @@ export default async function ClubsPage({
         </section>
       )}
 
+      {(listedClubs.length > 0 || featuredCards.length === 0) && (
       <section className="space-y-3">
-        <p className="text-xs font-semibold text-mute uppercase tracking-wide">All Clubs</p>
-        {clubs.length === 0 ? (
+        <p className="text-xs font-semibold text-mute uppercase tracking-wide" aria-live="polite">
+          {isFiltered ? `${listedClubs.length} club${listedClubs.length === 1 ? "" : "s"} found` : featuredCards.length > 0 ? "More Clubs" : "All Clubs"}
+        </p>
+        {listedClubs.length === 0 ? (
           <div className="text-center py-14 space-y-1">
             <p className="text-sm font-medium">No clubs found</p>
             <p className="text-xs text-mute">Try another club name, city or sport.</p>
           </div>
         ) : (
-          <div className="space-y-2 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0">
-            {clubs.map((club) => (
+          <div className="space-y-2">
+            {listedClubs.map((club) => (
               <ClubCard key={club.id} club={club} isGuest={!actor} />
             ))}
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }

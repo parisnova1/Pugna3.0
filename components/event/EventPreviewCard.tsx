@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatEventDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import type { EventStatus } from "@prisma/client";
+import { displayStatus, type DisplayStatus } from "@/lib/event-timing";
 
 export type EventPreview = {
   slug: string | null;
@@ -10,10 +11,12 @@ export type EventPreview = {
   venue: string | null;
   date: Date;
   startTime: Date | null;
+  dayCount?: number;
   status: EventStatus;
 };
 
-const STATUS_LABEL: Partial<Record<EventStatus, string>> = {
+const STATUS_LABEL: Partial<Record<DisplayStatus, string>> = {
+  ENDED: "ENDED",
   LIVE: "LIVE",
   INTERMISSION: "INTERMISSION",
   PUBLISHED: "UPCOMING",
@@ -31,11 +34,12 @@ export function EventPreviewCard({
   checkedInCount?: number;
 }) {
   if (!event.slug) return null;
-  const isLive = event.status === "LIVE" || event.status === "INTERMISSION";
+  const shown = displayStatus({ status: event.status, date: event.date, dayCount: event.dayCount ?? 1 });
+  const isLive = shown === "LIVE" || shown === "INTERMISSION";
 
   const pill = (
     <Badge live={isLive} tone={isLive ? "live" : "neutral"}>
-      {STATUS_LABEL[event.status] ?? event.status}
+      {STATUS_LABEL[shown] ?? shown}
     </Badge>
   );
 

@@ -1,7 +1,9 @@
 import bcrypt from "bcryptjs";
+import { PASSWORD_MIN_LENGTH, isPlausibleEmail } from "@/lib/validation";
+
+export { isPlausibleEmail };
 
 export const BCRYPT_COST = 12;
-const PASSWORD_MIN_LENGTH = 8;
 /** bcrypt silently ignores everything past 72 bytes, so refuse longer passwords instead of truncating them. */
 const PASSWORD_MAX_BYTES = 72;
 
@@ -42,7 +44,3 @@ export function normalizeEmail(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-export function isPlausibleEmail(email: string): boolean {
-  return email.length <= 254 && EMAIL_PATTERN.test(email);
-}

@@ -67,6 +67,12 @@ body {
   box-shadow: 0 -8px 32px -12px rgb(var(--white-rgb) / 0.25);
 }
 
+/* Visible keyboard focus everywhere (Tailwind's reset removes the browser default). */
+:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: 2px;
+}
+
 .tabular {
   font-variant-numeric: tabular-nums;
 }
