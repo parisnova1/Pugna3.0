@@ -12,6 +12,7 @@ const MANAGEMENT_STEPS = [
   { href: "structure", label: "Rings", desc: "Sport, rings, days" },
   { href: "schedule", label: "Schedule", desc: "Times and order" },
   { href: "media", label: "Media", desc: "Cover, gallery, sponsors" },
+  { href: "audience", label: "Audience", desc: "Votes and waiting-list signups" },
   { href: "review", label: "Settings", desc: "Blockers, warnings, publish" },
 ];
 

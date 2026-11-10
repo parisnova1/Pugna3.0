@@ -32,6 +32,14 @@ export const POLICIES = {
 
   codeLookupIp: { name: "code:ip", limit: 60, windowSec: 5 * MIN },
   checkInUser: { name: "checkin:user", limit: 30, windowSec: 10 * MIN },
+
+  // Generous per-IP ceilings: a whole hall on the venue Wi-Fi shares one
+  // address, so these only stop scripts, not a crowd. The per-voter and
+  // per-email keys do the real limiting.
+  fightVoteIp: { name: "fightvote:ip", limit: 600, windowSec: 10 * MIN },
+  fightVoteVoter: { name: "fightvote:voter", limit: 20, windowSec: 10 * MIN },
+  waitlistIp: { name: "waitlist:ip", limit: 200, windowSec: HOUR },
+  waitlistEmail: { name: "waitlist:email", limit: 5, windowSec: HOUR },
 } as const satisfies Record<string, Policy>;
 
 /** The three counters every password sign-in attempt is charged against. */
