@@ -28,6 +28,8 @@ import { EventHeader, EventInfoCard, OrganizerCard } from "@/components/event/ov
 import { getEventMeta } from "@/lib/seo-queries";
 import { absoluteUrl, buildMetadata, privateMetadata, sportsEventJsonLd } from "@/lib/seo";
 import { isPublishedEventStatus } from "@/lib/event-status";
+import { FightOfTheDay } from "@/components/event/FightOfTheDay";
+import { WaitlistCta } from "@/components/event/WaitlistCta";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -257,6 +259,15 @@ export default async function EventCardPage({
               liveBoutId={liveBoutId}
             />
 
+            <FightOfTheDay
+              eventId={event.id}
+              eventStatus={event.status}
+              day={1}
+              dayCount={1}
+              bouts={bouts}
+              viewerUserId={actor?.userId ?? null}
+            />
+
             <div id="info" className="scroll-mt-24 space-y-4">
               <EventInfoCard
                 hasVenue={Boolean(event.venue || event.city)}
@@ -269,6 +280,8 @@ export default async function EventCardPage({
               {organizerName && <OrganizerCard name={organizerName} href={organizerHref} />}
 
               <ParticipatingClubs clubs={participatingClubs} />
+
+              <WaitlistCta slug={slug} />
             </div>
           </div>
         </div>
@@ -449,6 +462,22 @@ export default async function EventCardPage({
           viewerCheckedIn={Boolean(viewerCheckIn)}
           liveBoutId={liveBoutId}
         />
+
+        <FightOfTheDay
+          eventId={event.id}
+          eventStatus={event.status}
+          day={selectedDay}
+          dayCount={event.dayCount}
+          bouts={dayBouts.map((b) => ({
+            id: b.id,
+            number: b.number,
+            weightClass: b.weightClass,
+            status: b.status,
+            fighterAName: b.fighterA?.displayName ?? null,
+            fighterBName: b.fighterB?.displayName ?? null,
+          }))}
+          viewerUserId={actor?.userId ?? null}
+        />
       </div>
 
       <div id="card" className="mt-8 space-y-3 scroll-mt-24">
@@ -505,6 +534,8 @@ export default async function EventCardPage({
         {organizerName && <OrganizerCard name={organizerName} href={organizerHref} />}
 
         <ParticipatingClubs clubs={participatingClubs} />
+
+        <WaitlistCta slug={slug} />
       </div>
     </div>
   );

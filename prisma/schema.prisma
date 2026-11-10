@@ -489,6 +489,7 @@ model Event {
   clubInvitesSent       ClubEventInvite[]
   clubRequestsReceived  ClubEventRequest[]
   clubParticipations    ClubEventParticipation[]
+  fightOfDayVotes       FightOfDayVote[]
 }
 
 /**
@@ -587,6 +588,7 @@ model Bout {
   crowdReactions CrowdReaction[]
   crowdShouts    CrowdShout[]
   savedBy        SavedBout[]
+  fightVotes     FightOfDayVote[]
 
   @@unique([eventId, number])
 }
@@ -899,4 +901,49 @@ model RateLimitBucket {
   resetAt DateTime
 
   @@index([resetAt])
+}
+
+/// One "fight of the day" vote per voter, per event day. A voter is a signed-in
+/// user ("u:<userId>") or an anonymous browser ("g:<sha256 of a random cookie>"),
+/// so people in the hall can vote straight from the QR code without an account.
+model FightOfDayVote {
+  id        String   @id @default(cuid())
+  eventId   String
+  day       Int      @default(1)
+  boutId    String
+  voterKey  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bout  Bout  @relation(fields: [boutId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, day, voterKey])
+  @@index([eventId, day, boutId])
+}
+
+enum WaitlistRole {
+  FAN
+  COACH
+  FIGHTER
+  ORGANIZER
+}
+
+/// Pre-launch interest list. `source` is the event slug the person signed up
+/// from (or "site"), which is how an event's hosts see their own signups.
+model WaitlistSignup {
+  id         String       @id @default(cuid())
+  email      String       @unique
+  name       String?
+  role       WaitlistRole @default(FAN)
+  clubName   String?
+  city       String?
+  newsletter Boolean      @default(false)
+  source     String       @default("site")
+  locale     String       @default("en")
+  consentAt  DateTime     @default(now())
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([source])
 }

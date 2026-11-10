@@ -25,8 +25,10 @@ const SESSION_COOKIES = ["authjs.session-token", "__Secure-authjs.session-token"
 
 // /onboarding (avoid self-redirect), /account (onboarding's own Sign In /
 // Register destination -- gating it too would be circular and would break
-// the existing returnTo flow), and /api (auth routes + polling endpoints).
-const EXEMPT_PREFIXES = ["/onboarding", "/account", "/api"];
+// the existing returnTo flow), /api (auth routes + polling endpoints), and
+// /waitlist (the pre-launch signup page people reach from a QR code or
+// Instagram -- it must open directly, not behind the app splash).
+const EXEMPT_PREFIXES = ["/onboarding", "/account", "/api", "/waitlist"];
 
 function isExempt(pathname: string): boolean {
   return EXEMPT_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
