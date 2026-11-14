@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EventStatus } from "@prisma/client";
-import { displayStatus, eventEndsAt, hasEnded, pillWithEnded, spansDay, utcDayStart } from "@/lib/event-timing";
+import { displayStatus, eventEndsAt, hasEnded, isOver, pillWithEnded, spansDay, utcDayStart } from "@/lib/event-timing";
 import { EMPTY_PREFS, parsePrefs, personalize, prefScore, serializePrefs, type Prefs } from "@/lib/prefs";
 import { isTabActive, type TabId } from "@/lib/nav";
 import { emailProblem, passwordProblem } from "@/lib/validation";
@@ -44,6 +44,14 @@ describe("event freshness", () => {
       expect(displayStatus({ ...past, status }, now)).toBe(status);
     }
     expect(displayStatus({ date: day("2026-11-05"), dayCount: 1, status: "LIVE" }, at("2026-11-05T19:00:00Z"))).toBe("LIVE");
+  });
+
+  it("an event is over when finished by its host or stale, but not while running, cancelled or a draft", () => {
+    const past = { date: day("2026-09-10"), dayCount: 1 };
+    const now = at("2026-11-05T00:00:00Z");
+    for (const status of ["FINISHED", "ARCHIVED", "PUBLISHED", "LIVE"] as EventStatus[]) expect(isOver({ ...past, status }, now)).toBe(true);
+    for (const status of ["CANCELLED", "DRAFT", "READY"] as EventStatus[]) expect(isOver({ ...past, status }, now)).toBe(false);
+    expect(isOver({ date: day("2026-11-05"), dayCount: 1, status: "LIVE" }, at("2026-11-05T19:00:00Z"))).toBe(false);
   });
 
   it("swaps a status pill for 'Ended' only when stale", () => {

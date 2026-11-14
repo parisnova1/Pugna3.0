@@ -28,7 +28,7 @@ import { EventHeader, EventInfoCard, OrganizerCard } from "@/components/event/ov
 import { getEventMeta } from "@/lib/seo-queries";
 import { absoluteUrl, buildMetadata, privateMetadata, sportsEventJsonLd } from "@/lib/seo";
 import { isPublishedEventStatus } from "@/lib/event-status";
-import { displayStatus, pillWithEnded } from "@/lib/event-timing";
+import { isOver, pillWithEnded } from "@/lib/event-timing";
 import { EndedNotice } from "@/components/event/overview/EndedNotice";
 
 function weightKg(weightClass: string): number {
@@ -79,9 +79,9 @@ export default async function EventCardPage({
   const { event, projection } = data;
   const actor = await getActor();
   const published = isPublishedEventStatus(event.status);
-  // A host who never pressed "Finish" leaves the stored status on PUBLISHED/LIVE. Past its dates the
-  // page behaves as finished (no live screen, no check-in); the stored status is left alone.
-  const ended = displayStatus(event) === "ENDED";
+  // Once an event is over -- finished by its host, or past its dates with the host never pressing
+  // "Finish" -- the page behaves as finished (no live screen, no check-in). Stored status is left alone.
+  const ended = isOver(event);
   const shownStatus = ended ? "FINISHED" : event.status;
 
   const view = can(actor, "event.view", { eventId: event.id, eventPublished: published });

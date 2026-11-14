@@ -44,6 +44,12 @@ export function displayStatus(event: Timed & { status: EventStatus }, now: Date 
   return ACTIVE.includes(event.status) && hasEnded(event, now) ? "ENDED" : event.status;
 }
 
+/** True once the event is over, whether the host marked it finished or just never did. */
+export function isOver(event: Timed & { status: EventStatus }, now: Date = new Date()): boolean {
+  const shown = displayStatus(event, now);
+  return shown === "ENDED" || shown === "FINISHED" || shown === "ARCHIVED";
+}
+
 /** Swap a status pill for "Ended" when the event is stale; leave it alone otherwise. */
 export function pillWithEnded<P extends { text: string; live: boolean } | null>(
   event: Timed & { status: EventStatus },
