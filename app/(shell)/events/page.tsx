@@ -10,7 +10,10 @@ import { buildMetadata } from "@/lib/seo";
 import { buttonClass } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getUnreadCount } from "@/lib/notifications-query";
-import { DAY_MS, LOOKBACK_MS, hasEnded, liveFirst, spansDay, utcDayStart } from "@/lib/event-timing";
+import { DAY_MS, LOOKBACK_MS, hasEnded, spansDay, utcDayStart } from "@/lib/event-timing";
+import { cookies } from "next/headers";
+import { PREFS_COOKIE, hasPrefs, parsePrefs, personalize } from "@/lib/prefs";
+import { PersonalizeCard } from "@/components/prefs/PersonalizeCard";
 
 type Filter = "live" | "today" | "week" | "upcoming" | "finished" | "tournaments" | "fightNights";
 
@@ -129,7 +132,10 @@ export default async function EventsPage({
     take: 150,
   });
   let events = candidates.filter(matchesTab);
-  if (filter !== "finished") events = liveFirst(events);
+  // Live first; then, for visitors who chose picks, matching events ahead of the rest. With no
+  // picks this is exactly live-first, soonest-first.
+  const prefs = parsePrefs((await cookies()).get(PREFS_COOKIE)?.value);
+  if (filter !== "finished") events = personalize(events, prefs);
 
   if (isNearby) {
     const center = { lat: Number(lat), lng: Number(lng) };
@@ -231,6 +237,8 @@ export default async function EventsPage({
         </Link>
       </div>
 
+      {filter !== "finished" && (events.length > 1 || hasPrefs(prefs)) && <PersonalizeCard prefs={prefs} returnTo={`/events${buildQuery(currentParams, {})}`} />}
+
       {savedRequested && !actor && (
         <p className="text-sm text-mute">
           <Link href="/account" className="underline">
@@ -243,15 +251,21 @@ export default async function EventsPage({
       {events.length === 0 ? (
         <div className="text-center py-14 space-y-4">
           <EmptyState>{emptyCopy}</EmptyState>
+          {!q && !isNearby && !isSaved && filter !== "finished" && (
+            <p className="text-sm text-mute max-w-xs mx-auto">
+              Follow a club and you&apos;ll be notified when it publishes its next event
+              {actor ? "." : " (you need an account for notifications)."}
+            </p>
+          )}
           <div className="flex flex-wrap justify-center gap-2">
+            <Link href="/clubs" className={buttonClass({ text: "sm", className: "inline-block px-5" })}>
+              Follow a club
+            </Link>
             {filter !== "finished" && (
               <Link href="/events?filter=finished" className={buttonClass({ variant: "outline", text: "sm", className: "inline-block px-5" })}>
                 See past events
               </Link>
             )}
-            <Link href="/clubs" className={buttonClass({ variant: "outline", text: "sm", className: "inline-block px-5" })}>
-              Explore clubs
-            </Link>
             <Link href="/sparring" className={buttonClass({ variant: "outline", text: "sm", className: "inline-block px-5" })}>
               Find sparring
             </Link>

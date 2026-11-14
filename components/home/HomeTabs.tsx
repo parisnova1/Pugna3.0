@@ -121,7 +121,7 @@ export function HomeTabs({
               <SeeAllLink href="/events" />
             </div>
             {upcoming.length === 0 ? (
-              <EmptyState>No events nearby yet.</EmptyState>
+              <EmptyState>No upcoming events right now.</EmptyState>
             ) : (
               <div className="space-y-3">
                 {upcoming.map((event) => (

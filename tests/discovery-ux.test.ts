@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EventStatus } from "@prisma/client";
-import { displayStatus, eventEndsAt, hasEnded, liveFirst, pillWithEnded, spansDay, utcDayStart } from "@/lib/event-timing";
+import { displayStatus, eventEndsAt, hasEnded, pillWithEnded, spansDay, utcDayStart } from "@/lib/event-timing";
+import { EMPTY_PREFS, parsePrefs, personalize, prefScore, serializePrefs, type Prefs } from "@/lib/prefs";
 import { isTabActive, type TabId } from "@/lib/nav";
 import { emailProblem, passwordProblem } from "@/lib/validation";
 import { arrangeClubs } from "@/lib/clubs-list";
@@ -53,14 +54,6 @@ describe("event freshness", () => {
     expect(pillWithEnded(fresh, { text: "Live now", live: true }, now)).toEqual({ text: "Live now", live: true });
   });
 
-  it("lists live-now events before upcoming ones, then by date", () => {
-    const list = [
-      { id: "later", status: "PUBLISHED" as EventStatus, date: day("2026-12-01") },
-      { id: "live", status: "LIVE" as EventStatus, date: day("2026-12-05") },
-      { id: "sooner", status: "PUBLISHED" as EventStatus, date: day("2026-11-10") },
-    ];
-    expect(liveFirst(list).map((e) => e.id)).toEqual(["live", "sooner", "later"]);
-  });
 
   it("knows which days a multi-day event covers", () => {
     const e = { date: day("2026-09-10"), dayCount: 3 };
@@ -178,5 +171,75 @@ describe("club directory has no duplicate listings", () => {
   it("never loses a club", () => {
     expect(arrangeClubs([club("only")], [club("only")], false)).toEqual({ featured: [club("only")], rest: [] });
     expect(arrangeClubs([], all, false).rest).toHaveLength(5);
+  });
+});
+
+describe("optional personalization", () => {
+  type Ev = { id: string; status: EventStatus; date: Date; sport: string; city: string | null };
+  const ev = (id: string, date: string, sport: string, city: string | null, status: EventStatus = "PUBLISHED"): Ev => ({
+    id,
+    status,
+    date: day(date),
+    sport,
+    city,
+  });
+  const list = [
+    ev("boxing-berlin", "2026-12-01", "Boxing", "Berlin"),
+    ev("mma-munich", "2026-12-02", "MMA", "München"),
+    ev("boxing-munich", "2026-12-03", "Boxing", "München"),
+    ev("live-berlin", "2026-12-09", "Boxing", "Berlin", "LIVE"),
+  ];
+  const ids = (events: Ev[]) => events.map((e) => e.id);
+
+  it("with no picks the order is just live first, then soonest first", () => {
+    expect(ids(personalize(list, EMPTY_PREFS))).toEqual(["live-berlin", "boxing-berlin", "mma-munich", "boxing-munich"]);
+  });
+
+  it("puts matching events ahead of the rest but never drops any", () => {
+    const prefs: Prefs = { sports: ["Boxing"], city: "München", dismissed: true };
+    const out = personalize(list, prefs);
+    expect(ids(out)).toEqual(["live-berlin", "boxing-munich", "mma-munich", "boxing-berlin"]);
+    expect(out).toHaveLength(list.length);
+  });
+
+  it("a live event still comes first even when it does not match", () => {
+    const prefs: Prefs = { sports: ["MMA"], city: "München", dismissed: true };
+    expect(personalize(list, prefs)[0]?.id).toBe("live-berlin");
+  });
+
+  it("a city match outweighs a sport match, and matching ignores case", () => {
+    const prefs: Prefs = { sports: ["Boxing"], city: "münchen", dismissed: true };
+    expect(prefScore({ sport: "MMA", city: "München" }, prefs)).toBe(2);
+    expect(prefScore({ sport: "boxing", city: "Berlin" }, prefs)).toBe(1);
+    expect(prefScore({ sport: "MMA", city: null }, prefs)).toBe(0);
+  });
+
+  it("does not mutate the list it was given", () => {
+    const copy = ids(list);
+    personalize(list, { sports: ["MMA"], city: "", dismissed: true });
+    expect(ids(list)).toEqual(copy);
+  });
+
+  it("reads the cookie defensively: bad, hostile or unknown values mean no picks", () => {
+    expect(parsePrefs(undefined)).toEqual(EMPTY_PREFS);
+    expect(parsePrefs("not json")).toEqual(EMPTY_PREFS);
+    expect(parsePrefs("null")).toEqual(EMPTY_PREFS);
+    expect(parsePrefs(JSON.stringify({ sports: ["Chess", "MMA"], city: 7, dismissed: "yes" }))).toEqual({
+      sports: ["MMA"],
+      city: "",
+      dismissed: false,
+    });
+  });
+
+  it("keeps the city short and free of control characters", () => {
+    const parsed = parsePrefs(JSON.stringify({ sports: [], city: `  Mün\u0000chen\n${"x".repeat(100)}` }));
+    expect(parsed.city.length).toBeLessThanOrEqual(60);
+    expect(parsed.city).not.toMatch(/[\u0000-\u001f]/);
+    expect(parsed.city.startsWith("Mün chen")).toBe(true);
+  });
+
+  it("round-trips what it saves", () => {
+    const prefs: Prefs = { sports: ["Boxing", "MMA"], city: "Nürnberg", dismissed: true };
+    expect(parsePrefs(serializePrefs(prefs))).toEqual(prefs);
   });
 });

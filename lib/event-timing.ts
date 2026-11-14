@@ -10,7 +10,7 @@ export const DAY_MS = 86_400_000;
 const END_GRACE_MS = 12 * 3_600_000;
 
 /** Events longer than this many days aren't expected; used only to bound database pre-filters. */
-export const MAX_EVENT_DAYS = 31;
+const MAX_EVENT_DAYS = 31;
 export const LOOKBACK_MS = MAX_EVENT_DAYS * DAY_MS;
 
 type Timed = { date: Date; dayCount: number };
@@ -51,10 +51,4 @@ export function pillWithEnded<P extends { text: string; live: boolean } | null>(
   now: Date = new Date(),
 ): P | { text: string; live: boolean } {
   return displayStatus(event, now) === "ENDED" ? { text: "Ended", live: false } : pill;
-}
-
-/** Live-now events first, then by date: the order the Upcoming list should read in. */
-export function liveFirst<E extends { status: EventStatus; date: Date }>(events: E[]): E[] {
-  const rank = (e: E) => (e.status === "LIVE" || e.status === "INTERMISSION" ? 0 : 1);
-  return [...events].sort((a, b) => rank(a) - rank(b) || a.date.getTime() - b.date.getTime());
 }

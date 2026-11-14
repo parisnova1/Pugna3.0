@@ -26,3 +26,10 @@ export async function clubAdminUserIds(clubId: string): Promise<string[]> {
   const admins = await prisma.clubAdmin.findMany({ where: { clubId }, select: { userId: true } });
   return admins.map((a) => a.userId);
 }
+
+/** People following the club that organizes an event, minus anyone who is already being told another way. */
+export async function getClubFollowerUserIds(clubId: string, excludeUserIds: string[] = []): Promise<string[]> {
+  const follows = await prisma.clubFollow.findMany({ where: { clubId }, select: { userId: true } });
+  const skip = new Set(excludeUserIds);
+  return [...new Set(follows.map((f) => f.userId).filter((id) => !skip.has(id)))];
+}

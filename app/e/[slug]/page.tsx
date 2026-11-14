@@ -28,7 +28,8 @@ import { EventHeader, EventInfoCard, OrganizerCard } from "@/components/event/ov
 import { getEventMeta } from "@/lib/seo-queries";
 import { absoluteUrl, buildMetadata, privateMetadata, sportsEventJsonLd } from "@/lib/seo";
 import { isPublishedEventStatus } from "@/lib/event-status";
-import { pillWithEnded } from "@/lib/event-timing";
+import { displayStatus, pillWithEnded } from "@/lib/event-timing";
+import { EndedNotice } from "@/components/event/overview/EndedNotice";
 
 function weightKg(weightClass: string): number {
   const match = weightClass.match(/\d+/);
@@ -78,6 +79,10 @@ export default async function EventCardPage({
   const { event, projection } = data;
   const actor = await getActor();
   const published = isPublishedEventStatus(event.status);
+  // A host who never pressed "Finish" leaves the stored status on PUBLISHED/LIVE. Past its dates the
+  // page behaves as finished (no live screen, no check-in); the stored status is left alone.
+  const ended = displayStatus(event) === "ENDED";
+  const shownStatus = ended ? "FINISHED" : event.status;
 
   const view = can(actor, "event.view", { eventId: event.id, eventPublished: published });
   if (!view.allowed) {
@@ -179,9 +184,10 @@ export default async function EventCardPage({
     }));
 
     const finalBouts = event.bouts.filter((b) => b.status === "FINAL");
-    const liveBoutId = projection.nowLabel === "LIVE" ? (projection.now?.id ?? null) : null;
-    const pill = eventStatusPillFor(event.status, projection.nowLabel);
-    const isLive = projection.nowLabel === "LIVE";
+    const nowLabel = ended ? null : projection.nowLabel;
+    const liveBoutId = nowLabel === "LIVE" ? (projection.now?.id ?? null) : null;
+    const pill = eventStatusPillFor(shownStatus, nowLabel);
+    const isLive = nowLabel === "LIVE";
 
     const tabs: EventTab[] = [
       { id: "overview", label: "Overview" },
@@ -224,6 +230,15 @@ export default async function EventCardPage({
             #overview's own (short) box scrolled past. */}
         <EventStickyNav eventName={event.name} isLive={isLive} fallbackHref="/events" tabs={tabs} />
 
+        {ended && (
+          <EndedNotice
+            resultsCount={finalBouts.length}
+            resultsHref="#results"
+            organizerName={organizerName}
+            organizerHref={organizerHref}
+          />
+        )}
+
         <div className="mt-6 lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start">
           <div id="live" className="lg:col-span-2 space-y-6 scroll-mt-24">
             <LiveEventCard
@@ -233,11 +248,11 @@ export default async function EventCardPage({
               venueLabel={venueLabel}
               streamUrl={event.streamUrl}
               cancelReason={event.cancelReason}
-              initialStatus={event.status}
+              initialStatus={shownStatus}
               initialBouts={bouts}
-              initialNowLabel={projection.nowLabel}
-              initialNowId={projection.now?.id ?? null}
-              initialNextId={projection.next?.id ?? null}
+              initialNowLabel={nowLabel}
+              initialNowId={ended ? null : (projection.now?.id ?? null)}
+              initialNextId={ended ? null : (projection.next?.id ?? null)}
               initialFollowerCount={event._count.follows}
               initialIntermissionUntil={event.intermissionUntil}
               galleryUrls={galleryUrls}
@@ -251,12 +266,14 @@ export default async function EventCardPage({
           </div>
 
           <div className="mt-6 lg:mt-0 space-y-4">
-            <LiveAudience
-              slug={slug}
-              checkedInCount={checkedInCount}
-              viewerCheckedIn={Boolean(viewerCheckIn)}
-              liveBoutId={liveBoutId}
-            />
+            {!ended && (
+              <LiveAudience
+                slug={slug}
+                checkedInCount={checkedInCount}
+                viewerCheckedIn={Boolean(viewerCheckIn)}
+                liveBoutId={liveBoutId}
+              />
+            )}
 
             <div id="info" className="scroll-mt-24 space-y-4">
               <EventInfoCard
@@ -312,7 +329,7 @@ export default async function EventCardPage({
   const defaultDay = currentDayNumber(event.date, event.dayCount);
   const selectedDay = day ? Math.min(Math.max(1, Number(day)), event.dayCount) : defaultDay;
   const dayBouts = event.bouts.filter((b) => b.day === selectedDay);
-  const ringProjections = computeRingProjections(event.status, event.rings, dayBouts);
+  const ringProjections = computeRingProjections(shownStatus, event.rings, dayBouts);
   const boutCountsByDay = Array.from({ length: event.dayCount }, (_, i) =>
     event.bouts.filter((b) => b.day === i + 1 && b.status !== "DRAFT").length,
   );
@@ -356,7 +373,8 @@ export default async function EventCardPage({
   const resultBouts = finalBouts.filter((b) => !weight || b.weightClass === weight);
   const liveBoutId = liveNow?.id ?? null;
   const isLive = isEventLive(ringProjections);
-  const pill = eventStatusPillFor(event.status, isLive ? "LIVE" : event.status === "INTERMISSION" ? "INTERMISSION" : null);
+  const pill = eventStatusPillFor(shownStatus, isLive ? "LIVE" : shownStatus === "INTERMISSION" ? "INTERMISSION" : null);
+  const eventFinalCount = event.bouts.filter((b) => b.status === "FINAL").length;
 
   // Results are now a toggle inside the Card tab (see #card below), not a
   // separate anchor stop — one control for "what's happening" vs. "what's
@@ -399,6 +417,15 @@ export default async function EventCardPage({
 
       {/* Sibling of #overview, not a child of it — see isSimple branch above for why. */}
       <EventStickyNav eventName={event.name} isLive={isLive} fallbackHref="/events" tabs={tabs} />
+
+      {ended && (
+        <EndedNotice
+          resultsCount={eventFinalCount}
+          resultsHref="#card"
+          organizerName={organizerName}
+          organizerHref={organizerHref}
+        />
+      )}
 
       <div className="mt-4">
         <DaySelector
@@ -444,12 +471,14 @@ export default async function EventCardPage({
           </div>
         )}
 
-        <LiveAudience
-          slug={slug}
-          checkedInCount={checkedInCount}
-          viewerCheckedIn={Boolean(viewerCheckIn)}
-          liveBoutId={liveBoutId}
-        />
+        {!ended && (
+          <LiveAudience
+            slug={slug}
+            checkedInCount={checkedInCount}
+            viewerCheckedIn={Boolean(viewerCheckIn)}
+            liveBoutId={liveBoutId}
+          />
+        )}
       </div>
 
       <div id="card" className="mt-8 space-y-3 scroll-mt-24">

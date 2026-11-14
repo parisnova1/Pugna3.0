@@ -10,7 +10,7 @@ import { redirect } from "next/navigation";
 import type { ActionResult } from "@/lib/actions/types";
 import { notifyMany } from "@/lib/actions/notify";
 import { geocodeVenue } from "@/lib/geocode";
-import { getBoutFighterUserIds, getFollowerUserIds } from "@/lib/recipients";
+import { getBoutFighterUserIds, getClubFollowerUserIds, getFollowerUserIds } from "@/lib/recipients";
 import { VERIFY_NEEDED_URL } from "@/lib/security/routes";
 import { isActiveEventStatus } from "@/lib/event-status";
 import { isReschedulable, rescheduleMessage, scheduleChanged } from "@/lib/schedule";
@@ -380,6 +380,15 @@ export async function publishEvent(eventId: string): Promise<ActionResult> {
 
   const fighterUserIds = await getBoutFighterUserIds(eventId);
   await notifyMany(fighterUserIds, "EVENT_PUBLISHED", `${event.name} is published — check your schedule.`, `/e/${slug}`);
+
+  // People following the organizing club hear about its next event (fighters above were already told).
+  if (event.organizingClubId) {
+    const club = await prisma.club.findUnique({ where: { id: event.organizingClubId }, select: { name: true } });
+    if (club) {
+      const followerIds = await getClubFollowerUserIds(event.organizingClubId, [...fighterUserIds, ...(actor ? [actor.userId] : [])]);
+      await notifyMany(followerIds, "EVENT_PUBLISHED", `${club.name} published ${event.name}.`, `/e/${slug}`);
+    }
+  }
 
   revalidatePath(`/host/events/${eventId}`);
   revalidatePath("/events");

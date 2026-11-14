@@ -19,6 +19,7 @@ const TABLES = [
   "notification",
   "savedBout",
   "club",
+  "clubFollow",
   "clubEventInvite",
   "clubEventRequest",
   "clubEventParticipation",

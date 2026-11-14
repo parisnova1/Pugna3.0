@@ -42,27 +42,28 @@ export default async function OnboardingPage({
           <p className="text-sm text-mute">Events, sparring &amp; clubs -- no subscription.</p>
         </div>
 
-        <div className="flex gap-3">
-          <Link
-            href={`/account?mode=signin${authQuery}`}
-            className={buttonClass({ size: "lg", weight: "bold", className: "flex-1 text-center" })}
-          >
-            Log In
-          </Link>
-          <Link
-            href={`/account?mode=register${authQuery}`}
-            className="flex-1 text-center rounded-pill bg-panel border border-white/20 text-ink font-bold py-3.5"
-          >
-            Sign Up
-          </Link>
-        </div>
-
         <Link
           href={safeReturnTo}
-          className="block text-center rounded-pill border border-white/15 text-ink/80 font-semibold py-3 mt-3"
+          className={buttonClass({ size: "lg", weight: "bold", fullWidth: true, className: "text-center" })}
         >
-          Discover
+          Explore events and clubs
         </Link>
+        <p className="text-center text-xs text-mute mt-2">No account needed to browse.</p>
+
+        <div className="flex gap-3 mt-4">
+          <Link
+            href={`/account?mode=register${authQuery}`}
+            className="flex-1 text-center rounded-pill bg-panel border border-white/20 text-ink font-semibold py-3"
+          >
+            Create account
+          </Link>
+          <Link
+            href={`/account?mode=signin${authQuery}`}
+            className="flex-1 text-center rounded-pill border border-white/15 text-ink/80 font-semibold py-3"
+          >
+            Log in
+          </Link>
+        </div>
       </div>
     </div>
   );
